@@ -26,7 +26,7 @@
 │                                                              │
 │  /api/auth/*      register / login / logout / verify-email /  │
 │                   resend-verify / oauth/:provider(google|github)│
-│  /api/me          用户信息 / referral(推荐码) / status-page    │
+│  /api/me          用户信息 / status-page                       │
 │                   (开关/域名/白标/密码) / subscribers(订阅者)  │
 │  /api/monitors    CRUD + import + stats + history             │
 │  /api/heartbeat/:id  心跳回填(无需登录)                       │
@@ -78,7 +78,7 @@
 ### `server.js`（入口，~1221 行，57 路由）
 - Express 应用初始化（静态服务、JSON body、Session(connect-pg-simple 落库)、安全中间件）
 - Paddle SDK 实例化（sandbox/live 切换）+ 手动 HMAC 验签 webhook
-- 路由注册：auth（注册/登录/登出/邮箱验证/OAuth google+github）/ me（信息/referral/状态页/订阅者）/ monitors（CRUD/import/stats/history）/ heartbeat / maintenance-windows / status(公开+解锁+订阅) / team / account-apikey / v1(Bearer) / plan-features / feedback / admin* / paddle-config / paddle-webhook / health
+- 路由注册：auth（注册/登录/登出/邮箱验证/OAuth google+github）/ me（信息/状态页/订阅者）/ monitors（CRUD/import/stats/history）/ heartbeat / maintenance-windows / status(公开+解锁+订阅) / team / account-apikey / v1(Bearer) / plan-features / feedback / admin* / paddle-config / paddle-webhook / health
 - 套餐门禁在路由层校验：`PLAN_LIMITS`（配额）、`planHasType`（检查类型）、`planHasChannel`（渠道）、`planHasStatusPage` / `planHasStats`（状态页/趋势图）、`planMinInterval`（最低间隔）
 - 启动：`seedAdmin()`（ADMIN_EMAIL/PASSWORD 建超管）+ `initDb()` + `startKeepAlive()` + `initAlerts()` + `startPolling()` + 月度报告 setInterval
 - 邮箱未验证账号监控数压至 `EMAIL_VERIFY_MONITOR_CAP=3`（防薅）
@@ -96,7 +96,9 @@
 - `registerUser` / `loginUser` / `logout` / `getUserById` / `getUserByEmail` / `updatePlan`
 - 邮箱验证：`verifyEmail(token)` / `resendVerify`（email_verified / verify_token / verify_expires）
 - OAuth：google + github start/callback（未配凭据优雅 400，不崩）
-- 推荐码：`registerReferral`（referral_code/referred_by，被推荐人首次付费 → 推荐人 10%）
+- 推荐码：注册时经 `?ref=` 静默记录来源（referral_code/referred_by，被推荐人首次付费 → 推荐人 10% 入 `referrals` 记账）。
+  ⚠️ 2026-09-15：推荐功能确定不计划上线，已移除前端面板与 `GET /api/me/referral` 统计端点及 `getReferralStats`；
+  注册来源记录与 webhook 提成记账保留（不对外展示任何承诺）
 - 状态页设置：`updateStatusPage`（enabled/slug/customDomain/whiteLabel/password）
 - 团队：建团队/邀请(按邮箱)/退出；admin：ban/delete/quota/role/plan/impersonate
 
@@ -245,8 +247,10 @@ Paddle POST /api/paddle/webhook
 ### feedback（客户反馈）
 id / user_id(可空) / email(选填) / message / page / status(new/seen/done) / created_at
 
-### referrals（推荐）
-▸ 承载 referral_code ↔ referred_by 绑定 + 统计（signups/paid/pending），被推荐人首次付费后推荐人得 10%
+### referrals（推荐 · 仅记账）
+▸ 承载 referral_code ↔ referred_by 绑定，被推荐人首次付费后推荐人得 10%（webhook 写入）
+▸ 2026-09-15 起推荐功能不计划上线：统计端点 `GET /api/me/referral` 与 `getReferralStats` 已移除，
+  前端面板与 `referral.*` 文案已删；表结构保留作为注册来源沉淀（如需重启功能无需重新迁移）
 
 ### teams（团队 · G9）
 id / name / owner / created_at（+ users.team_id/team_role 关联）

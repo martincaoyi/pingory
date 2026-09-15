@@ -85,7 +85,6 @@
   "admin.analytics.noData": "Sem dados ainda",
   "admin.analytics.onlineNow": "Online agora",
   "admin.analytics.paidUsers": "Usuários pagantes",
-  "admin.analytics.referralPaid": "Comissão de indicação paga",
   "admin.analytics.rev30": "Receita (30 d)",
   "admin.analytics.revenue30": "Receita diária (30 d)",
   "admin.analytics.title": "Análise do proprietário",
@@ -458,17 +457,6 @@
   "plan.info": "Plano: {plan} · {used} / {limit} monitores usados",
   "plan.pro": "Pro",
   "plan.starter": "Starter",
-  "referral.copied": "Copiado!",
-  "referral.copy": "Copiar",
-  "referral.copyfail": "Falha ao copiar, copie manualmente",
-  "referral.how": "Quando alguém se cadastrar pelo seu link e fizer upgrade para um plano pago, você ganha uma comissão única de 10%.",
-  "referral.loading": "Carregando…",
-  "referral.none": "Indicação ainda não disponível",
-  "referral.share": "Compartilhe seu link de convite",
-  "referral.statEarn": "Ganho",
-  "referral.statPaid": "Atualizados",
-  "referral.statTotal": "Convidados",
-  "referral.title": "Indique um amigo — ganhe 10%",
   "reg.ok": "Registro bem-sucedido! Enviamos um email de verificação — clique no link para ativar sua conta.",
   "reset.back": "Voltar para o login",
   "reset.confirmPw": "Confirme a nova senha",
@@ -723,5 +711,6 @@
   "cmp.faq.a4": "Sim. A Pingory importa diretamente o formato de exportação do UptimeRobot, então você migra com uma única colagem.",
   "cmp.src": "Fontes: os limites e preços da Pingory vêm do próprio produto (planos publicados em pingory.com). Os dados do UptimeRobot vêm da página oficial de preços e da base de conhecimento, verificados em setembro de 2026. Preços e limites de terceiros mudam; confirme os detalhes atuais no site de cada fornecedor antes de comprar.",
   "cmp.cta.h": "Procurando um monitor de disponibilidade mais barato?",
-  "cmp.cta.p": "Crie uma conta gratuita e monitore 50 endpoints em cerca de 30 segundos. Sem cartão de crédito."
+  "cmp.cta.p": "Crie uma conta gratuita e monitore 50 endpoints em cerca de 30 segundos. Sem cartão de crédito.",
+  "admin.analytics.totalSessions": "Visitas totais"
 }

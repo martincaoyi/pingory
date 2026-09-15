@@ -10,7 +10,7 @@ import { createMonitor, listMonitors, getMonitor, deleteMonitor, saveMonitor, ge
 import { initAlerts, generateMonthlyReport, sendTestAlert } from './src/alerts.js';
 import { initDb, startKeepAlive, getPool, pool } from './src/db.js';
 import { recordUserEvent, listUserEvents, getUserEventSummary, getUserActivityRanking, getDormantUsers, parseJSON } from './src/events.js';
-import { registerUser, loginUser, getUserById, getUserByEmail, updatePlan, updateStatusPage, createEmailVerification, verifyEmailToken, seedAdmin, setRole, addSubscriber, listSubscribers, removeSubscriber, createMaintenanceWindow, listMaintenanceWindows, deleteMaintenanceWindow, ensureApiKey, regenerateApiKey, getUserByApiKey, createTeam, inviteTeamMember, listTeam, leaveTeam, verifyPagePassword, recordReferralConversion, getReferralStats, createOAuthUser, recordBillingEvent, changePassword, setPassword, updateProfileName, requestEmailChange, confirmEmailChange, requestPasswordReset, resetPassword, getAlertChannels, saveAlertChannels } from './src/auth.js';
+import { registerUser, loginUser, getUserById, getUserByEmail, updatePlan, updateStatusPage, createEmailVerification, verifyEmailToken, seedAdmin, setRole, addSubscriber, listSubscribers, removeSubscriber, createMaintenanceWindow, listMaintenanceWindows, deleteMaintenanceWindow, ensureApiKey, regenerateApiKey, getUserByApiKey, createTeam, inviteTeamMember, listTeam, leaveTeam, verifyPagePassword, recordReferralConversion, createOAuthUser, recordBillingEvent, changePassword, setPassword, updateProfileName, requestEmailChange, confirmEmailChange, requestPasswordReset, resetPassword, getAlertChannels, saveAlertChannels } from './src/auth.js';
 import { sendVerificationEmail, sendFeedbackNotification, sendPasswordResetEmail, sendChangeEmailVerification } from './src/email.js';
 import { PLAN_LIMITS, planHasType, planHasChannel, planHasStatusPage, planHasStats, planFeatures, planMinInterval, TYPE_LABELS, CHANNEL_LABELS, EMAIL_VERIFY_MONITOR_CAP } from './src/plans.js';
 
@@ -764,17 +764,6 @@ app.get('/api/me', async (req, res) => {
   res.json({ user: user || null });
 });
 
-// 推荐码：返回当前用户的推广码、推广链接与提成统计
-app.get('/api/me/referral', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json(apiErr(E.AUTH_REQUIRED));
-  const user = await getUserById(req.session.userId);
-  if (!user) return res.status(401).json(apiErr(E.AUTH_REQUIRED));
-  if (!user.referralCode) return res.json({ referralCode: null, referralLink: null, stats: null });
-  const base = (process.env.APP_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
-  const stats = await getReferralStats(user.id);
-  res.json({ referralCode: user.referralCode, referralLink: `${base}/?ref=${user.referralCode}`, stats });
-});
-
 // 渠道配置规范化（账户渠道保存 / 测试发送共用）：去空、按渠道字段白名单，全空返回 null。
 function normalizeChannelCfg(ch, cfg) {
   if (!cfg || typeof cfg !== 'object') return null;
@@ -1505,13 +1494,6 @@ app.get('/api/admin/analytics', requireAdmin, async (req, res) => {
     const paidUsers = (planMap.starter || 0) + (planMap.pro || 0);
     const freeUsers = planMap.free || 0;
 
-    const refRes = await pool.query('SELECT status, COUNT(*) AS c FROM referrals GROUP BY status');
-    let referralPaid = 0, referralPending = 0;
-    refRes.rows.forEach((r) => {
-      if (r.status === 'paid') referralPaid = Number(r.c);
-      else if (r.status === 'pending') referralPending = Number(r.c);
-    });
-
     // 方案C 账本：总收入 / 近30天收入 / 主币种
     const revRes = await pool.query(`
       SELECT COALESCE(SUM(amount_cents),0) AS total,
@@ -1545,9 +1527,11 @@ app.get('/api/admin/analytics', requireAdmin, async (req, res) => {
     const sessRes = await pool.query(`
       SELECT
         (SELECT COUNT(*) FROM page_sessions WHERE started_at >= date_trunc('day', now() AT TIME ZONE 'UTC')) AS sessions,
+        (SELECT COUNT(*) FROM page_sessions) AS total_sessions,
         (SELECT COALESCE(AVG(duration_seconds),0)::int FROM page_sessions WHERE started_at >= date_trunc('day', now() AT TIME ZONE 'UTC')) AS avg_duration,
         (SELECT COUNT(*) FROM page_sessions WHERE last_seen_at >= now() - interval '5 minutes') AS online_now`);
     const todaySessions = Number(sessRes.rows[0].sessions);
+    const totalSessions = Number(sessRes.rows[0].total_sessions);
     const avgDurationSec = Number(sessRes.rows[0].avg_duration);
     const onlineNow = Number(sessRes.rows[0].online_now);
     const countriesRes = await pool.query(`
@@ -1569,13 +1553,12 @@ app.get('/api/admin/analytics', requireAdmin, async (req, res) => {
     res.json({
       currency,
       todayNewUsers, todayCents, totalMonitors,
-      todaySessions, avgDurationSec, onlineNow,
+      todaySessions, totalSessions, avgDurationSec, onlineNow,
       topCountries: countriesRes.rows.map((r) => ({ country: r.country, c: Number(r.c) })),
       mrrCents, totalCents, rev30Cents,
       totalUsers, paidUsers, freeUsers,
       starterCount: planMap.starter || 0, proCount: planMap.pro || 0,
       conversionRate, arpuCents,
-      referralPaid, referralPending,
       byProvider: byProvider.rows.map((r) => ({ provider: r.provider, cents: Number(r.cents) })),
       newUsers30: newUsers30.rows.map((r) => ({ d: r.d, c: Number(r.c) })),
       revenue30: revenue30.rows.map((r) => ({ d: r.d, cents: Number(r.cents) })),

@@ -8,6 +8,44 @@
 
 ---
 
+## 2026-09-15 · 新增累计访问数指标 + 彻底移除推荐功能死代码
+
+**一、新增「总访问数」指标（Martin 反馈「只有今日访问，看不到总的访问数」）**
+
+- `GET /api/admin/analytics` 返回体新增 `totalSessions`（`page_sessions` 全量计数，不受当日口径限制）。
+- `admin.html` Owner analytics 新增卡片 `Total visits`，紧邻 `Sessions today` 之后排列。
+- 8 语字典同步新增 `admin.analytics.totalSessions`（zh 总访问数 / en Total visits / es Visitas totales /
+  pt Visitas totais / de Besuche gesamt / fr Visites totales / ja 総訪問数 / ko 총 방문수）。
+- 影响：此前只能看到当日访问，无法评估推广渠道的**累计**带量效果。
+
+**二、彻底移除推荐功能死代码（决策：推荐返佣不计划上线）**
+
+按「留死代码 = 留意外」的原则，删除前逐一核实了调用链，确认无其他调用者后才动手：
+
+- `public/index.html`：删除 `REFERRAL_ENABLED = false` 死分支与 `loadReferral()` 函数
+  （调用链核实：`loadReferral` 全仓仅 1 处调用，即在死分支内 → 确认无用）。
+- `server.js`：删除 `GET /api/me/referral` 路由（唯一调用者即被删的 `loadReferral`，删除后成孤儿）
+  及 import 中的 `getReferralStats`。
+- `src/auth.js`：删除 `getReferralStats()`（唯一调用者即上述路由）。
+- 8 语字典：删除 `referral.*` 全部 11 键 + `admin.analytics.referralPaid`（合计 12 键/语，已验证 8 语键一致）。
+- `admin.html`：删除 `Referral paid` 卡片（永久为 0 且功能不上线，属误导性指标）；
+  接口同步移除 `referralPaid` / `referralPending` 字段与对应的 `referrals` 分组查询。
+
+**保留（有意不动，非死代码）**：
+
+- `signup.html` 的 `?ref=` 静默记录 + 注册时回传 `referralCode`（活跃链路，不展示任何承诺）。
+- `registerUser` / `createOAuthUser` 写入 `referrals` 行、`recordReferralConversion`（Paddle webhook 调用，
+  server.js:349/:526 活跃链路）与 `referrals` 表 / `users.referral_code` 列
+  —— 保留作为注册来源沉淀；删除需改动注册与支付主链路，风险大于收益。
+
+**三、文档同步**：`API-REFERENCE.md`（删端点 + 更新返回字段说明）、`ARCHITECTURE.md`
+（架构图 `/api/me` 行、路由清单、推荐码模块说明、`referrals` 表说明）、`UI-DESIGN.md`（附加面板清单）。
+
+**验证**：`dev_gate` 全绿；`server.js` / `src/auth.js` 语法校验通过；3 个页面内联脚本语法 0 错误；
+8 语字典 JSON 合法且键完全一致（714 键）。
+
+---
+
 ## 2026-09-15 · admin 分析区块不再被前置接口拖垮 + 移除推荐奖励承诺文案
 
 > 起因：Martin 反馈「后台没看到你说的数据」。排查结论是**数据链路完全正常**——

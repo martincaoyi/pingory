@@ -79,7 +79,7 @@
 ▸ 单监控详情：状态 + 可用率 + 趋势（stats/history）+ 事件时间线
 ▸ 状态页开关面板（spEnable/spDomain/spWhite/spPw/spSave）——公开链接展示
 ▸ 增强功能区（Enhanced capabilities，已注册付费档用户可见 add-on 列表）
-▸ 附加面板：维护窗口（mw*）、团队（team*）、推荐码（refBox/refCopy/refLink）、Account API（apiKey*）、一键导入（importBtn/impData/impFmt）、升级提示横幅（upgradeNudge/upgradeLink/upgradeDismiss）
+▸ 附加面板：维护窗口（mw*）、团队（team*）、Account API（apiKey*）、一键导入（importBtn/impData/impFmt）、升级提示横幅（upgradeNudge/upgradeLink/upgradeDismiss）
 ▸ 悬浮反馈组件（feedback-fab：默认居中悬浮 → 到底贴底；feedbackMsg/Email/Send/Cancel）
 ▸ 监控数超限/配额提示（statusBar 等）
 

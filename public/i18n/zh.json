@@ -85,7 +85,6 @@
   "admin.analytics.noData": "暂无数据",
   "admin.analytics.onlineNow": "当前在线",
   "admin.analytics.paidUsers": "付费用户",
-  "admin.analytics.referralPaid": "推荐提成已发放",
   "admin.analytics.rev30": "收入（30天）",
   "admin.analytics.revenue30": "每日收入（30天）",
   "admin.analytics.title": "所有者分析",
@@ -458,17 +457,6 @@
   "plan.info": "套餐：{plan} · 已用 {used} / {limit} 个监控",
   "plan.pro": "专业版",
   "plan.starter": "入门版",
-  "referral.copied": "已复制！",
-  "referral.copy": "复制",
-  "referral.copyfail": "复制失败，请手动复制",
-  "referral.how": "当有人通过你的链接注册并升级到付费套餐时，你将获得一次性 10% 佣金。",
-  "referral.loading": "加载中…",
-  "referral.none": "推荐功能暂不可用",
-  "referral.share": "分享你的邀请链接",
-  "referral.statEarn": "已赚取",
-  "referral.statPaid": "已升级",
-  "referral.statTotal": "已邀请",
-  "referral.title": "推荐有奖 — 赚取 10% 佣金",
   "reg.ok": "注册成功！验证邮件已发送，请点击邮件里的链接激活账号。",
   "reset.back": "返回登录",
   "reset.confirmPw": "确认新密码",
@@ -723,5 +711,6 @@
   "cmp.faq.a4": "可以。Pingory 直接导入 UptimeRobot 的导出格式，粘贴一次即可完成迁移。",
   "cmp.src": "来源：Pingory 的配额与价格取自产品本身（以 pingory.com 公布的套餐为准）。UptimeRobot 的数字取自其官方定价页与知识库，核对时间为 2026 年 9 月。第三方价格与配额会变动，购买前请在各自官网核对最新信息。",
   "cmp.cta.h": "在找更便宜的可用性监控？",
-  "cmp.cta.p": "免费注册，大约 30 秒就能开始监控 50 个端点。无需信用卡。"
+  "cmp.cta.p": "免费注册，大约 30 秒就能开始监控 50 个端点。无需信用卡。",
+  "admin.analytics.totalSessions": "总访问数"
 }

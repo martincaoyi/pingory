@@ -1651,15 +1651,6 @@
         loadTeam(body.querySelector('#teamBox'));
       }
 
-      // --- 推荐码系统（暂时下线：佣金仅记账、Creem Customer Credits 打款未实现，避免兑现不了的承诺；打款上线后把 REFERRAL_ENABLED 改回 true）---
-      const REFERRAL_ENABLED = false;
-      if (REFERRAL_ENABLED) {
-        const body = document.createElement('div');
-        body.innerHTML = `<div id="refBox" class="empty">${t('referral.loading','Loading…')}</div>`;
-        zone.appendChild(advPanel(t('referral.title','Refer a friend — earn 10%'), body));
-        loadReferral(body.querySelector('#refBox'));
-      }
-
       // --- 一键导入（#288）---
       {
         const body = document.createElement('div');
@@ -1707,34 +1698,6 @@
           '<button id="teamLeave" style="margin-top:10px;background:none;border:1px solid var(--border);color:#ff5c5c;padding:6px 10px;border-radius:6px;cursor:pointer;">'+t('team.leave','Leave team')+'</button>';
         box.querySelector('#teamInviteBtn').onclick = async ()=>{ const email=box.querySelector('#teamInvite').value; const r2=await fetch('/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}); const j2=await r2.json(); showAlert(r2.ok?(j2.result==='already'?t('team.already','Already a member'):t('team.joined','Invited')):(errMsg(j2)||t('err.fail','Failed'))); if(r2.ok) loadTeam(box); };
         box.querySelector('#teamLeave').onclick = async ()=>{ await fetch('/api/team/leave',{method:'POST'}); loadTeam(box); };
-      } catch {}
-    }
-    async function loadReferral(box){
-      try {
-        const r = await fetch('/api/me/referral'); const j = await r.json();
-        if (!j.referralCode) { box.innerHTML = '<div class="empty">'+t('referral.none','Referral is not available for your account yet.')+'</div>'; return; }
-        const link = j.referralLink;
-        const st = j.stats || {};
-        const earnings = (Number(st.earnings)||0).toFixed(2);
-        box.innerHTML =
-          '<div style="font-weight:600;margin-bottom:6px;">'+t('referral.share','Share your invite link')+'</div>' +
-          '<div style="display:flex;gap:8px;">' +
-            '<input id="refLink" readonly value="'+escapeHtml(link)+'" style="flex:1;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;"/>' +
-            '<button id="refCopy" class="pub">'+t('referral.copy','Copy')+'</button>' +
-          '</div>' +
-          '<div class="empty" style="margin-top:8px;">'+t('referral.how','When someone signs up with your link and upgrades to a paid plan, you earn a one-time 10% commission.')+'</div>' +
-          '<div style="margin-top:10px;font-size:.9rem;">' +
-            t('referral.statTotal','Invited')+': <b>'+(st.totalReferred||0)+'</b> · ' +
-            t('referral.statPaid','Upgraded')+': <b>'+(st.paidCount||0)+'</b> · ' +
-            t('referral.statEarn','Earned')+': <b>$'+earnings+'</b>' +
-          '</div>';
-        box.querySelector('#refCopy').onclick = async ()=>{
-          try {
-            await navigator.clipboard.writeText(link);
-            const b = box.querySelector('#refCopy'); b.textContent = t('referral.copied','Copied!');
-            setTimeout(()=>{ const b2 = box.querySelector('#refCopy'); if (b2) b2.textContent = t('referral.copy','Copy'); }, 1500);
-          } catch { showAlert(t('referral.copyfail','Copy failed, please copy manually')); }
-        };
       } catch {}
     }
     // 一键导入弹窗：选来源格式 + 粘贴导出数据，批量创建监控

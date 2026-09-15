@@ -188,16 +188,6 @@ Creem 订阅事件通知。签名用 `creem-signature` 头，HMAC-SHA256 原始 
 **响应 200** `{ id, email, plan, monitors_count }`
 **响应 401** 未登录
 
-### GET /api/me/referral
-获取当前用户的推荐码与统计。
-
-**响应 200**（已配置推荐码）
-```json
-{ "referralCode": "abc123", "referralLink": "https://pingory.com/?ref=abc123", "stats": { "signups": 2, "paid": 1, "pending": 0 } }
-```
-**响应 200**（无推荐码）`{ referralCode: null, referralLink: null, stats: null }`
-**响应 401** 未登录
-
 ### GET /api/auth/oauth/:provider/start
 发起 OAuth 社交登录。`provider` ∈ `google` | `github`。可选 `?ref=` 透传推荐码（写入 state，登录成功即绑定推荐关系）。
 
@@ -523,7 +513,7 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 所有 `/api/admin/*` 需 `role=admin`（否则 403）。超级账号启动时按 `ADMIN_EMAIL`/`ADMIN_PASSWORD` 自动建立。
 
 - **GET /api/admin/stats**：全局统计（用户数 / 付费数 / 监控数 / 当前 down 数 / 待处理反馈 / 运行时长 / 环境）
-- **GET /api/admin/analytics**：owner 收入/增长分析（方案一复用 users/referrals + 方案C 读归一化账本 `billing_events` + 页面分析 `page_sessions`；返回 今日新增用户 todayNewUsers / 今日收入 todayCents / 总监控数 totalMonitors / 今日访问数 todaySessions / 平均停留时长 avgDurationSec（秒）/ 当前在线 onlineNow / 来源国家 topCountries（{country, c}）/ MRR 近30天口径 / 总收入 / 近30天收入 / 付费数 / 转化率 / ARPU / 推荐提成已发(+待发) / 各渠道收入拆分 / 30天新增用户曲线 / 30天每日收入曲线）。分析只读 `billing_events`/`page_sessions`，与具体收款方解耦——换 Paddle/Creem 不改此端点。
+- **GET /api/admin/analytics**：owner 收入/增长分析（复用 users + 方案C 读归一化账本 `billing_events` + 页面分析 `page_sessions`；返回 今日新增用户 todayNewUsers / 今日收入 todayCents / 总监控数 totalMonitors / 今日访问数 todaySessions / 累计访问数 totalSessions / 平均停留时长 avgDurationSec（秒）/ 当前在线 onlineNow / 来源国家 topCountries（{country, c}）/ MRR 近30天口径 / 总收入 / 近30天收入 / 付费数 / 转化率 / ARPU / 各渠道收入拆分 / 30天新增用户曲线 / 30天每日收入曲线）。分析只读 `billing_events`/`page_sessions`，与具体收款方解耦——换 Paddle/Creem 不改此端点。
 - **GET /api/admin/users**：用户列表（含套餐 / 角色 / 邮箱验证 / 监控数；支持 q/plan/role/banned 筛选）
 - **GET /api/admin/users/:id**：用户详情 + 监控列表 + 订阅数
 - **POST /api/admin/users/:id/plan** `{ "plan": "free|starter|pro" }`：改套餐（测试用）

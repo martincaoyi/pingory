@@ -494,6 +494,7 @@
       ['admin.analytics.todayRevenue', 'Revenue today', money(d.todayCents)],
       ['admin.analytics.totalMonitors', 'Monitors total', d.totalMonitors],
       ['admin.analytics.todaySessions', 'Sessions today', d.todaySessions],
+      ['admin.analytics.totalSessions', 'Total visits', d.totalSessions],
       ['admin.analytics.avgDuration', 'Avg stay', fmtDuration(d.avgDurationSec)],
       ['admin.analytics.onlineNow', 'Online now', d.onlineNow],
       ['admin.analytics.mrr', 'MRR (30d)', money(d.mrrCents)],
@@ -502,7 +503,6 @@
       ['admin.analytics.paidUsers', 'Paid users', d.paidUsers + ' / ' + d.totalUsers],
       ['admin.analytics.conversion', 'Conversion', d.conversionRate + '%'],
       ['admin.analytics.arpu', 'ARPU', money(d.arpuCents)],
-      ['admin.analytics.referralPaid', 'Referral paid', d.referralPaid + (d.referralPending ? ' (+' + d.referralPending + ')' : '')],
     ].map(([k, def, n]) => `<div class="card"><div class="n">${esc(n)}</div><div class="l">${t(k, def)}</div></div>`).join('');
 
     document.getElementById('chartNewUsers').innerHTML = lineChart((d.newUsers30 || []).map((r) => ({ v: r.c })));

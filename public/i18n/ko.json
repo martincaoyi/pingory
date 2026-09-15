@@ -85,7 +85,6 @@
   "admin.analytics.noData": "아직 데이터 없음",
   "admin.analytics.onlineNow": "현재 접속",
   "admin.analytics.paidUsers": "유료 사용자",
-  "admin.analytics.referralPaid": "추천 수수료 지급됨",
   "admin.analytics.rev30": "수익(30일)",
   "admin.analytics.revenue30": "일일 수익(30일)",
   "admin.analytics.title": "소유자 분석",
@@ -458,17 +457,6 @@
   "plan.info": "플랜: {plan} · 사용 중 {used} / {limit} 개 모니터",
   "plan.pro": "Pro",
   "plan.starter": "Starter",
-  "referral.copied": "복사됨!",
-  "referral.copy": "복사",
-  "referral.copyfail": "복사 실패, 수동으로 복사해 주세요",
-  "referral.how": "누군가 회원님의 링크로 가입하여 유료 플랜으로 업그레이드하면, 일회성 10% 수수료를 받습니다.",
-  "referral.loading": "로딩 중…",
-  "referral.none": "현재 추천 기능을 사용할 수 없습니다",
-  "referral.share": "초대 링크 공유",
-  "referral.statEarn": "적립액",
-  "referral.statPaid": "업그레이드함",
-  "referral.statTotal": "초대함",
-  "referral.title": "친구 추천 — 10% 적립",
   "reg.ok": "가입이 완료되었습니다. 인증 메일을 발송했으니, 메일의 링크를 클릭하여 계정을 활성화하세요.",
   "reset.back": "로그인으로 돌아가기",
   "reset.confirmPw": "새 비밀번호 확인",
@@ -723,5 +711,6 @@
   "cmp.faq.a4": "네. Pingory는 UptimeRobot 내보내기 형식을 그대로 가져오므로 한 번 붙여 넣으면 이전됩니다.",
   "cmp.src": "출처: Pingory의 한도와 가격은 제품 자체(pingory.com에 공개된 요금제)에서 가져왔습니다. UptimeRobot 수치는 공식 가격 페이지와 지식 베이스를 바탕으로 2026년 9월에 확인했습니다. 제3자 가격과 한도는 바뀌므로 구매 전 각 사이트에서 최신 정보를 확인하세요.",
   "cmp.cta.h": "더 저렴한 업타임 모니터를 찾고 계신가요?",
-  "cmp.cta.p": "무료 계정을 만들면 약 30초 만에 엔드포인트 50개를 모니터링할 수 있습니다. 신용카드가 필요 없습니다."
+  "cmp.cta.p": "무료 계정을 만들면 약 30초 만에 엔드포인트 50개를 모니터링할 수 있습니다. 신용카드가 필요 없습니다.",
+  "admin.analytics.totalSessions": "총 방문수"
 }

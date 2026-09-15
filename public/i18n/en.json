@@ -85,7 +85,6 @@
   "admin.analytics.noData": "No data yet",
   "admin.analytics.onlineNow": "Online now",
   "admin.analytics.paidUsers": "Paid users",
-  "admin.analytics.referralPaid": "Referral commission paid",
   "admin.analytics.rev30": "Revenue (30d)",
   "admin.analytics.revenue30": "Daily revenue (30d)",
   "admin.analytics.title": "Owner analytics",
@@ -458,17 +457,6 @@
   "plan.info": "Plan: {plan} · {used} / {limit} monitors used",
   "plan.pro": "Pro",
   "plan.starter": "Starter",
-  "referral.copied": "Copied!",
-  "referral.copy": "Copy",
-  "referral.copyfail": "Copy failed, please copy manually",
-  "referral.how": "When someone signs up with your link and upgrades to a paid plan, you earn a one-time 10% commission.",
-  "referral.loading": "Loading…",
-  "referral.none": "Referral is not available for your account yet.",
-  "referral.share": "Share your invite link",
-  "referral.statEarn": "Earned",
-  "referral.statPaid": "Upgraded",
-  "referral.statTotal": "Invited",
-  "referral.title": "Refer a friend — earn 10%",
   "reg.ok": "Registration successful! A verification email is on its way — click the link to activate your account.",
   "reset.back": "Back to Sign In",
   "reset.confirmPw": "Confirm new password",
@@ -723,5 +711,6 @@
   "cmp.faq.a4": "Yes. Pingory imports UptimeRobot's export format directly, so you can migrate in a single paste.",
   "cmp.src": "Sources: Pingory limits and prices come from the product itself (plans as published at pingory.com). UptimeRobot figures are from its official pricing page and knowledge base, checked in September 2026. Third-party pricing and limits change; verify current details on each vendor's site before you buy.",
   "cmp.cta.h": "Looking for a cheaper uptime monitor?",
-  "cmp.cta.p": "Create a free account and monitor 50 endpoints in about 30 seconds. No credit card required."
+  "cmp.cta.p": "Create a free account and monitor 50 endpoints in about 30 seconds. No credit card required.",
+  "admin.analytics.totalSessions": "Total visits"
 }

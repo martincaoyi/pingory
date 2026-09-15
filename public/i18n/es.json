@@ -85,7 +85,6 @@
   "admin.analytics.noData": "Sin datos aún",
   "admin.analytics.onlineNow": "En línea ahora",
   "admin.analytics.paidUsers": "Usuarios de pago",
-  "admin.analytics.referralPaid": "Comisión de referido pagada",
   "admin.analytics.rev30": "Ingresos (30 d)",
   "admin.analytics.revenue30": "Ingresos diarios (30 d)",
   "admin.analytics.title": "Análisis del propietario",
@@ -458,17 +457,6 @@
   "plan.info": "Plan: {plan} · {used} / {limit} monitores usados",
   "plan.pro": "Pro",
   "plan.starter": "Starter",
-  "referral.copied": "¡Copiado!",
-  "referral.copy": "Copiar",
-  "referral.copyfail": "Error al copiar, copie manualmente",
-  "referral.how": "Cuando alguien se registre con tu enlace y actualice a un plan de pago, recibirás una comisión única del 10%.",
-  "referral.loading": "Cargando…",
-  "referral.none": "El programa de recomendación no está disponible aún",
-  "referral.share": "Comparte tu enlace de invitación",
-  "referral.statEarn": "Ganado",
-  "referral.statPaid": "Actualizados",
-  "referral.statTotal": "Invitados",
-  "referral.title": "Recomienda a un amigo — gana 10%",
   "reg.ok": "Registro exitoso. Te enviamos un email de verificación — haz clic en el enlace para activar tu cuenta.",
   "reset.back": "Volver a iniciar sesión",
   "reset.confirmPw": "Confirma la nueva contraseña",
@@ -723,5 +711,6 @@
   "cmp.faq.a4": "Sí. Pingory importa directamente el formato de exportación de UptimeRobot, así que puedes migrar con un solo pegado.",
   "cmp.src": "Fuentes: los límites y precios de Pingory provienen del propio producto (planes publicados en pingory.com). Los datos de UptimeRobot proceden de su página oficial de precios y su base de conocimiento, verificados en septiembre de 2026. Los precios y límites de terceros cambian; verifica los detalles actuales en la web de cada proveedor antes de comprar.",
   "cmp.cta.h": "¿Buscas un monitor de disponibilidad más barato?",
-  "cmp.cta.p": "Crea una cuenta gratuita y monitoriza 50 endpoints en unos 30 segundos. No se requiere tarjeta."
+  "cmp.cta.p": "Crea una cuenta gratuita y monitoriza 50 endpoints en unos 30 segundos. No se requiere tarjeta.",
+  "admin.analytics.totalSessions": "Visitas totales"
 }

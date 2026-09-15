@@ -85,7 +85,6 @@
   "admin.analytics.noData": "データなし",
   "admin.analytics.onlineNow": "オンライン中",
   "admin.analytics.paidUsers": "有料ユーザー",
-  "admin.analytics.referralPaid": "紹介報酬（支払済）",
   "admin.analytics.rev30": "収益（30日）",
   "admin.analytics.revenue30": "日次収益（30日）",
   "admin.analytics.title": "オーナー分析",
@@ -458,17 +457,6 @@
   "plan.info": "プラン：{plan} · 使用中 {used} / {limit} 件の監視",
   "plan.pro": "Pro",
   "plan.starter": "Starter",
-  "referral.copied": "コピーしました！",
-  "referral.copy": "コピー",
-  "referral.copyfail": "コピーに失敗しました。手動でコピーしてください",
-  "referral.how": "誰かがあなたのリンクから登録して有料プランにアップグレードすると、報酬として 10% を一度だけ受け取れます。",
-  "referral.loading": "読み込み中…",
-  "referral.none": "紹介プログラムは現在ご利用いただけません",
-  "referral.share": "招待リンクを共有",
-  "referral.statEarn": "報酬",
-  "referral.statPaid": "アップグレード済み",
-  "referral.statTotal": "招待済み",
-  "referral.title": "友達紹介 — 10% 報酬を獲得",
   "reg.ok": "登録が完了しました。確認メールを送信しましたので、メール内のリンクをクリックしてアカウントを有効化してください。",
   "reset.back": "ログインに戻る",
   "reset.confirmPw": "新しいパスワードを確認",
@@ -723,5 +711,6 @@
   "cmp.faq.a4": "はい。Pingory は UptimeRobot のエクスポート形式をそのまま読み込めるので、1 回貼り付けるだけで移行できます。",
   "cmp.src": "出典：Pingory の上限と価格は製品自体（pingory.com で公開されているプラン）に基づきます。UptimeRobot の数値は公式の料金ページとナレッジベースによるもので、2026 年 9 月に確認しました。第三者の価格や上限は変動するため、購入前に各社サイトで最新情報をご確認ください。",
   "cmp.cta.h": "より安い稼働監視をお探しですか？",
-  "cmp.cta.p": "無料アカウントを作成すれば、約 30 秒で 50 のエンドポイントを監視できます。クレジットカードは不要です。"
+  "cmp.cta.p": "無料アカウントを作成すれば、約 30 秒で 50 のエンドポイントを監視できます。クレジットカードは不要です。",
+  "admin.analytics.totalSessions": "総訪問数"
 }

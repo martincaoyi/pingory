@@ -85,7 +85,6 @@
   "admin.analytics.noData": "Pas encore de données",
   "admin.analytics.onlineNow": "En ligne",
   "admin.analytics.paidUsers": "Utilisateurs payants",
-  "admin.analytics.referralPaid": "Commission de parrainage versée",
   "admin.analytics.rev30": "Revenu (30 j)",
   "admin.analytics.revenue30": "Revenu quotidien (30 j)",
   "admin.analytics.title": "Analyse du propriétaire",
@@ -458,17 +457,6 @@
   "plan.info": "Plan : {plan} · {used} / {limit} moniteurs utilisés",
   "plan.pro": "Pro",
   "plan.starter": "Starter",
-  "referral.copied": "Copié !",
-  "referral.copy": "Copier",
-  "referral.copyfail": "Échec de la copie, veuillez copier manuellement",
-  "referral.how": "Lorsqu'une personne s'inscrit via votre lien et passe à un plan payant, vous recevez une commission unique de 10 %.",
-  "referral.loading": "Chargement…",
-  "referral.none": "Le parrainage n'est pas encore disponible",
-  "referral.share": "Partagez votre lien de parrainage",
-  "referral.statEarn": "Gains",
-  "referral.statPaid": "Convertis",
-  "referral.statTotal": "Invités",
-  "referral.title": "Parrainez un ami — gagnez 10%",
   "reg.ok": "Inscription réussie ! Un email de vérification a été envoyé — cliquez sur le lien pour activer votre compte.",
   "reset.back": "Retour à la connexion",
   "reset.confirmPw": "Confirmez le nouveau mot de passe",
@@ -723,5 +711,6 @@
   "cmp.faq.a4": "Oui. Pingory importe directement le format d'export d'UptimeRobot : vous migrez en un seul copier-coller.",
   "cmp.src": "Sources : les limites et prix de Pingory proviennent du produit lui-même (offres publiées sur pingory.com). Les chiffres d'UptimeRobot proviennent de sa page tarifaire officielle et de sa base de connaissances, vérifiés en septembre 2026. Les prix et limites de tiers évoluent ; vérifiez les informations à jour sur le site de chaque fournisseur avant d'acheter.",
   "cmp.cta.h": "Vous cherchez un moniteur de disponibilité moins cher ?",
-  "cmp.cta.p": "Créez un compte gratuit et surveillez 50 points de terminaison en 30 secondes environ. Sans carte bancaire."
+  "cmp.cta.p": "Créez un compte gratuit et surveillez 50 points de terminaison en 30 secondes environ. Sans carte bancaire.",
+  "admin.analytics.totalSessions": "Visites totales"
 }

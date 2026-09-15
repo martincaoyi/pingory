@@ -573,7 +573,7 @@ export async function leaveTeam(userId) {
   await pool.query('UPDATE users SET team_id = NULL, team_role = $3 WHERE id = $1', [userId, 'owner']);
 }
 
-// ===== 推荐码：付费转化记提成 + 推荐人统计 =====
+// ===== 推荐码：付费转化记提成 =====
 // 被推荐人付费转化后由 Paddle webhook 调用：把该推荐记录从 pending 改为 paid，并写入 10% 提成。
 // 幂等：仅当仍为 pending 时才记，避免 subscription.updated / 重复事件重复发提成。
 export async function recordReferralConversion(referredId, commission, currency) {
@@ -584,23 +584,5 @@ export async function recordReferralConversion(referredId, commission, currency)
     [referredId, commission, currency || 'USD']
   );
   return rowCount > 0;
-}
-
-// 推荐人视角：累计推荐数、已付费数、待付费数、累计提成（已 paid 之和，按主单位换算）
-export async function getReferralStats(referrerId) {
-  const pool = await getPool();
-  const { rows } = await pool.query(
-    `SELECT status, COUNT(*)::int AS cnt, COALESCE(SUM(commission),0) AS sum
-     FROM referrals WHERE referrer_id = $1 GROUP BY status`,
-    [referrerId]
-  );
-  let total = 0, paid = 0, pending = 0, earnings = 0;
-  for (const r of rows) {
-    const cnt = Number(r.cnt);
-    if (r.status === 'paid') { paid = cnt; earnings = Number(r.sum) / 100; }
-    else { pending += cnt; }
-    total += cnt;
-  }
-  return { totalReferred: total, paidCount: paid, pendingCount: pending, earnings, currency: 'USD' };
 }
 

@@ -85,7 +85,6 @@
   "admin.analytics.noData": "Noch keine Daten",
   "admin.analytics.onlineNow": "Jetzt online",
   "admin.analytics.paidUsers": "Zahlende Nutzer",
-  "admin.analytics.referralPaid": "Empfohlene Provision gezahlt",
   "admin.analytics.rev30": "Umsatz (30 T)",
   "admin.analytics.revenue30": "Täglicher Umsatz (30 T)",
   "admin.analytics.title": "Inhaber-Analyse",
@@ -458,17 +457,6 @@
   "plan.info": "Tarif: {plan} · {used} / {limit} Monitore genutzt",
   "plan.pro": "Pro",
   "plan.starter": "Starter",
-  "referral.copied": "Kopiert!",
-  "referral.copy": "Kopieren",
-  "referral.copyfail": "Kopieren fehlgeschlagen, bitte manuell kopieren",
-  "referral.how": "Wenn sich jemand über deinen Link anmeldet und auf einen kostenpflichtigen Plan aktualisiert, erhältst du eine einmalige Provision von 10%.",
-  "referral.loading": "Laden…",
-  "referral.none": "Empfehlungsprogramm noch nicht verfügbar",
-  "referral.share": "Teile deinen Einladungslink",
-  "referral.statEarn": "Verdient",
-  "referral.statPaid": "Upgegradet",
-  "referral.statTotal": "Eingeladen",
-  "referral.title": "Freund empfehlen — 10% verdienen",
   "reg.ok": "Registrierung erfolgreich! Eine Bestätigungs-E-Mail wurde gesendet – klicke auf den Link, um dein Konto zu aktivieren.",
   "reset.back": "Zurück zur Anmeldung",
   "reset.confirmPw": "Neues Passwort bestätigen",
@@ -723,5 +711,6 @@
   "cmp.faq.a4": "Ja. Pingory importiert das Exportformat von UptimeRobot direkt — du kannst also mit einem einzigen Einfügen umziehen.",
   "cmp.src": "Quellen: Limits und Preise von Pingory stammen aus dem Produkt selbst (Tarife wie auf pingory.com veröffentlicht). Die UptimeRobot-Zahlen stammen von der offiziellen Preisseite und der Wissensdatenbank, geprüft im September 2026. Preise und Limits Dritter ändern sich; prüfe die aktuellen Angaben vor dem Kauf auf der Seite des jeweiligen Anbieters.",
   "cmp.cta.h": "Suchst du ein günstigeres Uptime-Monitoring?",
-  "cmp.cta.p": "Erstelle ein kostenloses Konto und überwache 50 Endpunkte in etwa 30 Sekunden. Keine Kreditkarte nötig."
+  "cmp.cta.p": "Erstelle ein kostenloses Konto und überwache 50 Endpunkte in etwa 30 Sekunden. Keine Kreditkarte nötig.",
+  "admin.analytics.totalSessions": "Besuche gesamt"
 }
