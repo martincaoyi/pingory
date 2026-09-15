@@ -71,7 +71,6 @@
       <button type="button" class="oauth-btn" data-prov="google" data-i18n="signin.oauthGoogle">Continue with Google</button>
       <button type="button" class="oauth-btn" data-prov="github" data-i18n="signin.oauthGithub">Continue with GitHub</button>
       <div class="msg" id="msg"></div>
-      <div class="hint" id="refHint" style="display:none;color:var(--accent);"></div>
       <div class="hint" id="terms" data-i18n="signup.termsHint">By signing up you agree to receive a verification email. We hate spam too.</div>
     </form>
     <div class="alt" id="alt"></div>
@@ -116,28 +115,18 @@
     window.__afterLang = function(){
       document.getElementById('alt').innerHTML = t('signup.alt', 'Already have an account? {link}',
         { link: '<a href="/signin.html">' + t('signup.altLink','Sign In') + '</a>' });
-      // 邀请提示随语言切换重绘
-      const hint = document.getElementById('refHint');
-      if (hint) {
-        const ref = (function(){ try { return localStorage.getItem('pingory_ref'); } catch { return null; } })();
-        if (ref) {
-          hint.textContent = t('signup.refHint', 'You joined via a friend\'s invite link — they earn a 10% bonus when you upgrade. 🎉');
-          hint.style.display = 'block';
-        }
-      }
     };
 
     const form = document.getElementById('form');
     const msg = document.getElementById('msg');
 
-    // 推荐码：从 ?ref= 读取并暂存到 localStorage，注册时回传
+    // 推广码：仅静默记录来源（?ref=），不再展示任何奖励承诺
+    // 决策（2026-09-15）：推荐返佣不计划上线，故移除对访客的 10% 奖励提示
     (function captureRef(){
       try {
         const p = new URLSearchParams(location.search).get('ref');
         if (p) localStorage.setItem('pingory_ref', p.trim());
       } catch {}
-      // 邀请提示的渲染统一走 __afterLang，保证语言切换后同步更新
-      if (typeof window.__afterLang === 'function') window.__afterLang();
     })();
 
     form.addEventListener('submit', async (e) => {

@@ -126,6 +126,26 @@
 <div id="deny"><span data-i18n="admin.deny">Access denied: please sign in with a super-admin account.</span> <a href="/signin.html" data-i18n="admin.goLogin">Go to login</a></div>
 
 <div class="wrap" id="app" style="display:none">
+  <h2 data-i18n="admin.analytics.title">Owner analytics</h2>
+  <div id="analyticsErr"></div>
+  <div class="cards" id="analyticsCards"></div>
+  <div class="analytics-chart">
+    <h3 data-i18n="admin.analytics.newUsers30">New users (30d)</h3>
+    <div id="chartNewUsers"></div>
+  </div>
+  <div class="analytics-chart">
+    <h3 data-i18n="admin.analytics.revenue30">Daily revenue (30d)</h3>
+    <div id="chartRevenue"></div>
+  </div>
+  <div class="analytics-chart">
+    <h3 data-i18n="admin.analytics.byProvider">Revenue by provider</h3>
+    <div id="analyticsByProvider"></div>
+  </div>
+  <div class="analytics-chart">
+    <h3 data-i18n="admin.analytics.topCountries">Top countries today</h3>
+    <div id="analyticsTopCountries"></div>
+  </div>
+
   <div class="cards" id="statsCards"></div>
 
   <h2 data-i18n="admin.sys.title">System monitors</h2>
@@ -248,25 +268,6 @@
     <th data-i18n="admin.feedback.message">Message</th>
     <th data-i18n="admin.feedback.status">Status</th>
   </tr></thead><tbody></tbody></table>
-
-  <h2 data-i18n="admin.analytics.title">Owner analytics</h2>
-  <div class="cards" id="analyticsCards"></div>
-  <div class="analytics-chart">
-    <h3 data-i18n="admin.analytics.newUsers30">New users (30d)</h3>
-    <div id="chartNewUsers"></div>
-  </div>
-  <div class="analytics-chart">
-    <h3 data-i18n="admin.analytics.revenue30">Daily revenue (30d)</h3>
-    <div id="chartRevenue"></div>
-  </div>
-  <div class="analytics-chart">
-    <h3 data-i18n="admin.analytics.byProvider">Revenue by provider</h3>
-    <div id="analyticsByProvider"></div>
-  </div>
-  <div class="analytics-chart">
-    <h3 data-i18n="admin.analytics.topCountries">Top countries today</h3>
-    <div id="analyticsTopCountries"></div>
-  </div>
 </div>
 
 <div id="drawer" class="drawer" style="display:none">
@@ -380,6 +381,20 @@
     return r.text();
   }
 
+  // 单块加载：任一块接口失败只在该块显示错误，不再中断后续
+  // （历史故障：load() 原为串行链、loadAnalytics 排在最末，前面任一步失败都会让整个分析区块无声空白）
+  async function safe(label, fn, targets) {
+    try { await fn(); }
+    catch (e) {
+      console.error('[' + label + ']', e.message);
+      const ids = Array.isArray(targets) ? targets : (targets ? [targets] : []);
+      ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = `<div class="empty" style="color:#cf1322">${esc(t('admin.blockErr', 'Failed to load') + ' (' + label + '): ' + e.message)}</div>`;
+      });
+    }
+  }
+
   async function load() {
     const me = await api('/api/me');
     if (!me.user || me.user.role !== 'admin') {
@@ -389,7 +404,20 @@
     document.getElementById('who').textContent = t('admin.who', 'Signed in as {email}', { email: me.user.email });
     document.getElementById('app').style.display = 'block';
 
-    // Stat cards
+    // 各块互相独立：任一接口失败只影响自己，其余照常渲染
+    // 用箭头包裹调用（而非直接传函数引用），以便门禁的调用图能识别可达性
+    await Promise.all([
+      safe('analytics', () => loadAnalytics(), ['analyticsCards', 'analyticsErr']),
+      safe('stats', () => loadStats(), 'statsCards'),
+      safe('monitors', () => loadMonitors(), ['sysMon']),
+      safe('users', () => loadUsers()),
+      safe('activity', () => loadActivity()),
+      safe('ranking', () => loadRanking()),
+      safe('feedback', () => loadFeedback()),
+    ]);
+  }
+
+  async function loadStats() {
     const stats = await api('/api/admin/stats');
     document.getElementById('statsCards').innerHTML = [
       ['admin.stats.users', 'Users', stats.users],
@@ -399,22 +427,16 @@
       ['admin.stats.feedback', 'New feedback', stats.newFeedback],
       ['admin.stats.uptime', 'Uptime (s)', stats.serverUptime],
       ['admin.stats.env', 'Env', stats.env],
-    ].map(([k, def, n]) => `<div class="card"><div class="n">${n}</div><div class="l">${t(k, def)}</div></div>`).join('');
+    ].map(([k, def, n]) => `<div class="card"><div class="n">${esc(n)}</div><div class="l">${t(k, def)}</div></div>`).join('');
+  }
 
-    // System monitor summary
+  async function loadMonitors() {
     const mons = await api('/api/admin/monitors');
     const downs = mons.filter((m) => m.status === 'down');
     document.getElementById('sysMon').innerHTML = downs.length
       ? `<div><b style="color:#cf1322">${downs.length}</b> ${t('admin.sys.downTitle', 'monitor(s) down:')}</div>` +
         downs.map((m) => `<div class="down-url">• ${esc(m.url)}（${esc(m.owner_email) || t('admin.anon','anonymous')}）</div>`).join('')
       : `<div>✅ ${t('admin.sys.healthy','All monitors healthy')}</div>`;
-
-    // Users table（带搜索 / 筛选）
-    await loadUsers();
-
-    // User activity
-    await loadActivity();
-    await loadRanking();
 
     // Monitors table
     document.querySelector('#monTable tbody').innerHTML = mons.length
@@ -428,15 +450,13 @@
           <td class="nowrap">${fmt(m.last_checked)}</td>
         </tr>`).join('')
       : `<tr><td colspan="6" class="empty">${t('admin.monitors.none','No monitors yet')}</td></tr>`;
+  }
 
-    // Feedback table
+  async function loadFeedback() {
     const fb = await api('/api/admin/feedback');
     document.querySelector('#fbTable tbody').innerHTML = fb.length
       ? fb.map((f) => `<tr><td class="nowrap">${fmt(new Date(f.created_at).getTime())}</td><td>${esc(f.email) || t('admin.anon','anonymous')}</td><td>${esc(f.page) || ''}</td><td class="fb-msg">${esc(f.message)}</td><td class="nowrap">${esc(f.status)}</td></tr>`).join('')
       : `<tr><td colspan="5" class="empty">${t('admin.feedback.none','No feedback yet')}</td></tr>`;
-
-    // 方案C + 方案一：owner 收入/增长分析
-    await loadAnalytics();
   }
 
   // ===== 方案C + 方案一：owner 收入/增长分析 =====
@@ -467,8 +487,7 @@
       + `<circle cx="${(pad + (n - 1) * stepX).toFixed(1)}" cy="${yOf(vals[n - 1]).toFixed(1)}" r="3" fill="${color}"/></svg>`;
   }
   async function loadAnalytics() {
-    let d;
-    try { d = await api('/api/admin/analytics'); } catch (e) { console.error('[analytics]', e.message); return; }
+    const d = await api('/api/admin/analytics');
     const money = (c) => fmtMoney(c, d.currency);
     document.getElementById('analyticsCards').innerHTML = [
       ['admin.analytics.todayNew', 'New users today', d.todayNewUsers],
@@ -486,14 +505,14 @@
       ['admin.analytics.referralPaid', 'Referral paid', d.referralPaid + (d.referralPending ? ' (+' + d.referralPending + ')' : '')],
     ].map(([k, def, n]) => `<div class="card"><div class="n">${esc(n)}</div><div class="l">${t(k, def)}</div></div>`).join('');
 
-    document.getElementById('chartNewUsers').innerHTML = lineChart(d.newUsers30.map((r) => ({ v: r.c })));
-    document.getElementById('chartRevenue').innerHTML = lineChart(d.revenue30.map((r) => ({ v: r.cents })), { color: '#d46b08' });
+    document.getElementById('chartNewUsers').innerHTML = lineChart((d.newUsers30 || []).map((r) => ({ v: r.c })));
+    document.getElementById('chartRevenue').innerHTML = lineChart((d.revenue30 || []).map((r) => ({ v: r.cents })), { color: '#d46b08' });
 
-    document.getElementById('analyticsByProvider').innerHTML = d.byProvider.length
+    document.getElementById('analyticsByProvider').innerHTML = (d.byProvider || []).length
       ? d.byProvider.map((p) => `<div class="bp-row"><span>${esc(p.provider)}</span><span>${money(p.cents)}</span></div>`).join('')
       : `<div class="empty">${t('admin.analytics.noData','No data yet')}</div>`;
 
-    document.getElementById('analyticsTopCountries').innerHTML = d.topCountries.length
+    document.getElementById('analyticsTopCountries').innerHTML = (d.topCountries || []).length
       ? d.topCountries.map((c) => `<div class="bp-row"><span>${esc(c.country === 'unknown' ? t('admin.analytics.countryUnknown','unknown') : c.country)}</span><span>${esc(c.c)}</span></div>`).join('')
       : `<div class="empty">${t('admin.analytics.noData','No data yet')}</div>`;
   }
