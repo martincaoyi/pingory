@@ -1,0 +1,13 @@
+{
+  "name": "Pingory",
+  "short_name": "Pingory",
+  "description": "Catch downtime before your users do. Uptime, SSL, domain and keyword monitoring.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f8f6",
+  "theme_color": "#1faa6b",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

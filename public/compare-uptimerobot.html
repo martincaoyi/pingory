@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<!--
+  Pingory vs UptimeRobot 对比页（SEO 独立内容页）
+  路由：/compare/uptimerobot（英文）· /{zh|es|pt|de|fr|ja|ko}/compare/uptimerobot（各语言）
+        服务端注入 <html lang> 与 canonical；/vs/uptimerobot 与 .html 直链 301 到规范 URL。
+  i18n：全部文案走 public/i18n/*.json 的 cmp.* 键（8 语齐全），本页用 data-i18n 静态渲染，
+        Google 可直接抓取；语言切换走整页 URL（保证 URL 与内容语言一致）。
+-->
+<html lang="__CMP_LANG__">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="cmp.meta.title">Pingory vs UptimeRobot 2026: Price, Limits &amp; Honest Verdict</title>
+  <meta name="description" content="Pingory vs UptimeRobot 2026: an honest UptimeRobot alternative comparison — pricing, monitor limits, alerts, status pages, and where UptimeRobot still wins." data-i18n-content="cmp.meta.desc" />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="__CMP_CANONICAL__" />
+  <link rel="alternate" hreflang="en" href="https://pingory.com/compare/uptimerobot" />
+  <link rel="alternate" hreflang="zh" href="https://pingory.com/zh/compare/uptimerobot" />
+  <link rel="alternate" hreflang="es" href="https://pingory.com/es/compare/uptimerobot" />
+  <link rel="alternate" hreflang="pt" href="https://pingory.com/pt/compare/uptimerobot" />
+  <link rel="alternate" hreflang="de" href="https://pingory.com/de/compare/uptimerobot" />
+  <link rel="alternate" hreflang="fr" href="https://pingory.com/fr/compare/uptimerobot" />
+  <link rel="alternate" hreflang="ja" href="https://pingory.com/ja/compare/uptimerobot" />
+  <link rel="alternate" hreflang="ko" href="https://pingory.com/ko/compare/uptimerobot" />
+  <link rel="alternate" hreflang="x-default" href="https://pingory.com/compare/uptimerobot" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Pingory vs UptimeRobot (2026): An Honest Comparison" data-i18n-content="cmp.h1" />
+  <meta property="og:description" content="Pingory vs UptimeRobot 2026: pricing, monitor limits, alerts and status pages compared — including where UptimeRobot still wins." data-i18n-content="cmp.meta.desc" />
+  <meta property="og:url" content="__CMP_CANONICAL__" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <!--CMP_I18N_PRELOAD-->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Is there a free UptimeRobot alternative?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pingory's free plan includes 50 monitors with 5-minute checks and requires no credit card — the same headline limit as UptimeRobot's free tier." } },
+          { "@type": "Question", "name": "Is Pingory cheaper than UptimeRobot?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pingory's paid plans start at $4/month; UptimeRobot's start at $9–$10/month. For 100 monitors at 60-second checks, that is $4 versus $35–$41." } },
+          { "@type": "Question", "name": "Does Pingory include a status page?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — a public status page from $4/month, with custom domain, white-label and password protection at $6/month." } },
+          { "@type": "Question", "name": "Can I move my existing monitors over from UptimeRobot?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pingory imports UptimeRobot's export format directly, so you can migrate in a single paste." } }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Pingory", "item": "https://pingory.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Compare", "item": "https://pingory.com/compare/uptimerobot" },
+          { "@type": "ListItem", "position": 3, "name": "Pingory vs UptimeRobot", "item": "https://pingory.com/compare/uptimerobot" }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    :root { --bg:#f5f8f6; --bg-2:#eef3f0; --card:#ffffff; --border:#dbe4df; --accent:#1faa6b; --accent-soft:rgba(31,170,107,0.10); --text:#16241d; --muted:#5d6b63; --nav-bg:rgba(245,248,246,0.92); }
+    [data-theme="dark"] { --bg:#0e1310; --bg-2:#151b17; --card:#161d18; --border:#2a322c; --text:#e6efe9; --muted:#9fb0a6; --accent:#2bd585; --accent-soft:rgba(43,213,133,0.14); --nav-bg:rgba(14,19,16,0.92); }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); line-height:1.7;
+           font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+    a { color:var(--accent); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .topnav { position:sticky; top:0; z-index:20; background:var(--nav-bg); backdrop-filter:blur(8px);
+              border-bottom:1px solid var(--border); padding:12px 20px; display:flex; align-items:center; gap:12px; }
+    .brand { display:inline-flex; align-items:center; gap:8px; font-weight:700; font-size:1.15rem; color:var(--accent); }
+    .spacer { margin-left:auto; }
+    .btn { border:1px solid var(--border); border-radius:7px; padding:7px 14px; font-size:.88rem; color:var(--text); white-space:nowrap; }
+    .btn-primary { border-color:var(--accent); color:var(--accent); font-weight:600; }
+    select { padding:6px 8px; border-radius:7px; border:1px solid var(--border); background:var(--bg-2); color:var(--text); font-size:.85rem; }
+    #themeToggle { border:1px solid var(--border); background:transparent; color:var(--text); cursor:pointer;
+                   font-size:1rem; border-radius:7px; padding:5px 9px; }
+    .doc { max-width:920px; margin:0 auto; padding:38px 20px 72px; }
+    h1 { font-size:2.05rem; line-height:1.28; margin:0 0 10px; }
+    .verified { color:var(--muted); font-size:.88rem; margin:0 0 26px; }
+    h2 { font-size:1.32rem; margin:40px 0 12px; border-left:3px solid var(--accent); padding-left:12px; }
+    h3 { font-size:1rem; margin:22px 0 6px; }
+    p, li { margin:0 0 12px; }
+    ul { padding-left:22px; }
+    .lead { font-size:1.06rem; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px 22px; margin:0 0 8px; }
+    .short li { margin-bottom:9px; }
+    .tablewrap { overflow-x:auto; border:1px solid var(--border); border-radius:12px; background:var(--card); }
+    table { border-collapse:collapse; width:100%; min-width:660px; font-size:.9rem; }
+    caption { text-align:left; padding:14px 16px 0; color:var(--muted); font-size:.85rem; }
+    th, td { text-align:left; padding:11px 14px; border-bottom:1px solid var(--border); vertical-align:top; }
+    thead th { background:var(--accent-soft); color:var(--text); font-weight:700; white-space:nowrap; }
+    tbody tr:last-child td { border-bottom:0; }
+    tbody th { font-weight:600; color:var(--text); }
+    td.win { color:var(--accent); font-weight:700; }
+    .note { color:var(--muted); font-size:.85rem; margin:10px 0 0; }
+    details.faq-item { border:1px solid var(--border); border-radius:10px; background:var(--card); margin:0 0 10px; padding:0 16px; }
+    details.faq-item summary { cursor:pointer; font-weight:600; padding:14px 0; list-style:none; }
+    details.faq-item summary::-webkit-details-marker { display:none; }
+    details.faq-item summary::after { content:'+'; float:right; color:var(--accent); font-weight:700; }
+    details.faq-item[open] summary::after { content:'−'; }
+    details.faq-item p { padding-bottom:4px; color:var(--text); }
+    .cta { background:var(--card); border:1px solid var(--accent); border-radius:14px; padding:26px 24px;
+           margin:40px 0 0; text-align:center; }
+    .cta h2 { border:0; padding:0; margin:0 0 8px; }
+    .cta p { color:var(--muted); }
+    .cta a.btn-primary { display:inline-block; padding:11px 26px; font-size:1rem; margin-top:6px; }
+    .back { display:inline-block; color:var(--muted); font-size:.88rem; margin-bottom:22px; }
+    .src { color:var(--muted); font-size:.83rem; margin-top:34px; }
+    .site-footer { border-top:1px solid var(--border); margin-top:56px; padding:26px 20px; text-align:center;
+                   color:var(--muted); font-size:.88rem; }
+    .site-footer nav { display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin-bottom:10px; }
+  </style>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+  <span class="spacer"></span>
+  <select id="langSel" aria-label="Language"></select>
+  <button id="themeToggle" type="button" title="Toggle dark mode">🌙</button>
+  <a class="btn" href="/signin.html" data-i18n="nav.signin">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html" data-i18n="nav.signup">Sign Up</a>
+</nav>
+
+<main class="doc">
+  <a class="back" href="/" data-i18n="cmp.back">← Back to Pingory</a>
+  <h1 data-i18n="cmp.h1">Pingory vs UptimeRobot (2026): An Honest Comparison</h1>
+  <p class="verified" data-i18n="cmp.verified">Last verified: September 2026. Prices are in USD.</p>
+  <p class="lead" data-i18n="cmp.lead">If you are looking for an <strong>UptimeRobot alternative</strong>, you are probably trying to keep an <strong>uptime monitor</strong> watching your sites, get alerted the moment one goes down, and avoid enterprise pricing. This page compares Pingory and UptimeRobot on the numbers that show up on an invoice — price, monitor limits, check intervals, alerts, and <strong>status pages</strong>. Both are real products with real users, and we will say plainly where UptimeRobot still wins.</p>
+
+  <h2 data-i18n="cmp.short.h">The short version</h2>
+  <ul class="short">
+    <li data-i18n="cmp.short.1">Both services offer a free plan with <strong>50 monitors at 5-minute checks</strong> and no credit card required.</li>
+    <li data-i18n="cmp.short.2">Pingory's paid plans start at <strong>$4/month</strong>. UptimeRobot's start at <strong>$9–$10/month</strong> (Solo).</li>
+    <li data-i18n="cmp.short.3">At <strong>$6/month</strong>, Pingory gives you <strong>unlimited monitors and 30-second checks</strong>. UptimeRobot's closest tier is <strong>$35–$41/month for 100 monitors</strong>.</li>
+    <li data-i18n="cmp.short.4">UptimeRobot wins on scale and enterprise needs: <strong>2M+ users since 2010, 20+ probe locations, SMS and voice alerts, SOC 2, and a much larger integration catalog.</strong></li>
+    <li data-i18n="cmp.short.5">Pingory wins on <strong>price per monitor, language coverage (8 UI languages), and a simpler, developer-focused product</strong>.</li>
+  </ul>
+
+  <h2 data-i18n="cmp.price.h">Pricing at a glance</h2>
+  <p class="note" data-i18n="cmp.price.note">Prices below are the plans as published in September 2026. UptimeRobot discounts annual billing; Pingory's annual price is shown in parentheses. Verify current figures on each vendor's site before you buy.</p>
+  <div class="tablewrap">
+    <table>
+      <caption data-i18n="cmp.price.h">Pricing at a glance</caption>
+      <thead>
+        <tr>
+          <th scope="col" data-i18n="cmp.tbl.feature">Feature</th>
+          <th scope="col">Pingory</th>
+          <th scope="col">UptimeRobot</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r4">Cheapest paid plan</th>
+          <td class="win" data-i18n="cmp.v.r4.p">Starter — $4/mo ($40/yr)</td>
+          <td data-i18n="cmp.v.r4.u">Solo — $10/mo, $9/mo billed yearly</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r8">Mid / top self-serve plan</th>
+          <td class="win" data-i18n="cmp.v.r8.p">Pro — $6/mo ($60/yr)</td>
+          <td data-i18n="cmp.v.r8.u">Team — $41/mo, $35/mo billed yearly</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r5">Monitors on that plan</th>
+          <td class="win" data-i18n="cmp.v.r9.p">Unlimited monitors, 30-second checks</td>
+          <td data-i18n="cmp.v.r9.u">100 monitors, 30-second checks</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r6">Fastest check on that plan</th>
+          <td class="win" data-i18n="cmp.v.r6.p">60 seconds</td>
+          <td data-i18n="cmp.v.r6.p">60 seconds</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r1">Free plan</th>
+          <td data-i18n="cmp.v.r1.p">$0 — 50 monitors, 5-minute checks</td>
+          <td data-i18n="cmp.v.r1.p">$0 — 50 monitors, 5-minute checks</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r2">Free plan includes</th>
+          <td data-i18n="cmp.v.r2.p">HTTP/HTTPS and keyword checks, email alerts</td>
+          <td data-i18n="cmp.v.r2.u">Web/API/port/ping checks, a basic status page, 5 integrations</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r3">Status page on the free plan</th>
+          <td data-i18n="cmp.tbl.no">No</td>
+          <td data-i18n="cmp.v.r3.u">Yes (basic)</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r7">All monitor types start at</th>
+          <td class="win" data-i18n="cmp.v.r7.p">$4/mo</td>
+          <td data-i18n="cmp.v.r7.u">$9–$10/mo</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r10">Highest self-serve tier</th>
+          <td>—</td>
+          <td data-i18n="cmp.v.r10.u">Scale — $77/mo, $65/mo billed yearly (200–500 monitors, 15-second checks)</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r11">Status page features</th>
+          <td data-i18n="cmp.v.r11.p">Public from $4; custom domain, white-label and password protection from $6</td>
+          <td data-i18n="cmp.v.r11.u">Basic on free; custom domain from $9–$10; white-label and 100 pages from $35</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r12">Alert channels</th>
+          <td data-i18n="cmp.v.r12.p">Email; plus Slack, Webhook and Telegram from $4; plus Discord, Microsoft Teams and PagerDuty from $6</td>
+          <td data-i18n="cmp.v.r12.u">Email, SMS, voice call, mobile push and 10+ integrations (SMS and calls are metered)</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r13">Multi-location checks</th>
+          <td data-i18n="cmp.v.r13.p">Starter and above (majority-vote confirmation)</td>
+          <td data-i18n="cmp.v.r13.u">20+ global locations</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r14">Data history</th>
+          <td data-i18n="cmp.v.r14.p">7 days free / 90 days Starter / 365 days Pro</td>
+          <td data-i18n="cmp.v.r14.u">About 3 months free / 12 months Solo / 24 months Team and above</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r15">UI languages</th>
+          <td class="win" data-i18n="cmp.v.r15.p">8, including Spanish, Portuguese, German, French, Japanese and Korean</td>
+          <td data-i18n="cmp.v.r15.u">Primarily English</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r16">Mobile app</th>
+          <td data-i18n="cmp.tbl.no">No</td>
+          <td data-i18n="cmp.v.r16.u">iOS and Android</td>
+        </tr>
+        <tr>
+          <th scope="row" data-i18n="cmp.tbl.r17">Enterprise package</th>
+          <td>—</td>
+          <td data-i18n="cmp.v.r17.u">SOC 2, DPA/MSA/SLA, dedicated CSM, custom invoicing</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 data-i18n="cmp.buy.h">What $4–$6 actually buys you</h2>
+  <p data-i18n="cmp.buy.p">On Pingory, <strong>$4/month (Starter)</strong> gets you 100 monitors, 60-second checks, all nine monitor types, four alert channels and a public status page. The equivalent capability on UptimeRobot — 60-second checks with the full set of monitor types — starts at <strong>Solo ($9–$10/month) with only 10 monitors</strong>, and 100 monitors on 60-second checks means <strong>Team ($35–$41)</strong>. Pingory's <strong>$6 Pro</strong> removes the monitor cap and drops checks to 30 seconds; UptimeRobot's 30-second tier starts at <strong>Team ($35+)</strong>.</p>
+
+  <h2 data-i18n="cmp.types.h">Monitor types compared</h2>
+  <p data-i18n="cmp.types.p">Both platforms cover the essentials: HTTP/HTTPS status, keyword content, ping (ICMP), TCP port, SSL certificate expiry, domain expiry, DNS records, API checks and heartbeat/cron monitoring. The difference is not which types exist — it is <strong>what you pay to unlock them</strong>. Pingory opens all nine from <strong>$4/month</strong>; UptimeRobot reserves most advanced types for tiers starting at <strong>$9–$10/month</strong>.</p>
+
+  <h2 data-i18n="cmp.alerts.h">Alerts and notifications</h2>
+  <p data-i18n="cmp.alerts.p">Email alerts are included on both, on every plan. Pingory adds <strong>Slack, Webhook and Telegram at $4</strong>, then <strong>Discord, Microsoft Teams and PagerDuty at $6</strong>. UptimeRobot offers more — including <strong>SMS and voice calls</strong> and a larger integration library — but SMS and calls are metered, and several integrations are limited on the free plan. If you need a phone call at 3 a.m., UptimeRobot is ahead; if email plus chat is enough, Pingory covers it for less.</p>
+
+  <h2 data-i18n="cmp.sp.h">Status pages</h2>
+  <p data-i18n="cmp.sp.p">This is one of the clearest pricing gaps. Pingory includes a public status page with an incident timeline from <strong>$4/month</strong>, and unlocks custom domain, white-label, password protection and subscriber notifications at <strong>$6/month</strong>. UptimeRobot offers a basic version free, but a custom domain waits until <strong>Solo ($9–$10)</strong> and white-label requires <strong>Team ($35+)</strong>.</p>
+
+  <h2 data-i18n="cmp.iv.h">Check intervals and probe locations</h2>
+  <p data-i18n="cmp.iv.p">Free plans are identical at <strong>5-minute checks</strong>. Pingory runs <strong>60-second checks at $4</strong> and <strong>30-second checks at $6</strong>; UptimeRobot runs 60-second checks from <strong>$9–$10</strong>, 30-second from <strong>$35</strong>, and 15-second from <strong>$65–$77</strong>. On geography, UptimeRobot wins clearly — <strong>20+ probe locations</strong> versus Pingory's multi-region checks with majority-vote confirmation (Starter and above).</p>
+
+  <h2 data-i18n="cmp.lang.h">Language support</h2>
+  <p data-i18n="cmp.lang.p">Pingory's interface ships in <strong>8 languages</strong>, including Spanish, Portuguese, German, French, Japanese and Korean. UptimeRobot's is primarily English. If you or your team work in a non-English language, especially in Latin America or Europe, that is a meaningful difference.</p>
+
+  <h2 data-i18n="cmp.uw.h">Where UptimeRobot is still the better choice</h2>
+  <ul>
+    <li data-i18n="cmp.uw.1"><strong>Scale and trust.</strong> UptimeRobot has been running since 2010 with <strong>2M+ users</strong> monitoring millions of endpoints. Its track record and community are hard to match.</li>
+    <li data-i18n="cmp.uw.2"><strong>Enterprise and compliance.</strong> SOC 2, DPA/MSA/SLA contracts, dedicated customer success and custom invoicing make it the safer pick for companies with procurement or compliance requirements.</li>
+    <li data-i18n="cmp.uw.3"><strong>SMS and voice-call alerts</strong>, plus a much larger integration catalog (Slack, Microsoft Teams, Google Chat, Mattermost, PagerDuty, Splunk On-Call, Zapier and more).</li>
+    <li data-i18n="cmp.uw.4"><strong>Deeper free tier.</strong> A basic status page and more integration channels available without paying.</li>
+    <li data-i18n="cmp.uw.5"><strong>Mobile apps</strong> for iOS and Android.</li>
+  </ul>
+  <p data-i18n="cmp.uw.close">If any of those are hard requirements for you, UptimeRobot is the right choice — and there is no shame in that.</p>
+
+  <h2 data-i18n="cmp.pw.h">Where Pingory fits better</h2>
+  <ul>
+    <li data-i18n="cmp.pw.1"><strong>Price per monitor.</strong> A cheaper UptimeRobot alternative by a wide margin — $4 versus $9–$10 for comparable checks, and unlimited monitors at $6.</li>
+    <li data-i18n="cmp.pw.2"><strong>Faster checks for less.</strong> 30-second checks at $6 versus $35+ elsewhere.</li>
+    <li data-i18n="cmp.pw.3"><strong>Branding included early.</strong> Custom domain and white-label at $6 instead of $35+.</li>
+    <li data-i18n="cmp.pw.4"><strong>An 8-language interface</strong> for non-English teams.</li>
+    <li data-i18n="cmp.pw.5"><strong>A focused, uncluttered product</strong> built for indie developers and small projects, with honest limits and no metered surprises.</li>
+  </ul>
+
+  <h2 data-i18n="cmp.mig.h">Migrating from UptimeRobot</h2>
+  <p data-i18n="cmp.mig.p">Switching is low-friction. Pingory accepts <strong>UptimeRobot's export format</strong> directly — paste your exported monitor list and Pingory recreates your monitors automatically. Types your plan does not support are <strong>auto-downgraded to HTTP checks</strong> instead of failing, and any check interval below your plan's minimum is raised to the allowed value.</p>
+
+  <h2 data-i18n="cmp.faq.h">Frequently asked questions</h2>
+  <details class="faq-item">
+    <summary data-i18n="cmp.faq.q1">Is there a free UptimeRobot alternative?</summary>
+    <p data-i18n="cmp.faq.a1">Yes. Pingory's free plan includes <strong>50 monitors with 5-minute checks</strong> and requires no credit card — the same headline limit as UptimeRobot's free tier.</p>
+  </details>
+  <details class="faq-item">
+    <summary data-i18n="cmp.faq.q2">Is Pingory cheaper than UptimeRobot?</summary>
+    <p data-i18n="cmp.faq.a2">Yes. Pingory's paid plans start at <strong>$4/month</strong>; UptimeRobot's start at <strong>$9–$10/month</strong>. For 100 monitors at 60-second checks, that is $4 versus $35–$41.</p>
+  </details>
+  <details class="faq-item">
+    <summary data-i18n="cmp.faq.q3">Does Pingory include a status page?</summary>
+    <p data-i18n="cmp.faq.a3">Yes — a public one from <strong>$4/month</strong>, with custom domain, white-label and password protection at <strong>$6/month</strong>.</p>
+  </details>
+  <details class="faq-item">
+    <summary data-i18n="cmp.faq.q4">Can I move my existing monitors over?</summary>
+    <p data-i18n="cmp.faq.a4">Yes. Pingory imports UptimeRobot's export format directly, so you can migrate in a single paste.</p>
+  </details>
+
+  <p class="src" data-i18n="cmp.src">Sources: Pingory limits and prices come from the product itself (plans as published at pingory.com). UptimeRobot figures are from its official pricing page and knowledge base, checked in September 2026. Third-party pricing and limits change; verify current details on each vendor's site before you buy.</p>
+
+  <div class="cta">
+    <h2 data-i18n="cmp.cta.h">Looking for a cheaper uptime monitor?</h2>
+    <p data-i18n="cmp.cta.p">Create a free account and monitor 50 endpoints in about 30 seconds. No credit card required.</p>
+    <a class="btn btn-primary" href="/signup.html" data-i18n="landing.ctaFree">Sign Up Free</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <nav>
+    <a href="/compare/uptimerobot" data-i18n="footer.compare">Compare</a>
+    <a href="/terms.html" data-i18n="footer.terms">Terms</a>
+    <a href="/privacy.html" data-i18n="footer.privacy">Privacy</a>
+    <a href="/refund.html" data-i18n="footer.refund">Refund</a>
+    <a href="/#plans" data-i18n="footer.pricing">Pricing</a>
+  </nav>
+  <p style="margin:0 0 8px;"><span data-i18n="footer.contact">Contact:</span> <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p style="margin:0;" data-i18n="footer.rights">© 2026 Pingory. All rights reserved.</p>
+</footer>
+
+<script>
+// ===== i18n（必须在调用 t() 之前定义；本页用 data-i18n 静态渲染，Google 可直接抓取）=====
+const I18N_LANGS = [['en','English'],['zh','中文'],['es','Español'],['pt','Português'],['de','Deutsch'],['fr','Français'],['ja','日本語'],['ko','한국어']];
+let I18N = {};
+function t(key, def, vars) {
+  let s = (I18N && I18N[key]) || def;
+  if (vars) { for (const k in vars) s = s.split('{' + k + '}').join(vars[k]); }
+  return s;
+}
+function applyI18n() {
+  // 文案含 <strong> 等行内标记，故用 innerHTML 渲染（字典为本站自有静态文件）
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const v = I18N[el.getAttribute('data-i18n')];
+    if (v) el.innerHTML = v;
+  });
+  document.querySelectorAll('[data-i18n-content]').forEach((el) => {
+    const v = I18N[el.getAttribute('data-i18n-content')];
+    if (v) el.setAttribute('content', v);
+  });
+  document.documentElement.lang = CUR_LANG;
+  const sel = document.getElementById('langSel');
+  if (sel) sel.value = CUR_LANG;
+  window.__langSeq = (window.__langSeq || 0) + 1;   // 完成标记（供回归测试等待）
+}
+async function loadI18n(lang) {
+  // 服务端已按 URL 语言内联注入本页所用字典 → 首屏即本地化，无「闪一下英文」，也不依赖 fetch 成功。
+  // 注意：必须比对「预载字典所属语言」，不能只比 CUR_LANG —— 否则法语偏好用户打开英文规范页时会拿到英文。
+  if (window.__I18N_PRELOAD__ && window.__I18N_LANG__ === lang) {
+    I18N = window.__I18N_PRELOAD__;
+  } else {
+    try { const r = await fetch('/i18n/' + lang + '.json'); I18N = await r.json(); } catch { I18N = {}; }
+  }
+  CUR_LANG = lang;
+  try { localStorage.setItem('pingory_lang', lang); } catch {}
+  applyI18n();
+}
+// 语言切换 = 整页 URL 切换（保证 URL 与内容语言一致，利于各语言收录）
+function switchLang(lang) {
+  const base = '/compare/uptimerobot';
+  const target = lang === 'en' ? base : '/' + lang + base;
+  if (target !== location.pathname) { try { localStorage.setItem('pingory_lang', lang); } catch {} location.href = target; return; }
+  loadI18n(lang);
+}
+function langSwitcher() {
+  const sel = document.getElementById('langSel');
+  sel.innerHTML = I18N_LANGS.map(([c, n]) => `<option value="${c}">${n}</option>`).join('');
+  sel.value = CUR_LANG;
+  sel.onchange = () => switchLang(sel.value);
+}
+
+// 首屏语言：带语言前缀的 URL 优先（SEO/分享用），否则沿用用户偏好
+let CUR_LANG = (function () {
+  const fromUrl = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+  if (fromUrl && fromUrl !== 'en') return fromUrl;
+  try { return localStorage.getItem('pingory_lang') || 'en'; } catch { return 'en'; }
+})();
+
+// 规范英文路径必须始终呈现英文（canonical 与内容语言一致，不对搜索引擎呈现"语言漂移"）；
+// 若该访客已存非英语偏好，则跳到对应语言路径 —— 用户体验不变，SEO 语义保持确定。
+function cmpRedirectTarget() {
+  if (document.documentElement.getAttribute('lang') !== 'en') return '';
+  if (location.pathname !== '/compare/uptimerobot') return '';
+  let pref = 'en';
+  try { pref = localStorage.getItem('pingory_lang') || 'en'; } catch { /* 隐私模式 */ }
+  return (pref !== 'en' && I18N_LANGS.some(([c]) => c === pref)) ? '/' + pref + '/compare/uptimerobot' : '';
+}
+const CMP_REDIRECT = cmpRedirectTarget();
+
+if (CMP_REDIRECT) {
+  location.replace(CMP_REDIRECT);
+} else {
+  (async () => {
+    const tt = document.getElementById('themeToggle');
+    function syncThemeIcon() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+    if (tt) tt.addEventListener('click', () => {
+      const dark = document.documentElement.dataset.theme === 'dark';
+      if (dark) document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = 'dark';
+      try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch {}
+      syncThemeIcon();
+    });
+    syncThemeIcon();
+    await loadI18n(CUR_LANG);
+    langSwitcher();
+  })();
+}
+</script>
+</body>
+</html>

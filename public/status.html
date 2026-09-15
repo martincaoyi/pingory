@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="meta.title.status">Status — Pingory</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <style>
+    :root { --bg:#f5f8f6; --bg-2:#eef3f0; --card:#ffffff; --card-2:#f1f8f3; --border:#dbe4df; --accent:#1faa6b; --accent-soft:rgba(31,170,107,0.10); --accent-line:rgba(31,170,107,0.30); --text:#16241d; --muted:#5d6b63;
+            /* 状态色 token（收口，全站统一） */
+            --ok:#1faa6b; --warn:#f5a623; --down:#ff5c5c; --maint:#3b82f6; --nav-bg:rgba(245,248,246,0.92); }
+    /* 暗色模式（#265） */
+    [data-theme="dark"] {
+      --bg:#0e1310; --bg-2:#151b17; --card:#161d18; --card-2:#1e261f; --border:#2a322c;
+      --text:#e6efe9; --muted:#9fb0a6; --accent:#2bd585; --accent-soft:rgba(43,213,133,0.14); --accent-line:rgba(43,213,133,0.42); --nav-bg:rgba(14,19,16,0.92);
+    }
+    [data-theme="dark"] .banner-status.ok { background:var(--accent-soft); color:var(--accent); }
+    [data-theme="dark"] .banner-status.warn { background:rgba(245,166,35,0.14); border-color:var(--warn); color:var(--warn); }
+    [data-theme="dark"] .banner-status.down { background:rgba(255,92,92,0.14); border-color:var(--down); color:#ff8a8a; }
+    [data-theme="dark"] .lock input, [data-theme="dark"] .sub-box input { background:var(--bg-2); color:var(--text); }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+           background:var(--bg); color:var(--text); line-height:1.6; }
+    .langbar { position:fixed; top:0; left:0; right:0; padding:10px 16px; border-bottom:1px solid var(--border);
+               background:var(--nav-bg); display:flex; align-items:center; justify-content:flex-end; gap:10px; z-index:50; }
+    .langbar select { padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:.85rem; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 72px 20px 56px; }
+    h1 { font-size: 1.8rem; margin: 0 0 6px; }
+    .sub { color: var(--muted); margin-bottom: 24px; }
+    /* 总状态横幅 */
+    .banner-status { display:flex; align-items:center; gap:12px; padding:16px 18px; border-radius:12px; margin-bottom:28px; font-weight:600; font-size:1.05rem; border:1px solid transparent; }
+    .banner-status.ok { background:var(--accent-soft); border-color:var(--accent-line); color:#157a4c; }
+    .banner-status.warn { background:#fff7e6; border-color:#ffd591; color:#a06a00; }
+    .banner-status.down { background:#ffeaea; border-color:#ffc2c2; color:#b3261e; }
+    .b-dot { width:14px; height:14px; border-radius:50%; flex-shrink:0; }
+    .banner-status.ok .b-dot { background:var(--ok); }
+    .banner-status.warn .b-dot { background:var(--warn); }
+    .banner-status.down .b-dot { background:var(--down); }
+    .mon { background:var(--card); border:1px solid var(--border); border-radius:10px;
+           padding:16px; margin-bottom:12px; display:flex; align-items:center; gap:16px; }
+    .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .dot.up, .dot.ok { background:var(--ok); }
+    .dot.down { background:var(--down); }
+    .dot.warn { background:var(--warn); }
+    .dot.maint { background:var(--maint); }
+    .dot.unknown { background:var(--muted); }
+    .mon .info { flex:1; min-width:0; }
+    .mon .url { font-weight:600; word-break:break-all; }
+    .mon .meta { color:var(--muted); font-size:.82rem; margin-top:2px; }
+    .mon .spark { width:120px; height:28px; margin-top:8px; }
+    .section-h { font-size:1.05rem; font-weight:600; margin:32px 0 12px; }
+    .empty { color:var(--muted); }
+    .foot { color:var(--muted); font-size:.8rem; text-align:center; margin-top:40px; }
+    a { color:var(--accent); }
+    .branding-hidden .foot, .branding-hidden #sub.brand { display:none; }
+    .lock { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:20px; }
+    .lock input { width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:#fff; color:var(--text); margin-top:8px; }
+    .lock button { margin-top:10px; padding:10px 16px; border:0; border-radius:8px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
+    .sub-box { margin-top:32px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; }
+    .sub-box input { width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:#fff; color:var(--text); margin-top:8px; }
+    .sub-box button { margin-top:10px; padding:9px 14px; border:0; border-radius:8px; background:var(--accent); color:#fff; cursor:pointer; }
+    .msg { color:var(--accent); font-size:.85rem; margin-top:8px; }
+    /* 状态图例（文字+图标，防色盲） */
+    .legend { display:flex; flex-wrap:wrap; gap:16px; margin-top:14px; font-size:.85rem; color:var(--muted); }
+    .legend span { display:inline-flex; align-items:center; gap:6px; }
+    /* 事故时间线 */
+    .timeline { border-left:2px solid var(--border); margin-left:6px; padding-left:18px; }
+    .timeline .evt { position:relative; padding:8px 0; }
+    .timeline .evt .t { color:#6b7280; font-size:.78rem; display:block; }
+    .timeline .evt .ic { font-size:.9rem; }
+    .timeline .evt .dot { position:absolute; left:-25px; top:12px; }
+  </style>
+</head>
+<body>
+  <div class="langbar"><button id="themeToggle" title="Toggle dark mode" style="border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:1.05rem;border-radius:6px;padding:4px 8px;">🌙</button><select id="langSel"></select></div>
+  <div class="wrap" id="wrap">
+    <h1 id="title" data-i18n="status.title">Service Status</h1>
+    <p class="sub" id="sub" data-i18n="status.sub">Last 30-day availability</p>
+    <div id="banner"></div>
+    <div id="list"><p class="empty" data-i18n="status.loading">Loading…</p></div>
+    <div class="section-h" id="timelineH" style="display:none" data-i18n="status.timeline">Incident timeline</div>
+    <div class="timeline" id="timeline"></div>
+    <div class="legend">
+      <span><span class="dot ok"></span> Operational</span>
+      <span><span class="dot warn"></span> Degraded</span>
+      <span><span class="dot down"></span> Down</span>
+      <span><span class="dot maint"></span> Maintenance</span>
+    </div>
+    <div class="sub-box" id="subBox" style="display:none">
+      <div id="subTitle" data-i18n="status.subTitle">Subscribe to status change emails</div>
+      <input id="subEmail" type="email" placeholder="you@example.com" />
+      <button id="subBtn" data-i18n="status.subBtn">Subscribe</button>
+      <div class="msg" id="subMsg"></div>
+    </div>
+    <p class="foot"><span data-i18n="status.foot">Uptime monitoring that costs less than your coffee.</span> <a href="https://pingory.com/">pingory.com</a></p>
+  </div>
+
+  <script>
+    // ===== i18n（必须在调用 t() 之前定义）=====
+    const I18N_LANGS = [['en','English'],['zh','中文'],['es','Español'],['pt','Português'],['de','Deutsch'],['fr','Français'],['ja','日本語'],['ko','한국어']];
+    let I18N = {};
+    function t(key, def, vars) {
+      let s = (I18N && I18N[key]) || def;
+      if (vars) { for (const k in vars) s = s.split('{' + k + '}').join(vars[k]); }
+      return s;
+    }
+    function errMsg(d) {
+      if (typeof d === 'string') return d;
+      if (!d || !d.error) return '';
+      let s = t('err.' + d.error, d.error);
+      if (d.ep) { const ep = Object.assign({}, d.ep); if (ep.plan !== undefined) ep.plan = t('plan.' + ep.plan, ep.plan); s = s.replace(/\{(\w+)\}/g, (m, k) => (ep[k] !== undefined ? ep[k] : m)); }
+      return s;
+    }
+    // 检查失败原因：服务端存 `code|detail` 稳定错误码，按当前语言翻译（公开状态页也要多语言）。
+    // 未知值（HTTP 500 / ECONNREFUSED 等语言中立原文）原样显示。⚠️ 与 src/monerr.js 保持同步。
+    const MONERR_CODES = ['timeout','kw_missing','kw_not_found','ping_no_response','ping_failed','connect_timeout','ssl_no_cert','ssl_expired','ssl_handshake','ssl_timeout','whois_no_expiry','domain_expired','assert_failed','heartbeat_never','heartbeat_late','ssl_expiring','domain_expiring'];
+    function fmtMonitorError(raw) {
+      if (!raw) return '';
+      const p = String(raw).split('|');
+      if (!MONERR_CODES.includes(p[0])) return String(raw);
+      const s = t('monerr.' + p[0], String(raw));
+      if (p[0] === 'assert_failed') return s.replace('{p}', p[1] || '').replace('{a}', p[2] || '').replace('{e}', p[3] || '');
+      return s.replace('{detail}', p[1] || '');
+    }
+    async function loadI18n(lang){
+      try { const r = await fetch('/i18n/'+lang+'.json'); I18N = await r.json(); } catch { I18N = {}; }
+      try { localStorage.setItem('pingory_lang', lang); } catch {}
+      applyI18n();
+    }
+    function applyI18n(){
+      document.querySelectorAll('[data-i18n]').forEach((el)=>{
+        const k = el.getAttribute('data-i18n'); if (I18N[k]) el.textContent = I18N[k];
+      });
+      document.documentElement.lang = (function(){ try { return localStorage.getItem('pingory_lang')||'en'; } catch { return 'en'; } })();
+      // 语言切换时重渲染动态区（横幅/监控列表/订阅框），否则切换后仍是旧语言
+      if (window.__lastStatusData) { try { render(window.__lastStatusData); } catch {} }
+    }
+    function langSwitcher(){
+      let cur='en'; try { cur = localStorage.getItem('pingory_lang')||'en'; } catch {}
+      const sel = document.getElementById('langSel');
+      sel.innerHTML = I18N_LANGS.map(([c,n])=>`<option value="${c}" ${c===cur?'selected':''}>${n}</option>`).join('');
+      sel.onchange = ()=> loadI18n(sel.value);
+    }
+
+    // 判断是 slug 路径 还是 自定义域名根路径
+    const parts = location.pathname.split('/').filter(Boolean);
+    const isStatusPath = parts[0] === 'status' && parts[1];
+    const slug = isStatusPath ? parts[1] : null;
+    const apiBase = slug ? '/api/status/' + slug : '/api/status-page';
+
+    function load() {
+      fetch(apiBase)
+        .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
+        .then(({ ok, d }) => {
+          if (!ok && d.needsPassword) return showLock();
+          if (!ok) throw new Error(errMsg(d) || 'not found');
+          render(d);
+        })
+        .catch((e) => {
+          document.getElementById('list').innerHTML = '<p class="empty">' + t('status.notFound', 'Status page not found or not public.') + '</p>';
+        });
+    }
+
+    function showLock() {
+      document.getElementById('list').innerHTML = `
+        <div class="lock">
+          <div>${t('status.lockTitle', 'This status page is private. Please enter the password:')}</div>
+          <input id="pw" type="password" placeholder="${t('status.lockPlaceholder', 'Password')}" />
+          <button id="pwBtn">${t('status.lockBtn', 'Unlock')}</button>
+          <div class="msg" id="pwMsg"></div>
+        </div>`;
+      document.getElementById('pwBtn').onclick = async () => {
+        const pw = document.getElementById('pw').value;
+        const unlockApi = slug ? '/api/status/' + slug + '/unlock' : '/api/status-page/unlock';
+        const r = await fetch(unlockApi, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pw }),
+        });
+        const j = await r.json();
+        if (r.ok && j.ok) { document.getElementById('list').innerHTML = '<p class="empty">' + t('status.loading', 'Loading…') + '</p>'; load(); }
+        else document.getElementById('pwMsg').textContent = errMsg(j) || t('status.lockWrong', 'Wrong password');
+      };
+    }
+
+    function overallStatus(monitors) {
+      if (!monitors.length) return 'none';
+      const downs = monitors.filter((m) => m.status === 'down').length;
+      if (downs === 0) return 'operational';
+      if (downs < monitors.length) return 'partial';
+      return 'major';
+    }
+
+    function sparkSvg(spark) {
+      if (!spark || !spark.length) return '';
+      const W = 120, H = 28, pad = 3;
+      const vals = spark.map((p) => p.avgRt).filter((v) => v != null);
+      if (!vals.length) return '';
+      const max = Math.max(...vals, 1);
+      const n = spark.length;
+      const x = (i) => pad + (i / Math.max(1, n - 1)) * (W - 2 * pad);
+      const y = (v) => H - pad - (v / max) * (H - 2 * pad);
+      const pts = spark.map((p, i) => `${x(i)},${p.avgRt != null ? y(p.avgRt) : H - pad}`).join(' ');
+      const downDots = spark.map((p, i) => p.down ? `<circle cx="${x(i)}" cy="${H - pad}" r="2" fill="var(--down)"/>` : '').join('');
+      return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">` +
+        `<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.5"/>${downDots}</svg>`;
+    }
+
+    function render(data) {
+      window.__lastStatusData = data; // 供语言切换时重渲染动态区
+      const wrap = document.getElementById('wrap');
+      if (data.whiteLabel) wrap.classList.add('branding-hidden');
+      document.getElementById('title').textContent = data.owner + ' — ' + t('status.title', 'Service Status');
+      document.getElementById('sub').textContent = t('status.sub', 'Last 30-day availability');
+
+      // 总状态横幅
+      const overall = overallStatus(data.monitors);
+      const bannerText = {
+        operational: t('status.allOk', 'All systems operational'),
+        partial: t('status.partial', 'Partial outage — some systems are experiencing issues'),
+        major: t('status.major', 'Major outage — most systems are down'),
+        none: t('status.nomon', 'No monitors configured yet'),
+      }[overall];
+      const bannerClass = { operational: 'ok', partial: 'warn', major: 'down', none: '' }[overall];
+      document.getElementById('banner').innerHTML =
+        `<div class="banner-status ${bannerClass}"><span class="b-dot"></span><span>${bannerText}</span></div>`;
+
+      const nameMap = {};
+      data.monitors.forEach((m) => { nameMap[m.id] = m.name; });
+
+      // 监控列表（可用率 + sparkline）
+      const list = document.getElementById('list');
+      if (!data.monitors.length) {
+        list.innerHTML = '<p class="empty">' + t('status.noPublic', 'No public monitors.') + '</p>';
+      } else {
+        list.innerHTML = data.monitors.map((m) => `
+          <div class="mon">
+            <span class="dot ${m.status}"></span>
+            <div class="info">
+              <div class="url">${escapeHtml(m.name)}</div>
+              <div class="meta">${escapeHtml(m.url)}
+                ${m.uptime != null ? ' · ' + t('status.uptime', 'Uptime') + ' ' + m.uptime.toFixed(2) + '%' : ''}
+                ${m.avgRt != null ? ' · ' + t('status.avg', 'Avg') + ' ' + m.avgRt + 'ms' : ''}
+                ${m.status === 'down' ? ' · ❌ ' + t('status.down', 'Down') : ' · ✅ ' + t('status.up', 'Operational')}</div>
+              ${sparkSvg(m.spark)}
+            </div>
+          </div>`).join('');
+      }
+
+      // 事故时间线
+      const timeline = document.getElementById('timeline');
+      const timelineH = document.getElementById('timelineH');
+      const incidents = (data.incidents || []).filter((e) => e.to_status === 'down' || e.to_status === 'up');
+      if (!incidents.length) {
+        timelineH.style.display = 'none';
+        timeline.innerHTML = '';
+      } else {
+        timelineH.style.display = 'block';
+        timeline.innerHTML = incidents.map((e) => {
+          const name = nameMap[e.monitor_id] || e.monitor_id;
+          const isDown = e.to_status === 'down';
+          const label = isDown ? t('status.incDown', 'Outage') : t('status.incUp', 'Recovered');
+          return `<div class="evt"><span class="dot ${isDown ? 'down' : 'ok'}"></span>` +
+            `<span class="t">${new Date(e.created_at).toLocaleString()}</span>` +
+            `<span class="ic"><b>${escapeHtml(name)}</b> — ${label}${e.error ? ': ' + escapeHtml(fmtMonitorError(e.error)) : ''}</span></div>`;
+        }).join('');
+      }
+
+      document.getElementById('subBox').style.display = 'block';
+      document.getElementById('subTitle').textContent = t('status.subTitle', 'Subscribe to status change emails');
+      document.getElementById('subBtn').textContent = t('status.subBtn', 'Subscribe');
+      document.getElementById('subBtn').onclick = async () => {
+        const email = document.getElementById('subEmail').value;
+        const subApi = slug ? '/api/status/' + slug + '/subscribe' : '/api/status-page/subscribe';
+        const r = await fetch(subApi, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const j = await r.json();
+        document.getElementById('subMsg').textContent = r.ok
+          ? t('status.subOk', 'Subscribed: {email}', { email: (j.email || email) })
+          : t('status.subFail', 'Subscription failed');
+      };
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    }
+
+    (async ()=>{
+      let saved='en'; try { saved = localStorage.getItem('pingory_lang')||'en'; } catch {}
+      document.documentElement.lang = saved;
+      // 暗色模式（#265）
+      const tt = document.getElementById('themeToggle');
+      function syncThemeIcon(){ if(tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+      if (tt) tt.addEventListener('click', () => {
+        const dark = document.documentElement.dataset.theme === 'dark';
+        if (dark) document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = 'dark';
+        try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch {}
+        syncThemeIcon();
+      });
+      syncThemeIcon();
+      await loadI18n(saved);
+      langSwitcher();
+      load();
+    })();
+  </script>
+</body>
+</html>

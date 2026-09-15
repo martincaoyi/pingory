@@ -1,0 +1,13 @@
+# Render 部署配置（render.com）
+# 创建 Blueprint 时选择本仓库即可；环境变量在 Dashboard 里填（见 .env.example）
+services:
+  - type: web
+    name: uptime-monitor
+    runtime: node
+    plan: starter
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /health
+    envFile: .env
+    # 多区域探针可再建一个 type: web 服务，startCommand: node src/worker.js
+    # 并加环境变量 PROBE_REGION_NAME / PROBE_PORT / PROBE_SECRET

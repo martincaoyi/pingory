@@ -1,0 +1,30 @@
+# Fly.io 部署配置（Uptime Monitor 常驻后端）
+# 用法：
+#   1. 安装 flyctl：https://fly.io/docs/handbook/installing/
+#   2. fly auth signup（或 fly auth login，需信用卡验身）
+#   3. fly launch --no-deploy   # 生成 app 名，本文件已就绪
+#   4. fly secrets set $(cat .env | grep -v '^#' | xargs)   # 把 .env 全部设为机密
+#   5. fly deploy
+# 注意：secret 不能写在 toml 里，务必用 fly secrets set。
+app = "uptime-monitor-martin"
+primary_region = "nrt"   # 东京节点，离大陆近；可改 sin(新加坡)/hkg(香港)
+build = { dockerfile = "Dockerfile" }
+
+[env]
+  PORT = "3000"
+  NODE_ENV = "production"
+
+[[services]]
+  internal_port = 3000
+  protocol = "tcp"
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+[vm]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256

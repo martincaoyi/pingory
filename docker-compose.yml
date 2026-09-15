@@ -1,0 +1,68 @@
+# 一条命令起全部：docker compose up -d
+# 默认包含：PostgreSQL + 主服务（Web + 轮询 + 告警）+ 两个示例多区域探针节点。
+# 若已使用外部数据库（Neon / Supabase / RDS / 自建 Postgres）：
+#   在 .env 里设置 DATABASE_URL，app 会优先使用该值，db 服务可自行删除。
+services:
+  # 内置数据库。不需要外部库时用它，数据存在 pgdata 卷里。
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pingory}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pingory}
+      POSTGRES_DB: ${POSTGRES_DB:-pingory}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pingory -d pingory"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    command: node server.js
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      # 若 .env 未提供 DATABASE_URL，则默认连上面的 db 服务。
+      # 注意：若你修改了 POSTGRES_PASSWORD，请同时在 .env 里显式写全 DATABASE_URL。
+      DATABASE_URL: ${DATABASE_URL:-postgresql://pingory:pingory@db:5432/pingory}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # 多区域探针（按需增删；每个节点建议部署在独立地区机器上）
+  probe-us:
+    build: .
+    command: node src/worker.js
+    environment:
+      - PROBE_REGION_NAME=us-east
+      - PROBE_PORT=3100
+      - PROBE_SECRET=${PROBE_SECRET}
+    env_file: .env
+    restart: unless-stopped
+    expose:
+      - "3100"
+
+  probe-eu:
+    build: .
+    command: node src/worker.js
+    environment:
+      - PROBE_REGION_NAME=eu-west
+      - PROBE_PORT=3100
+      - PROBE_SECRET=${PROBE_SECRET}
+    env_file: .env
+    restart: unless-stopped
+    expose:
+      - "3100"
+
+volumes:
+  pgdata:

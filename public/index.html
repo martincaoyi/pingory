@@ -1,0 +1,1832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="meta.title.home">Pingory — Catch downtime before your users do.</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="description" content="Free for 50 monitors. Upgrade for 1-minute checks, public status pages & incident timelines. No vendor lock-in." />
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <style>
+    :root { --bg:#f5f8f6; --bg-2:#eef3f0; --card:#ffffff; --card-2:#eaf2ec; --border:#dbe4df; --accent:#1faa6b; --accent-soft:rgba(31,170,107,0.12); --accent-line:rgba(31,170,107,0.4); --text:#16241d; --muted:#5d6b63; --nav-bg:rgba(245,248,246,0.92); --danger:#e5484d; }
+    /* 暗色模式（#265）：仅覆盖语义 token，新增颜色一律引用 token */
+    [data-theme="dark"] {
+      --bg:#0e1310; --bg-2:#151b17; --card:#161d18; --card-2:#1e261f; --border:#2a322c;
+      --text:#e6efe9; --muted:#9fb0a6; --accent:#2bd585; --accent-soft:rgba(43,213,133,0.14); --accent-line:rgba(43,213,133,0.42); --nav-bg:rgba(14,19,16,0.92); --danger:#ff6b6b;
+    }
+    [data-theme="dark"] .banner { background:#2a2410; border-color:#5c4a1a; color:#ffd591; }
+    [data-theme="dark"] .modal-box, [data-theme="dark"] .pingory-modal .pm-box { background:var(--card); color:var(--text); }
+    [data-theme="dark"] .upgrade-nudge { background:var(--card-2); border-color:var(--accent-line); color:var(--text); }
+    [data-theme="dark"] .feedback-fab { color:#06210f; }
+    [data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea { background:var(--bg-2); }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+           background:var(--bg); color:var(--text); line-height:1.6; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 64px 20px; }
+    h1 { font-size: 2.4rem; margin: 0 0 12px; }
+    .sub { color: var(--muted); font-size: 1.15rem; margin-bottom: 40px; }
+    .eyebrow { color: var(--accent); font-size: 1.05rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 12px; }
+    .billing { display:flex; align-items:center; justify-content:center; gap:12px; margin:8px 0 28px; color:var(--muted); font-size:.95rem; }
+    .billing .save { color:var(--accent); font-weight:600; font-size:.85rem; }
+    .switch { position:relative; display:inline-block; width:52px; height:28px; }
+    .switch input { opacity:0; width:0; height:0; }
+    .slider { position:absolute; cursor:pointer; inset:0; background:#cdd9d2; border-radius:999px; transition:.2s; }
+    .slider:before { content:""; position:absolute; height:22px; width:22px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+    .switch input:checked + .slider { background:var(--accent); }
+    .switch input:checked + .slider:before { transform:translateX(24px); }
+    .plans { display:grid; grid-template-columns: repeat(3,1fr); gap:20px; align-items:stretch; }
+    .plan { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; display:flex; flex-direction:column;
+            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+    .plan:nth-child(1) { background:var(--card); }
+    .plan:nth-child(2) { background:var(--card-2); border-color:var(--accent-line); }
+    .plan:nth-child(3) { background:var(--bg-2); border-color:var(--accent); }
+    .plan:hover { transform:translateY(-6px); box-shadow:0 16px 32px rgba(22,36,29,0.12); border-color:var(--accent-line); }
+    .plan button { margin-top:auto; }
+    .plan h3 { margin:0 0 4px; font-size:1.3rem; }
+    .price { font-size:2rem; font-weight:700; margin:8px 0; line-height:1.15; }
+    .price small { font-size:1rem; color:var(--muted); font-weight:400; }
+    .price .eq { font-size:2rem; font-weight:700; }
+    .price .billed { display:block; font-size:.85rem; font-weight:500; color:var(--muted); margin-top:4px; }
+    .price s { color:var(--muted); font-weight:400; font-size:.9rem; margin-left:4px; text-decoration-thickness:1.5px; }
+    .plan ul { list-style:none; padding:0; margin:16px 0 20px; color:var(--muted); }
+    .plan li { padding:4px 0; }
+    button { width:100%; padding:12px; border:0; border-radius:8px; font-size:1rem;
+             font-weight:600; cursor:pointer; background:var(--accent); color:#06210f; }
+    button:hover { opacity:.9; }
+    button.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+    .trust { color:var(--muted); font-size:.85rem; margin-top:32px; text-align:center; }
+    .dash { margin-top:56px; padding-top:40px; border-top:1px solid var(--border); }
+    .dash h2 { font-size:1.6rem; margin:0 0 16px; }
+    .add { display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap; }
+    .add input { flex:1; min-width:200px; padding:10px 12px; border-radius:8px;
+                 border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:.95rem; }
+    .add button { width:auto; padding:10px 20px; }
+    .mon { background:var(--card); border:1px solid var(--border); border-radius:10px;
+           padding:16px; margin-bottom:12px; display:flex; align-items:center; gap:16px; }
+    .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .dot.up { background:var(--accent); }
+    .dot.down { background:#ff5c5c; }
+    .dot.unknown { background:var(--muted); }
+    .mon .info { flex:1; min-width:0; }
+    .mon .url { font-weight:600; word-break:break-all; }
+    .mon .meta { color:var(--muted); font-size:.82rem; margin-top:2px; }
+    .mon .del { width:auto; padding:6px 14px; background:transparent; color:#ff5c5c; border:1px solid #ff5c5c; }
+    .mon { flex-wrap: wrap; }
+    .mon .acts { display:flex; gap:8px; }
+    .mon .hist { width:auto; padding:6px 14px; background:transparent; color:var(--muted); border:1px solid var(--border); }
+    .mon .history { width:100%; margin-top:12px; }
+    .evt { font-size:.8rem; color:var(--muted); padding:5px 0; border-top:1px solid var(--border); display:flex; gap:10px; }
+    .evt .t { color:#6b7280; white-space:nowrap; }
+    .empty { color:var(--muted); font-size:.9rem; }
+    .authbar { display:flex; justify-content:flex-end; align-items:center; gap:12px;
+               margin-bottom:24px; color:var(--muted); font-size:.9rem; min-height:36px; }
+    .authbar button { width:auto; padding:8px 16px; }
+    .authbox { background:var(--card); border:1px solid var(--border); border-radius:12px;
+               padding:24px; margin:32px auto 0; max-width:380px; }
+    .authbox h3 { margin:0 0 16px; font-size:1.2rem; }
+    .authbox input { width:100%; padding:10px 12px; margin-bottom:12px; border-radius:8px;
+                     border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:.95rem; }
+    .authbox .row { display:flex; gap:8px; }
+    .authbox .row button { flex:1; }
+    .authmsg { color:#ff5c5c; font-size:.85rem; min-height:1.2em; margin-bottom:8px; }
+    .hidden { display:none !important; }
+    .add { flex-wrap: wrap; }
+    .add .full { flex-basis:100%; }
+    .add select { flex:1; min-width:160px; padding:10px 12px; border-radius:8px;
+                  border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:.95rem; }
+    .cfg { width:100%; background:var(--card); border:1px solid var(--border); border-radius:10px;
+           padding:14px 16px; margin-bottom:14px; }
+    .cfg label { display:block; font-size:.8rem; color:var(--muted); margin:8px 0 4px; }
+    .cfg input, .cfg textarea { width:100%; padding:8px 10px; border-radius:8px;
+                  border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:.9rem; }
+    .cfg .hint { font-size:.75rem; color:var(--muted); margin-top:2px; }
+    .sec-title { font-size:.95rem; font-weight:600; margin:6px 0 4px; }
+    /* 告警渠道：复选框置左，渠道名紧随，填写框在其右侧（窄屏自动换行） */
+    .cfg .chan-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:10px 0 0; }
+    .cfg label.chan-head { display:flex; align-items:center; gap:7px; margin:0; flex:0 0 auto;
+                           min-width:104px; font-size:.9rem; font-weight:500; color:var(--text); cursor:pointer; }
+    /* 注意：.add input 设了 min-width:200px，min-width 优先级高于 width，必须一并重置，
+       否则勾选框仍会被撑成 200px 宽（视觉上「浮」在行中间）。 */
+    .cfg label.chan-head input[type="checkbox"] { width:16px; min-width:0; height:16px; flex:0 0 auto;
+                           margin:0; padding:0; accent-color:var(--accent); cursor:pointer; }
+    .cfg .chan-row > input { flex:1 1 200px; min-width:0; }
+    .cfg .chan-fields { flex:1 1 200px; min-width:0; display:flex; flex-direction:column; gap:6px; }
+    .cfg .chan-note { flex-basis:100%; font-size:.78rem; color:var(--muted); margin:0; }
+    .cfg .chan-note a { color:var(--accent); text-decoration:none; }
+    .mon .stats { width:auto; padding:6px 14px; background:transparent; color:var(--accent); border:1px solid var(--accent); }
+    .mon .pub { width:auto; padding:6px 14px; background:transparent; color:var(--muted); border:1px solid var(--border); }
+    .chart { width:100%; margin-top:12px; }
+    .statusbar { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:18px; }
+    .statusbar a { color:var(--accent); }
+    /* 新手引导（3 步清单，方案A：free 第③步为升级点） */
+    .onb { background:var(--card); border:1px solid var(--accent-line); border-radius:12px; padding:18px 20px; margin-bottom:18px; }
+    .onb-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .onb-title { font-weight:700; font-size:1.05rem; margin:0; }
+    .onb-sub { color:var(--muted); font-size:.85rem; margin:2px 0 0; }
+    .onb-bar { height:6px; background:var(--bg-2); border-radius:999px; overflow:hidden; margin:12px 0 14px; }
+    .onb-fill { height:100%; background:var(--accent); border-radius:999px; transition:width .4s ease; }
+    .onb-steps { display:flex; flex-direction:column; gap:10px; }
+    .onb-step { display:flex; gap:12px; align-items:flex-start; border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+    .onb-step.done { border-color:var(--accent-line); background:rgba(46,160,67,.05); }
+    .onb-check { flex:0 0 26px; width:26px; height:26px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:.85rem; color:transparent; margin-top:2px; }
+    .onb-step.done .onb-check { border-color:var(--accent); background:var(--accent); color:#06210f; }
+    .onb-step.locked .onb-check { border-color:var(--accent); color:var(--accent); background:transparent; }
+    .onb-body { flex:1; min-width:0; }
+    .onb-t { font-weight:600; font-size:.95rem; margin:0 0 2px; }
+    .onb-d { color:var(--muted); font-size:.83rem; line-height:1.45; }
+    .onb-act { margin-top:8px; }
+    .onb-act button { width:auto; padding:7px 16px; font-size:.88rem; }
+    .onb-act button.lk { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+    .onb-dismiss { background:none; border:none; color:var(--muted); cursor:pointer; font-size:.85rem; width:auto; padding:4px; }
+    .onb-dismiss:hover { color:var(--text); }
+    @media(max-width:520px){ .onb-head{ flex-direction:column; align-items:flex-start; } }
+    .trust-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin:36px 0 8px; }
+    .stat { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 12px; text-align:center; }
+    .stat .num { font-size:1.8rem; font-weight:700; color:var(--accent); }
+    .stat .lbl { font-size:.85rem; color:var(--muted); margin-top:4px; }
+    .value-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:8px 0 32px; }
+    .value-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px 18px; text-align:left; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+    .value-card:hover { transform:translateY(-4px); box-shadow:0 10px 24px rgba(31,170,107,.12); border-color:var(--accent-line); }
+    .value-card .vc-ic { font-size:1.7rem; margin-bottom:8px; }
+    .value-card .vc-t { font-weight:700; font-size:1.02rem; margin-bottom:4px; }
+    .value-card .vc-d { color:var(--muted); font-size:.87rem; line-height:1.5; }
+    .value-card.hl { border-color:var(--accent); background:linear-gradient(135deg,var(--card-2),var(--card)); box-shadow:0 0 0 1px var(--accent-line); }
+    .value-card.hl:hover { box-shadow:0 10px 24px rgba(31,170,107,.18), 0 0 0 1px var(--accent-line); border-color:var(--accent); }
+    .value-card.hl .vc-t { color:var(--accent); }
+    .value-card .vc-tag { display:inline-block; font-size:.68rem; font-weight:700; letter-spacing:.04em; color:#06210f; background:var(--accent); border-radius:999px; padding:2px 9px; margin-bottom:8px; }
+    @media(max-width:760px){ .value-cards{ grid-template-columns:1fr; } }
+    .how { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:24px 0 8px; }
+    .step { display:flex; gap:12px; background:var(--card-2); border:1px solid var(--border); border-radius:12px; padding:16px; }
+    .step-n { flex:0 0 32px; width:32px; height:32px; border-radius:50%; background:var(--accent); color:#06210f; font-weight:700; display:flex; align-items:center; justify-content:center; }
+    .step-t { font-weight:600; margin-bottom:2px; }
+    .step-d { font-size:.85rem; color:var(--muted); }
+    @media(max-width:760px){ .plans{ grid-template-columns:1fr; } .trust-strip,.how{ grid-template-columns:1fr 1fr; } }
+    .monitor-types { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; margin:40px 0; }
+    .mt-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; text-align:center; transition:transform .15s ease, border-color .15s ease; }
+    .mt-card.wide { grid-column:span 2; }
+    .mt-card:hover { transform:translateY(-2px); border-color:var(--accent-line); }
+    .mt-icon { font-size:1.8rem; margin-bottom:8px; }
+    .mt-title { font-weight:600; font-size:.98rem; margin-bottom:4px; }
+    .mt-desc, .mt-src { color:var(--muted); font-size:.82rem; line-height:1.45; }
+    .faq { margin-top:56px; padding-top:40px; border-top:1px solid var(--border); }
+    .faq h2 { font-size:1.4rem; margin:0 0 20px; }
+    .faq-item { margin-bottom:16px; }
+    .faq-q { font-weight:600; cursor:pointer; padding:10px 0; border-bottom:1px solid var(--border); }
+    .faq-a { color:var(--muted); font-size:.9rem; line-height:1.6; padding:8px 0; display:none; }
+    .faq-item.open .faq-a { display:block; }
+    /* 顶部导航栏（竞品标准：Logo左，Login右） */
+    .topnav { position:fixed; top:0; left:0; right:0; z-index:100; background:var(--nav-bg); backdrop-filter:blur(8px); border-bottom:1px solid var(--border); padding:12px 24px; display:flex; align-items:center; justify-content:space-between; }
+    .topnav-brand { font-size:1.2rem; font-weight:700; color:var(--accent); text-decoration:none; display:inline-flex; align-items:center; gap:8px; }
+    .topnav-brand svg { flex:none; }
+    .topnav-brand:hover { opacity:.8; }
+    .topnav-login { font-size:.9rem; color:var(--muted); cursor:pointer; padding:8px 16px; border:1px solid var(--border); border-radius:6px; background:transparent; text-decoration:none; display:inline-block; }
+    .topnav-login:hover { border-color:var(--accent); color:var(--accent); }
+    .topnav-signup { margin-left:8px; border-color:var(--accent); color:var(--accent); }
+    .topnav-actions { display:flex; align-items:center; gap:10px; flex-wrap:nowrap; }
+    #topnavRight { display:flex; align-items:center; gap:8px; }
+    .topnav-login { white-space:nowrap; }
+    .topnav.nav-float { left:50%; right:auto; transform:translateX(-50%); top:12px; width:min(780px,94vw); border-radius:999px; border-color:var(--accent-line); box-shadow:0 6px 24px rgba(0,0,0,.45); padding:10px 20px; }
+    .lang-wrap { display:inline-flex; align-items:center; gap:6px; flex-direction:row; white-space:nowrap; }
+    .lang-label { font-size:.85rem; color:var(--muted); white-space:nowrap; }
+    .lang-select { padding:5px 8px; background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:.85rem; }
+    #themeToggle { width:34px; height:34px; border-radius:50%; border:1.5px solid var(--border); background:var(--card-2); color:var(--text); display:flex; align-items:center; justify-content:center; font-size:1.15rem; cursor:pointer; transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease; flex-shrink:0; }
+    #themeToggle:hover { border-color:var(--accent); transform:scale(1.05); box-shadow:0 0 0 3px var(--accent-soft); }
+    /* 黑色页面下边框需更明显：accent 绿描边 + 微光晕，避免与深色背景糊在一起 */
+    [data-theme="dark"] #themeToggle { background:var(--card); border:2px solid var(--accent-line); box-shadow:0 0 0 1px rgba(43,213,133,0.18); }
+    [data-theme="dark"] #themeToggle:hover { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+    /* 落地页主 CTA（独立 Sign In / Sign Up） */
+    .hero-cta { display:flex; gap:12px; margin:28px 0 8px; flex-wrap:wrap; }
+    .btn-primary { display:inline-block; padding:12px 28px; border-radius:8px; font-size:1rem; font-weight:600;
+                   background:var(--accent); color:#06210f; text-decoration:none; border:0; cursor:pointer; }
+    .btn-primary:hover { opacity:.9; }
+    .btn-ghost { display:inline-block; padding:12px 28px; border-radius:8px; font-size:1rem; font-weight:600;
+                 background:transparent; color:var(--accent); border:1px solid var(--accent); text-decoration:none; cursor:pointer; }
+    .btn-ghost:hover { background:var(--accent-soft); }
+    /* 免费用户叙事式升级卡片（软性引流，非价目表） */
+    .upgrade-nudge { background:linear-gradient(135deg,#eafaf1,#f1f8f3); border:1px solid #cfe9da; border-left:3px solid var(--accent);
+                     border-radius:10px; padding:14px 16px; margin:8px 0 18px; font-size:.92rem; line-height:1.6; color:#33564a; }
+    .upgrade-nudge .story { margin:0; }
+    .upgrade-nudge a.upgrade-link { color:var(--accent); text-decoration:none; font-weight:700; font-size:1.18rem; cursor:pointer; }
+    .upgrade-nudge a.upgrade-link:hover { text-decoration:underline; }
+    .upgrade-nudge .dismiss { float:right; color:var(--muted); cursor:pointer; border:none; background:none; font-size:.85rem; }
+    /* Free vs Starter 对比弹窗（方案二） */
+    .pingory-modal .pm-box:has(.cmp) { width:560px; }
+    .pingory-modal .cmp { display:grid; grid-template-columns:1fr 1.2fr; gap:10px; margin:10px 0 4px; }
+    .pingory-modal .cmp-col { border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
+    .pingory-modal .cmp-col h4 { margin:0 0 6px; font-size:.85rem; color:var(--text); }
+    .pingory-modal .cmp-col ul { margin:0; padding-left:16px; }
+    .pingory-modal .cmp-col li { font-size:.8rem; margin:3px 0; color:var(--muted); }
+    .pingory-modal .cmp-hl { border-color:var(--accent); background:rgba(46,160,67,.06); }
+    .pingory-modal .cmp-hl li { color:var(--text); }
+    .pingory-modal .pm-body .story { margin:0 0 4px; color:var(--text); }
+    /* P0-3 账户设置弹窗 */
+    .ac-section, .ac-pane { margin:16px 0; padding-top:14px; border-top:1px solid var(--border); overflow-x:hidden; }
+    .ac-section:first-child { border-top:0; padding-top:0; }
+    .ac-section h4, .ac-pane h4 { margin:0 0 8px; font-size:.94rem; }
+    .ac-section label, .ac-pane label { display:block; font-size:.8rem; color:var(--muted); margin:8px 0 4px; }
+    .ac-section input, .ac-pane input { width:100%; padding:9px 11px; border-radius:8px; border:1px solid var(--border); background:var(--bg-2); color:var(--text); font-size:.92rem; }
+    .ac-hint { font-size:.82rem; color:var(--muted); margin:0 0 6px; }
+    .ac-section button, .ac-pane button { margin-top:28px; padding:8px 14px; border:0; border-radius:7px; background:var(--accent); color:#fff; cursor:pointer; font-size:.85rem; }
+    .ac-section button:disabled, .ac-pane button:disabled { opacity:.6; cursor:default; }
+    .ac-section .ac-msg, .ac-pane .ac-msg { margin-left:8px; font-size:.82rem; }
+    .topnav-account, .linkbtn { background:transparent; border:1px solid var(--border); color:var(--text); border-radius:7px; padding:5px 11px; cursor:pointer; font-size:.85rem; margin-left:8px; }
+    .topnav-account:hover, .linkbtn:hover { border-color:var(--accent); }
+    .pingory-modal .cmp-bill { font-size:.8rem; margin:6px 0 0; color:var(--muted); }
+    @media (max-width:520px){ .pingory-modal .pm-box:has(.cmp){width:92%;} .pingory-modal .cmp{grid-template-columns:1fr;} }
+    .topnav-login:hover { border-color:var(--accent); color:var(--accent); }
+    .topnav-user { font-size:.9rem; color:var(--text); }
+    body { padding-top:60px; }
+  </style>
+</head>
+<body>
+  <!-- 顶部导航栏 -->
+  <nav class="topnav">
+    <a href="/" class="topnav-brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+      <div class="topnav-actions">
+        <button id="themeToggle" title="Toggle dark mode" data-i18n-title="theme.toggle">🌙</button>
+        <span id="langMount"></span>
+        <div id="topnavRight"></div>
+      </div>
+  </nav>
+
+  <div class="wrap">
+    <div class="authbar" id="authBar"></div>
+
+    <div id="landing">
+    <p class="eyebrow" data-i18n="landing.eyebrow">Uptime monitoring your customers can rely on</p>
+    <h1 data-i18n="landing.title">Make downtime something your users never worry about.</h1>
+    <p class="sub" data-i18n="landing.sub">Pingory catches outages the moment they happen and publishes a status page your users can trust. Set up your first monitor in about 30 seconds — free for 50 monitors, paid plans from $4/month.</p>
+
+    <div class="hero-cta">
+      <a class="btn-primary" href="/signup.html" data-i18n="landing.ctaFree">Sign Up Free</a>
+      <a class="btn-ghost" href="/signin.html" data-i18n="landing.ctaSignin">Sign In</a>
+    </div>
+
+    <!-- 交付价值（你有了它会怎样：快 / 值 / 信任，信任高亮） -->
+    <div class="value-cards">
+      <div class="value-card hl">
+        <span class="vc-tag" data-i18n="landing.value.tag">★ TRUST</span>
+        <div class="vc-ic">🛡️</div>
+        <div class="vc-t" data-i18n="landing.value.trust.t">A status page your users trust</div>
+        <div class="vc-d" data-i18n="landing.value.trust.d">Show customers in real time that you're on top of an outage — every incident builds, not breaks, their confidence in you.</div>
+      </div>
+      <div class="value-card">
+        <div class="vc-ic">⚡</div>
+        <div class="vc-t" data-i18n="landing.value.speed.t">Your first monitor in 30 seconds</div>
+        <div class="vc-d" data-i18n="landing.value.speed.d">Paste a URL, pick a type, save — no setup, no credit card, no waiting.</div>
+      </div>
+      <div class="value-card">
+        <div class="vc-ic">💰</div>
+        <div class="vc-t" data-i18n="landing.value.cost.t">Reliable uptime, from $4/month</div>
+        <div class="vc-d" data-i18n="landing.value.cost.d">Free for 50 monitors. Paid plans start at $4 — roughly half the price of mainstream commercial uptime tools.</div>
+      </div>
+    </div>
+
+    <div class="monitor-types" id="monitorTypes">
+      <div class="mt-card wide"><div class="mt-icon">🌐</div><div class="mt-title" data-i18n="landing.type.http.title">HTTP/HTTPS</div><div class="mt-desc" data-i18n="landing.type.http.desc">Monitor any web page or API endpoint for availability</div></div>
+      <div class="mt-card"><div class="mt-icon">🔒</div><div class="mt-title" data-i18n="landing.type.ssl.title">SSL Certificates</div><div class="mt-desc" data-i18n="landing.type.ssl.desc">Get alerted 30 days before your certificates expire</div></div>
+      <div class="mt-card"><div class="mt-icon">📅</div><div class="mt-title" data-i18n="landing.type.domain.title">Domain Expiry</div><div class="mt-desc" data-i18n="landing.type.domain.desc">WHOIS monitoring so you never lose a domain</div></div>
+      <div class="mt-card"><div class="mt-icon">🔍</div><div class="mt-title" data-i18n="landing.type.keyword.title">Keyword Checks</div><div class="mt-desc" data-i18n="landing.type.keyword.desc">Detect when expected content appears or disappears</div></div>
+      <div class="mt-card"><div class="mt-icon">📡</div><div class="mt-title" data-i18n="landing.type.ping.title">Ping &amp; Port</div><div class="mt-desc" data-i18n="landing.type.ping.desc">ICMP ping and TCP port monitoring for servers</div></div>
+      <div class="mt-card"><div class="mt-icon">⚡</div><div class="mt-title" data-i18n="landing.type.api.title">API Monitoring</div><div class="mt-desc" data-i18n="landing.type.api.desc">Validate response headers and JSON assertions</div></div>
+      <div class="mt-card"><div class="mt-icon">📋</div><div class="mt-title" data-i18n="landing.type.dns.title">DNS Records</div><div class="mt-desc" data-i18n="landing.type.dns.desc">Detect unauthorized DNS changes early</div></div>
+      <div class="mt-card"><div class="mt-icon">💓</div><div class="mt-title" data-i18n="landing.type.heartbeat.title">Heartbeat / Cron</div><div class="mt-desc" data-i18n="landing.type.heartbeat.desc">Know immediately when scheduled jobs fail</div></div>
+    </div>
+
+    <!-- 信任感增强（#269，学 Better Uptime / Hyperping：实时统计 + 三步上手） -->
+    <div class="trust-strip">
+      <div class="stat"><div class="num">50</div><div class="lbl" data-i18n="landing.stat.monitors">free monitors</div></div>
+      <div class="stat"><div class="num">30s</div><div class="lbl" data-i18n="landing.stat.interval">fastest check interval</div></div>
+      <div class="stat"><div class="num">24/7</div><div class="lbl" data-i18n="landing.stat.alerts">real-time alerts</div></div>
+      <div class="stat"><div class="num">∞</div><div class="lbl" data-i18n="landing.stat.history">history kept, no lock-in</div></div>
+    </div>
+    <div class="how">
+      <div class="step"><div class="step-n">1</div><div><div class="step-t" data-i18n="landing.step1.title">Add a monitor</div><div class="step-d" data-i18n="landing.step1.desc">Paste your URL, pick a check type. Takes about 30 seconds.</div></div></div>
+      <div class="step"><div class="step-n">2</div><div><div class="step-t" data-i18n="landing.step2.title">Get alerted</div><div class="step-d" data-i18n="landing.step2.desc">Email, Slack, Telegram the moment something goes down.</div></div></div>
+      <div class="step"><div class="step-n">3</div><div><div class="step-t" data-i18n="landing.step3.title">Share status</div><div class="step-d" data-i18n="landing.step3.desc">Publish a public status page with incident timeline for your users.</div></div></div>
+    </div>
+
+    <div class="billing">
+      <span id="billMonthly" data-i18n="billing.monthly">Monthly</span>
+      <label class="switch"><input type="checkbox" id="billToggle" checked /><span class="slider"></span></label>
+      <span id="billAnnual" data-i18n="billing.annual">Annual</span>
+      <span class="save" id="billSave" data-i18n="billing.save2">Save 2 months</span>
+    </div>
+
+    <div class="plans" id="plans">
+      <div class="plan">
+        <h3 data-i18n="landing.plan.free.title">Free</h3>
+        <div class="price" data-i18n="landing.plan.free.price">$0</div>
+        <ul>
+          <li data-i18n="landing.plan.free.feature1">50 monitors</li>
+          <li data-i18n="landing.plan.free.feature2">5-minute checks</li>
+          <li data-i18n="landing.plan.free.feature3">7-day history</li>
+          <li data-i18n="landing.plan.free.feature4">HTTP/HTTPS + Keyword</li>
+        </ul>
+        <button class="ghost" data-plan="free" data-i18n="landing.plan.free.btn">Get Started Free</button>
+      </div>
+
+      <div class="plan featured">
+        <h3 data-i18n="landing.plan.starter.title">Starter</h3>
+        <div class="price" id="priceStarter"><span class="eq">$3.33</span><small>/mo</small><s>$4</s><span class="billed">billed $40/yr · save 2 months</span></div>
+        <ul>
+          <li data-i18n="landing.plan.starter.feature1">100 monitors</li>
+          <li data-i18n="landing.plan.starter.feature2">1-minute checks</li>
+          <li data-i18n="landing.plan.starter.feature3">90-day history</li>
+          <li data-i18n="landing.plan.starter.feature4">All monitor types</li>
+          <li data-i18n="landing.plan.starter.feature5">Email + Slack alerts</li>
+          <li data-i18n="landing.plan.starter.feature6">Public status page</li>
+        </ul>
+        <button data-plan="starter" data-i18n="landing.plan.starter.btn">Upgrade to Starter</button>
+      </div>
+
+      <div class="plan pro">
+        <h3 data-i18n="landing.plan.pro.title">Pro</h3>
+        <div class="price" id="pricePro"><span class="eq">$5</span><small>/mo</small><s>$6</s><span class="billed">billed $60/yr · save 2 months</span></div>
+        <ul>
+          <li data-i18n="landing.plan.pro.feature1">Unlimited monitors</li>
+          <li data-i18n="landing.plan.pro.feature2">30-second checks</li>
+          <li data-i18n="landing.plan.pro.feature3">365-day history</li>
+          <li data-i18n="landing.plan.pro.feature4">All monitor types</li>
+          <li data-i18n="landing.plan.pro.feature5">All alert channels</li>
+          <li data-i18n="landing.plan.pro.feature6">Custom domain status page</li>
+          <li data-i18n="landing.plan.pro.feature7">Team access (up to 3)</li>
+        </ul>
+        <button data-plan="pro" data-i18n="landing.plan.pro.btn">Upgrade to Pro</button>
+      </div>
+    </div>
+
+    <p class="trust" data-i18n="landing.trust">No credit card required for Free. Cancel anytime. Prices in USD.</p>
+
+    <p style="text-align:center;margin:8px 0 0;font-size:.95rem;">
+      <a href="/compare/uptimerobot" style="color:var(--accent);font-weight:600;text-decoration:none;" data-i18n="nav.compare">Compare with UptimeRobot →</a>
+    </p>
+
+    <div class="faq" id="faq">
+      <h2 data-i18n="landing.faq.title">Frequently asked questions</h2>
+      <div class="faq-item">
+        <div class="faq-q" data-i18n="landing.faq.q1">What is Pingory?</div>
+        <div class="faq-a" data-i18n="landing.faq.a1">Pingory is an uptime monitoring service that continuously checks your websites, APIs, servers, and domains. It alerts you the moment something goes down, so you can respond before your users notice.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" data-i18n="landing.faq.q2">How do I create a monitor?</div>
+        <div class="faq-a" data-i18n="landing.faq.a2">Sign up for free → click "Add monitor" → choose the type (HTTP, SSL, Ping, etc.) → enter your URL or hostname → set the check interval → add alert channels (email, Slack, etc.) → save. Takes about 30 seconds.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" data-i18n="landing.faq.q3">Can I use my own domain for status pages?</div>
+        <div class="faq-a" data-i18n="landing.faq.a3">Yes! The Pro plan includes custom domain support and white-label branding. You can point your domain to Pingory and we'll handle the SSL certificate automatically.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" data-i18n="landing.faq.q4">Do you offer a free trial?</div>
+        <div class="faq-a" data-i18n="landing.faq.a4">Yes! The Free plan gives you 50 monitors with 5-minute checks forever—no credit card required. You can upgrade to Starter ($4/month) or Pro ($6/month) anytime for faster checks and more features.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" data-i18n="landing.faq.q5">What alert channels do you support?</div>
+        <div class="faq-a" data-i18n="landing.faq.a5">Email alerts are included on all plans. Starter adds Slack, Telegram, and Webhook. Pro adds Discord, Microsoft Teams, and PagerDuty. You can configure multiple channels per monitor.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" data-i18n="landing.faq.q6">How does multi-location monitoring work?</div>
+        <div class="faq-a" data-i18n="landing.faq.a6">Pro plan supports multi-region probes. We check your monitors from multiple geographic locations and use majority voting to reduce false positives. More regions coming soon.</div>
+      </div>
+    </div>
+    </div><!-- /landing -->
+
+    <div class="dash hidden" id="dash">
+      <h2 data-i18n="nav.monitors">Your monitors</h2>
+      <p id="planInfo" class="empty"></p>
+      <div id="onbWrap"></div>
+      <div class="statusbar hidden" id="statusBar"></div>
+      <div class="upgrade-nudge hidden" id="upgradeNudge"></div>
+      <div id="advZone"></div>
+
+      <form class="add" id="addForm">
+        <select id="typeInput" class="full"></select>
+        <input type="text" id="urlInput" class="full" placeholder="Target URL or hostname" required />
+        <input type="text" id="nameInput" placeholder="name (optional)" />
+        <input type="number" id="intervalInput" placeholder="interval(s)" value="300" min="30" style="max-width:110px" />
+        <div id="cfgBox" class="cfg full hidden"></div>
+        <div id="chanBox" class="cfg full hidden"></div>
+        <button type="submit" class="full" data-i18n="btn.addMonitor">Add monitor</button>
+      </form>
+      <div id="monList"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+  <script>
+    let cfg = null;
+
+    // ===== G10 i18n（必须在任何调用 t() 的函数之前定义）=====
+    const I18N_LANGS = [['en','English'],['zh','中文'],['es','Español'],['pt','Português'],['de','Deutsch'],['fr','Français'],['ja','日本語'],['ko','한국어']];
+    let I18N = {};
+    function t(key, def, vars) {
+      let s = (I18N && I18N[key]) || def;
+      if (vars) { for (const k in vars) s = s.split('{' + k + '}').join(vars[k]); }
+      return s;
+    }
+    // 将后端返回的错误码 { error: code, ep: {...} } 翻译为当前语言文案（根治后端报错漏译）
+    function errMsg(d) {
+      if (typeof d === 'string') return d;                 // 兼容旧版纯字符串错误
+      if (!d || !d.error) return '';
+      let s = t('err.' + d.error, d.error);                // 缺译时回退为原始错误码
+      if (d.ep) { const ep = Object.assign({}, d.ep); if (ep.plan !== undefined) ep.plan = t('plan.' + ep.plan, ep.plan); s = s.replace(/\{(\w+)\}/g, (m, k) => (ep[k] !== undefined ? ep[k] : m)); }
+      return s;
+    }
+    async function loadI18n(lang){
+      try { const r = await fetch('/i18n/'+lang+'.json', { cache: 'no-cache' }); I18N = await r.json(); } catch { I18N = {}; }
+      try { localStorage.setItem('pingory_lang', lang); } catch {}
+      applyI18n();
+    }
+    function applyI18n(){
+      document.querySelectorAll('[data-i18n]').forEach((el)=>{
+        const k = el.getAttribute('data-i18n'); if (I18N[k]) el.textContent = I18N[k];
+      });
+      document.querySelectorAll('[data-i18n-title]').forEach((el)=>{
+        const k = el.getAttribute('data-i18n-title'); if (I18N[k]) el.title = I18N[k];
+      });
+      document.documentElement.lang = (function(){ try { return localStorage.getItem('pingory_lang')||'en'; } catch { return 'en'; } })();
+      // 动态区域：反馈/验证横幅等已挂载组件随语言刷新
+      const fb = document.getElementById('feedbackBtn'); if (fb) fb.textContent = t('fb.btn', 'Feedback');
+      const vb = document.getElementById('verifyBanner'); if (vb) renderVerifyBannerText();
+      const ph = (id, key, def) => { const el = document.getElementById(id); if (el) el.placeholder = t(key, def); };
+      ph('urlInput', 'add.url', 'Target URL or hostname');
+      ph('nameInput', 'add.name', 'name (optional)');
+      ph('authEmail', 'auth.email', 'you@example.com');
+      ph('authPassword', 'auth.pass', 'password (min 8 chars)');
+      ph('authName', 'auth.name', 'Full name (optional)');
+      // 语言切换时刷新叙事式升级卡片文案（free→Starter 与 starter→Pro 两种）
+      if (currentPlan === 'free' && upgradeNudge && !upgradeNudge.classList.contains('hidden')) showUpgradeNudge();
+      else if (currentPlan === 'starter' && upgradeNudge && !upgradeNudge.classList.contains('hidden')) showProNudge();
+      if (typeof window.__afterLang === 'function') window.__afterLang();
+      applyBilling();
+    }
+    // 月/年计费切换：年付默认主视觉，年付以「月均等价」展示（学 UptimeRobot），省 2 个月徽标年付态显示
+    function applyBilling() {
+      const annual = document.getElementById('billToggle') && document.getElementById('billToggle').checked;
+      const ps = document.getElementById('priceStarter');
+      const pp = document.getElementById('pricePro');
+      const yearlyHtml = (eq, mo, yr) => `<span class="eq">${eq}</span><small>/mo</small><s>${mo}</s><span class="billed">${t('billing.billedYear','billed {yr}/yr · save 2 months',{yr:'$'+yr})}</span>`;
+      const monthlyHtml = (mo) => `<span class="eq">${mo}</span><small>/mo</small>`;
+      if (ps) ps.innerHTML = annual ? yearlyHtml('$3.33', '$4', '40') : monthlyHtml('$4');
+      if (pp) pp.innerHTML = annual ? yearlyHtml('$5', '$6', '60') : monthlyHtml('$6');
+      const save = document.getElementById('billSave');
+      if (save) save.style.display = annual ? 'inline' : 'none';
+    }
+    function langSwitcher(){
+      let cur = 'en'; try { cur = localStorage.getItem('pingory_lang')||'en'; } catch {}
+      const sel = document.createElement('select');
+      sel.className = 'lang-select';
+      sel.innerHTML = I18N_LANGS.map(([c,n])=>`<option value="${c}" ${c===cur?'selected':''}>${n}</option>`).join('');
+      sel.onchange = ()=> loadI18n(sel.value);
+      const wrap = document.createElement('div'); wrap.className='lang-wrap';
+      const lbl = document.createElement('span'); lbl.className='lang-label'; lbl.dataset.i18n='lang.label'; lbl.textContent = t('lang.label', 'Language:');
+      wrap.appendChild(lbl); wrap.appendChild(sel);
+      return wrap;
+    }
+    // 语言切换时刷新全部「动态生成」区域。
+    // ⚠️ applyI18n 只能刷新带 data-i18n 的静态节点；凡是用 t() 拼 innerHTML 的动态区
+    //    都必须在这里重绘，否则切语言后会停留在旧语言（历史 bug：告警渠道区切语言不刷新）。
+    window.__afterLang = function(){
+      const lm = document.getElementById('langMount');
+      if (lm) { lm.innerHTML = ''; lm.appendChild(langSwitcher()); }
+      if (window.__currentUser) { renderTopnavLoggedIn(window.__currentUser); mountAdvanced(window.__currentUser); }
+      else renderTopnavLoggedOut();
+      renderOnboarding();
+      fillTypeOptions(); renderCfg(); renderChannels();   // 类型下拉 + 动态表单 + 告警渠道
+      if (window.__lastMonitors) { renderMonitors(window.__lastMonitors); refreshPlanInfo(); }
+      redrawMonitorExtras();                              // 已展开的历史事件 / 趋势图
+      if (window.__currentUser) loadStatusPage(window.__currentUser);   // 状态页开关条
+      refreshOpenModal();                                 // 打开中的弹窗
+      const fbm = document.getElementById('feedbackModal');
+      if (fbm && !fbm.classList.contains('hidden')) {     // 反馈弹窗（独立于通用弹窗）
+        const v = document.getElementById('feedbackMsg') ? document.getElementById('feedbackMsg').value : '';
+        const e = document.getElementById('feedbackEmail') ? document.getElementById('feedbackEmail').value : '';
+        renderFeedbackModal(fbm);
+        const m2 = document.getElementById('feedbackMsg'); if (m2) m2.value = v;
+        const e2 = document.getElementById('feedbackEmail'); if (e2) e2.value = e;
+      }
+      // E2E 用完成标记：语言切换全部重绘结束（真机回归测试据此等待，避免固定 sleep 造成的误报）
+      try { window.__langSeq = (window.__langSeq || 0) + 1; } catch { /* 忽略 */ }
+    };
+
+    // ===== 新增 UI 样式（验证横幅 / 反馈组件 / 全局提示）=====
+    (function injectStyles() {
+      const css = `
+        .banner{background:#fff7e6;border:1px solid #ffd591;color:#874d00;padding:8px 12px;font-size:13px;}
+        .banner button{margin-left:8px;cursor:pointer;}
+        .banner.hidden{display:none;}
+        .globalmsg{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#52c41a;color:#fff;padding:8px 16px;border-radius:6px;z-index:9999;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+        .globalmsg.hidden{display:none;}
+        .feedback-fab{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:999;background:var(--accent);color:#fff;border:none;border-radius:24px;padding:10px 18px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+        .feedback-fab.fab-bottom{left:50%;transform:translateX(-50%);bottom:12px;border-radius:999px;padding:10px 22px;box-shadow:0 4px 16px rgba(0,0,0,.35);}
+        .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:1000;}
+        .modal.hidden{display:none;}
+        .modal-box{background:#fff;padding:18px;border-radius:10px;width:320px;max-width:90%;}
+        .modal-box h3{margin:0 0 10px;}
+        .modal-box textarea{width:100%;height:90px;margin-bottom:8px;box-sizing:border-box;}
+        .modal-box input{width:100%;margin-bottom:8px;padding:6px;box-sizing:border-box;}
+        .modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+        .modal-actions .primary{background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;}
+        .topnav-admin{margin-left:10px;color:var(--accent);display:inline-flex;align-items:center;white-space:nowrap;writing-mode:horizontal-tb;}
+        .pingory-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;}
+        .pingory-modal.hidden{display:none;}
+        .pingory-modal .pm-mask{position:absolute;inset:0;background:rgba(0,0,0,.5);}
+        .pingory-modal .pm-box{position:relative;z-index:1;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;width:360px;max-width:90%;box-shadow:0 8px 24px rgba(0,0,0,.25);}
+        .pingory-modal .pm-box.pm-compact{max-height:71vh;display:flex;flex-direction:column}
+        .pingory-modal .pm-box.pm-compact .pm-body{overflow-y:auto;overflow-x:hidden}
+        .pingory-modal .pm-title{font-weight:600;margin-bottom:8px;}
+        .pingory-modal .pm-body{font-size:.9rem;color:var(--muted);margin-bottom:14px;}
+        .pingory-modal .pm-body input{width:100%;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;margin-top:6px;}
+        .pingory-modal .pm-actions{display:flex;justify-content:flex-end;gap:8px;}
+        .pingory-modal .pm-actions button{width:auto;padding:6px 14px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;}
+        .pingory-modal .pm-actions .ok{background:var(--accent);color:#06210f;border-color:var(--accent);}`;
+      const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
+    })();
+
+    function showGlobal(msg) {
+      let g = document.getElementById('globalMsg');
+      if (!g) { g = document.createElement('div'); g.id = 'globalMsg'; g.className = 'globalmsg hidden'; document.body.insertBefore(g, document.body.firstChild); }
+      g.textContent = msg; g.classList.remove('hidden');
+      setTimeout(() => g.classList.add('hidden'), 6000);
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    }
+
+    // 居中自定义弹窗（替代 alert/confirm/prompt，避免浏览器原生弹窗位置不可控）
+    function showGenericModal(title, bodyHtml, actions, opts) {
+      OPEN_MODAL = null;   // 默认不可重建；支持语言切换重绘的调用方在返回后自行注册
+      let m = document.getElementById('pingoryModal');
+      if (!m) {
+        m = document.createElement('div'); m.id = 'pingoryModal'; m.className = 'pingory-modal hidden';
+        m.innerHTML = '<div class="pm-mask"></div><div class="pm-box"><div class="pm-title"></div><div class="pm-body"></div><div class="pm-actions"></div></div>';
+        m.querySelector('.pm-mask').onclick = () => m.classList.add('hidden');
+        document.body.appendChild(m);
+      }
+      m.querySelector('.pm-title').textContent = title;
+      m.querySelector('.pm-body').innerHTML = bodyHtml || '';
+      const box = m.querySelector('.pm-box'); box.classList.toggle('pm-compact', !!(opts && opts.compact));
+      const act = m.querySelector('.pm-actions'); act.innerHTML = '';
+      for (const a of actions) {
+        const b = document.createElement('button'); b.textContent = a.text;
+        if (a.primary) b.className = 'ok';
+        b.onclick = () => { m.classList.add('hidden'); if (a.onClick) a.onClick(); };
+        act.appendChild(b);
+      }
+      m.classList.remove('hidden');
+    }
+    // 打开中的弹窗注册表：切换语言时用注册的重建函数重绘，并回填未保存的输入
+    // （弹窗内容是 innerHTML 动态生成的，applyI18n 只扫 data-i18n，不重绘就会停留旧语言）
+    let OPEN_MODAL = null;
+    function refreshOpenModal() {
+      const m = document.getElementById('pingoryModal');
+      if (!m || m.classList.contains('hidden') || !OPEN_MODAL) return;
+      const snap = {};
+      m.querySelectorAll('input,textarea,select').forEach((el) => {
+        if (el.id) snap[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+      });
+      try { OPEN_MODAL(); } catch { return; }
+      const m2 = document.getElementById('pingoryModal');
+      if (!m2) return;
+      m2.querySelectorAll('input,textarea,select').forEach((el) => {
+        if (el.id && snap[el.id] !== undefined) { if (el.type === 'checkbox') el.checked = snap[el.id]; else el.value = snap[el.id]; }
+      });
+      // 账户设置：恢复上次选中的分区（否则重绘后跳回「资料」）
+      const sec = m2.querySelector('#acSection');
+      if (sec) {
+        m2.querySelectorAll('.ac-pane').forEach((p) => p.classList.remove('active'));
+        const pane = m2.querySelector('#acPane-' + sec.value);
+        if (pane) pane.classList.add('active');
+      }
+    }
+    // 通用弹窗：默认视为「不可重建」（调用方若要支持语言切换后重绘，自行设置 OPEN_MODAL）
+    function showAlert(msg) {
+      const raw = msg;
+      showGenericModal(t('modal.alert','Notice'), escapeHtml(msg), [{ text: t('modal.ok','OK'), primary: true }]);
+      OPEN_MODAL = () => showAlert(raw);
+    }
+    function showConfirm(msg, onOk) {
+      const raw = msg;
+      showGenericModal(t('modal.confirm','Confirm'), escapeHtml(msg), [
+        { text: t('modal.cancel','Cancel'), onClick: ()=>{} },
+        { text: t('modal.ok','OK'), primary: true, onClick: onOk }
+      ]);
+      OPEN_MODAL = () => showConfirm(raw, onOk);
+    }
+    function showPrompt(msg, def, onOk) {
+      const id = 'pmPromptInput'; const raw = msg;
+      showGenericModal(t('modal.input','Input'), '<div>' + escapeHtml(msg) + '</div><input id="' + id + '" value="' + escapeHtml(def||'') + '" />', [
+        { text: t('modal.cancel','Cancel'), onClick: ()=>{} },
+        { text: t('modal.ok','OK'), primary: true, onClick: ()=> onOk(document.getElementById(id).value) }
+      ]);
+      OPEN_MODAL = () => showPrompt(raw, def, onOk);
+      setTimeout(()=>{ const el=document.getElementById(id); if(el) el.focus(); }, 0);
+    }
+
+    // 邮箱验证横幅（未验证时显示，可重发）
+    function renderVerifyBannerText() {
+      const vb = document.getElementById('verifyBanner');
+      if (!vb) return;
+      vb.innerHTML = t('verify.banner', 'Please verify your email to unlock all features.')
+        + '<button id="resendVerify">' + t('verify.resend', 'Resend verification email') + '</button>';
+      const btn = document.getElementById('resendVerify');
+      if (btn) btn.addEventListener('click', async () => {
+        const r = await fetch('/api/auth/resend-verify', { method: 'POST' });
+        const d = await r.json();
+        showGlobal(d.ok ? t('verify.sent', 'Verification email resent. Please check your inbox.') : (errMsg(d) || t('verify.fail', 'Failed to send')));
+      });
+    }
+    function ensureVerifyBanner() {
+      let vb = document.getElementById('verifyBanner');
+      if (vb) return vb;
+      vb = document.createElement('div'); vb.id = 'verifyBanner'; vb.className = 'banner hidden';
+      document.body.insertBefore(vb, document.body.firstChild);
+      renderVerifyBannerText();
+      return vb;
+    }
+
+    // 处理 ?verify=TOKEN（点击邮件验证链接后落地）
+    async function handleVerifyParam() {
+      const token = new URLSearchParams(location.search).get('verify');
+      if (!token) return;
+      const r = await fetch('/api/auth/verify-email?token=' + encodeURIComponent(token));
+      const d = await r.json();
+      showGlobal(d.ok ? t('verify.ok', 'Email verified — welcome to Pingory!') : (errMsg(d) || t('verify.fail', 'Verification failed')));
+      history.replaceState(null, '', location.pathname);
+    }
+
+    // 账户设置弹窗（P0-3）：改昵称 / 改密码 / 改邮箱；OAuth 用户显示"设置密码"
+    function ensureAcCss() {
+      if (document.getElementById('acCss')) return;
+      const s = document.createElement('style'); s.id = 'acCss';
+      s.textContent = '.ac-section,.ac-pane{margin:16px 0;padding-top:14px;border-top:1px solid var(--border);overflow-x:hidden}.ac-pane{border-top:0;padding-top:0;margin:12px 0 0}.ac-section h4,.ac-pane h4{margin:0 0 8px;font-size:.94rem}.ac-section label,.ac-pane label{display:block;font-size:.8rem;color:var(--muted);margin:8px 0 4px}.ac-section input,.ac-pane input{width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);font-size:.92rem}.ac-hint{font-size:.82rem;color:var(--muted);margin:0 0 6px}.ac-section button,.ac-pane button{margin-top:28px;padding:8px 14px;border:0;border-radius:7px;background:var(--accent);color:#fff;cursor:pointer;font-size:.85rem}.ac-section button:disabled,.ac-pane button:disabled{opacity:.6;cursor:default}.ac-section .ac-msg,.ac-pane .ac-msg{margin-left:8px;font-size:.82rem}'
+        + '.ac-select{width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);font-size:.92rem;margin-bottom:6px}.ac-pane{display:none}.ac-pane.active{display:block}'
+        + '.ac-chan{margin:10px 0;padding:10px 12px;border:1px solid var(--border);border-radius:8px}.ac-chan h4{margin:0 0 6px;font-size:.9rem}.ac-pane button.ac-test{margin-top:10px;background:var(--bg-2);color:var(--text);border:1px solid var(--border)}';
+      document.head.appendChild(s);
+    }
+    async function openAccountSettings(user, skipFeatures) {
+      ensureAcCss();
+      // 套餐能力未加载时先拉一次，否则渠道区会误显示「套餐不含渠道」
+      // （语言切换重组装时传 skipFeatures，避免再次 await 造成异步竞态导致弹窗停留在旧语言）
+      if (!FEATURES && !skipFeatures) { try { await loadPlanFeatures(); } catch { /* 忽略 */ } }
+      const pwBlock = user.hasPassword
+        ? `<label>${t('ac.oldPass','Current password')}</label><input type="password" id="acOld" autocomplete="current-password" />
+           <label>${t('ac.newPass','New password')}</label><input type="password" id="acNew" autocomplete="new-password" />`
+        : `<p class="ac-hint">${t('ac.noPw','This account uses Google/GitHub sign-in. Set a password to also log in with email.')}</p>
+           <label>${t('ac.newPass','New password')}</label><input type="password" id="acNew" autocomplete="new-password" />`;
+      const allowedCh = (FEATURES && Array.isArray(FEATURES.channels) ? FEATURES.channels : []).filter((c) => c !== 'email');
+      let chHtml = `<p class="ac-hint">${t('ac.channelsHint','Configure credentials once here; each monitor just ticks which channels to use. Email alerts are always on.')}</p>`;
+      if (!allowedCh.length) {
+        chHtml += `<p class="ac-hint">${t('chan.noneInPlan','No extra alert channels on your plan.')}</p>`;
+      } else {
+        for (const c of allowedCh) {
+          const label = t('channel.'+c, CHANNEL_LABELS[c] || c);
+          const cur = ACCOUNT_CHANNELS[c] || {};
+          chHtml += `<div class="ac-chan"><h4>${label}</h4>`;
+          if (c === 'telegram') {
+            chHtml += `<label>${t('chan.botToken','Bot Token')}</label><input id="acc_${c}_bot" autocomplete="off" value="${escapeHtml(cur.botToken || '')}" />`
+              + `<label>${t('chan.chatId','Chat ID')}</label><input id="acc_${c}_chat" autocomplete="off" value="${escapeHtml(cur.chatId || '')}" />`;
+          } else {
+            // 渠道名已是卡片标题，这里不再重复，只标 URL（2026-09-14）
+            chHtml += `<label>${t('chan.url','URL')}</label><input id="acc_${c}_url" autocomplete="off" value="${escapeHtml(cur.url || '')}" />`;
+          }
+          chHtml += `<button type="button" class="ac-test" data-test="${c}">${t('chan.test','Send test')}</button>`;
+          chHtml += `<span class="ac-msg" id="accMsg_${c}"></span></div>`;
+        }
+      }
+      const body = `<select id="acSection" class="ac-select">
+          <option value="profile">${t('ac.profile','Profile')}</option>
+          <option value="password">${user.hasPassword ? t('ac.password','Password') : t('ac.setPw','Set password')}</option>
+          <option value="email">${t('ac.email','Email')}</option>
+          <option value="channels">${t('ac.channels','Alert channels')}</option>
+        </select>
+        <div class="ac-pane active" id="acPane-profile">
+          <label>${t('ac.name','Display name')}</label><input id="acName" value="${escapeHtml(user.name || '')}" />
+          <button id="acNameSave">${t('ac.save','Save')}</button><span class="ac-msg" id="acNameMsg"></span>
+        </div>
+        <div class="ac-pane" id="acPane-password">
+          ${pwBlock}
+          <button id="acPwSave">${user.hasPassword ? t('ac.updatePw','Update password') : t('ac.setPw','Set password')}</button><span class="ac-msg" id="acPwMsg"></span>
+        </div>
+        <div class="ac-pane" id="acPane-email">
+          <p class="ac-hint">${t('ac.currentEmail','Current')}: ${escapeHtml(user.email)} ${user.emailVerified ? '✓' : ''}</p>
+          <label>${t('ac.newEmail','New email')}</label><input type="email" id="acEmail" placeholder="you@example.com" />
+          <button id="acEmailSave">${t('ac.sendConfirm','Send confirmation link')}</button><span class="ac-msg" id="acEmailMsg"></span>
+        </div>
+        <div class="ac-pane" id="acPane-channels">
+          ${chHtml}
+          ${allowedCh.length ? `<button id="acChSaveAll" style="margin-top:14px">${t('chan.saveAll','Save all channels')}</button><span class="ac-msg" id="accMsg_all"></span>` : ''}
+        </div>`;
+      showGenericModal(t('ac.title','Account settings'), body, [{ text: t('ac.close','Close'), primary: true }], { compact: true });
+      OPEN_MODAL = () => openAccountSettings(window.__currentUser, true);   // 语言切换后按当前语言重建（跳过套餐拉取，保持同步）
+      setTimeout(() => {
+        const sec = document.getElementById('acSection');
+        if (sec) sec.onchange = () => {
+          document.querySelectorAll('.ac-pane').forEach(p => p.classList.remove('active'));
+          const pane = document.getElementById('acPane-' + sec.value);
+          if (pane) pane.classList.add('active');
+        };
+        const nameSave = document.getElementById('acNameSave');
+        if (nameSave) nameSave.onclick = async () => {
+          const msg = document.getElementById('acNameMsg'); msg.textContent = '';
+          try {
+            const r = await fetch('/api/account/profile', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: document.getElementById('acName').value }) });
+            const d = await r.json();
+            if (!r.ok) { msg.style.color='var(--danger)'; msg.textContent = errMsg(d); return; }
+            msg.style.color='var(--accent)'; msg.textContent = t('ac.saved','Saved');
+            const me = await (await fetch('/api/me', { credentials:'same-origin' })).json();
+            if (me.user) { window.__currentUser = me.user; renderTopnavLoggedIn(me.user); }
+          } catch { msg.style.color='var(--danger)'; msg.textContent = t('ac.network','Network error'); }
+        };
+        const pwSave = document.getElementById('acPwSave');
+        if (pwSave) pwSave.onclick = async () => {
+          const msg = document.getElementById('acPwMsg'); msg.textContent = '';
+          const newPw = document.getElementById('acNew').value;
+          if (!newPw || newPw.length < 8) { msg.style.color='var(--danger)'; msg.textContent = t('ac.pwShort','Password must be at least 8 characters'); return; }
+          const url = user.hasPassword ? '/api/account/change-password' : '/api/account/profile';
+          const bodyObj = user.hasPassword ? { oldPassword: document.getElementById('acOld').value, newPassword: newPw } : { password: newPw };
+          try {
+            const r = await fetch(url, { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify(bodyObj) });
+            const d = await r.json();
+            if (!r.ok) { msg.style.color='var(--danger)'; msg.textContent = errMsg(d); return; }
+            msg.style.color='var(--accent)'; msg.textContent = t('ac.pwUpdated','Password updated');
+            document.getElementById('acNew').value = '';
+            const oldI = document.getElementById('acOld'); if (oldI) oldI.value = '';
+            if (!user.hasPassword) { user.hasPassword = true; const b = document.getElementById('acPwSave'); if (b) { b.disabled = true; b.style.opacity = '0.6'; } }
+            const me = await (await fetch('/api/me', { credentials:'same-origin' })).json();
+            if (me.user) { window.__currentUser = me.user; renderTopnavLoggedIn(me.user); }
+          } catch { msg.style.color='var(--danger)'; msg.textContent = t('ac.network','Network error'); }
+        };
+        // ---- 账户渠道：收集 + 全部保存 + 单渠道测试发送 ----
+        const collectAcCh = (list) => {
+          const out = {};
+          for (const c of list) {
+            if (c === 'telegram') {
+              const botToken = document.getElementById(`acc_${c}_bot`)?.value.trim();
+              const chatId = document.getElementById(`acc_${c}_chat`)?.value.trim();
+              if (botToken || chatId) out[c] = { botToken: botToken || '', chatId: chatId || '' };
+            } else {
+              const url = document.getElementById(`acc_${c}_url`)?.value.trim();
+              if (url) out[c] = { url };
+            }
+          }
+          return out;
+        };
+        const chSaveAll = document.getElementById('acChSaveAll');
+        if (chSaveAll) chSaveAll.onclick = async () => {
+          const msg = document.getElementById('accMsg_all'); msg.textContent = '';
+          try {
+            const r = await fetch('/api/account/channels', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ channels: collectAcCh(allowedCh) }) });
+            const d = await r.json();
+            if (!r.ok) { msg.style.color='var(--danger)'; msg.textContent = errMsg(d); return; }
+            ACCOUNT_CHANNELS = d.channels || {};
+            msg.style.color='var(--accent)'; msg.textContent = t('chan.saved','Saved');
+            renderChannels();
+          } catch { msg.style.color='var(--danger)'; msg.textContent = t('ac.network','Network error'); }
+        };
+        document.querySelectorAll('#acPane-channels [data-test]').forEach((btn) => {
+          btn.onclick = async () => {
+            const c = btn.dataset.test;
+            const msg = document.getElementById('accMsg_' + c); if (msg) msg.textContent = '';
+            const cfg = collectAcCh([c])[c];
+            if (!cfg) { if (msg) { msg.style.color='var(--danger)'; msg.textContent = t('chan.needCred','Enter the credentials first'); } return; }
+            btn.disabled = true;
+            try {
+              const r = await fetch('/api/account/channels/test', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ channel: c, config: cfg }) });
+              const d = await r.json();
+              if (!r.ok) { if (msg) { msg.style.color='var(--danger)'; msg.textContent = errMsg(d); } return; }
+              if (msg) { msg.style.color='var(--accent)'; msg.textContent = t('chan.testSent','Test alert sent'); }
+            } catch { if (msg) { msg.style.color='var(--danger)'; msg.textContent = t('ac.network','Network error'); } }
+            finally { btn.disabled = false; }
+          };
+        });
+        const emailSave = document.getElementById('acEmailSave');
+        if (emailSave) emailSave.onclick = async () => {
+          const msg = document.getElementById('acEmailMsg'); msg.textContent = '';
+          const newEmail = document.getElementById('acEmail').value.trim();
+          if (!newEmail) { msg.style.color='var(--danger)'; msg.textContent = t('ac.emailEmpty','Enter a new email'); return; }
+          try {
+            const r = await fetch('/api/account/change-email', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ newEmail }) });
+            const d = await r.json();
+            if (!r.ok) { msg.style.color='var(--danger)'; msg.textContent = errMsg(d); return; }
+            msg.style.color='var(--accent)'; msg.textContent = t('ac.emailSent','Confirmation link sent to your new email');
+          } catch { msg.style.color='var(--danger)'; msg.textContent = t('ac.network','Network error'); }
+        };
+      }, 0);
+    }
+
+    async function handleConfirmEmail() {
+      const token = new URLSearchParams(location.search).get('confirmEmail');
+      if (!token) return;
+      try {
+        const r = await fetch('/api/account/confirm-email', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token }) });
+        const d = await r.json();
+        if (d.ok) showGlobal(t('ac.emailConfirmed', 'Email updated to {email}', { email: d.email }));
+        else showGlobal(t('ac.emailConfirmFail', 'Confirmation link is invalid or expired'));
+      } catch { showGlobal(t('ac.emailConfirmFail', 'Confirmation link is invalid or expired')); }
+      history.replaceState(null, '', location.pathname);
+    }
+
+    // 悬浮反馈组件（页面内提交，入库 + 邮件通知管理员）
+    function mountFeedbackWidget() {
+      if (document.getElementById('feedbackBtn')) return;
+      const btn = document.createElement('button');
+      btn.id = 'feedbackBtn'; btn.className = 'feedback-fab'; btn.textContent = t('fb.btn', 'Feedback');
+      btn.addEventListener('click', () => {
+        const modal = document.getElementById('feedbackModal');
+        renderFeedbackModal(modal);
+        modal.classList.remove('hidden');
+      });
+      const modal = document.createElement('div');
+      modal.id = 'feedbackModal'; modal.className = 'modal hidden';
+      document.body.appendChild(btn); document.body.appendChild(modal);
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
+    }
+    function renderFeedbackModal(modal) {
+      modal.innerHTML = `<div class="modal-box"><h3>${t('fb.title', 'Send us feedback')}</h3>
+        <textarea id="feedbackMsg" placeholder="${t('fb.placeholder', 'Tell us your suggestions or the issues you hit…')}"></textarea>
+        <input id="feedbackEmail" placeholder="${t('fb.emailph', 'Your email (optional, so we can reply)')}" />
+        <div class="modal-actions"><button id="feedbackCancel">${t('fb.cancel', 'Cancel')}</button><button id="feedbackSend" class="primary">${t('fb.send', 'Send')}</button></div></div>`;
+      document.getElementById('feedbackCancel').addEventListener('click', () => modal.classList.add('hidden'));
+      document.getElementById('feedbackSend').addEventListener('click', async () => {
+        const message = document.getElementById('feedbackMsg').value.trim();
+        const email = document.getElementById('feedbackEmail').value.trim();
+        if (!message) { showAlert(t('fb.empty', 'Please enter your feedback first')); return; }
+        const r = await fetch('/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message, email, page: location.pathname }) });
+        const d = await r.json();
+        if (r.ok) { modal.classList.add('hidden'); document.getElementById('feedbackMsg').value = ''; showGlobal(t('fb.thanks', 'Thanks! We received your feedback.')); }
+        else showAlert(errMsg(d) || t('fb.fail', 'Failed to send'));
+      });
+    }
+
+    let creemActive = false;
+    async function init() {
+      const res = await fetch('/api/paddle-config');
+      cfg = await res.json();
+
+      try {
+        const cr = await fetch('/api/creem-config');
+        const cj = await cr.json();
+        creemActive = !!cj.active;
+      } catch (e) { creemActive = false; }
+
+      Paddle.Environment.set(cfg.environment);
+      Paddle.Initialize({ token: cfg.clientToken });
+
+      document.querySelectorAll('button[data-plan]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const plan = btn.dataset.plan;
+          if (plan === 'free') { ensureAuth(); return; }
+          if (creemActive) openCreemCheckout(plan, !!(document.getElementById('billToggle') && document.getElementById('billToggle').checked));
+          else openPaddleCheckout(plan);
+        });
+      });
+    }
+
+    init().catch((e) => {
+      console.error('init failed', e);
+      showAlert(t('paddle.initFail', 'Paddle init failed. Check /api/paddle-config and .env'));
+    });
+
+    // ===== FAQ 展开/折叠 =====
+    document.querySelectorAll('.faq-q').forEach((q) => {
+      q.addEventListener('click', () => {
+        const item = q.parentElement;
+        item.classList.toggle('open');
+      });
+    });
+
+    // ===== 月/年计费切换 =====
+    const billToggle = document.getElementById('billToggle');
+    if (billToggle) billToggle.addEventListener('change', applyBilling);
+
+    // ===== 暗色模式开关（#265）=====
+    const themeToggle = document.getElementById('themeToggle');
+    function applyThemeIcon(){ if(!themeToggle) return; themeToggle.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+    if (themeToggle) themeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.dataset.theme === 'dark';
+      if (isDark) document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = 'dark';
+      try { localStorage.setItem('pingory_theme', isDark ? '' : 'dark'); } catch {}
+      applyThemeIcon();
+    });
+    applyThemeIcon();
+
+    // ===== 认证 =====
+    const authBar = document.getElementById('authBar');
+    const topnavRight = document.getElementById('topnavRight');
+    const dash = document.getElementById('dash');
+    const planInfo = document.getElementById('planInfo');
+    const upgradeNudge = document.getElementById('upgradeNudge');
+
+    const PLAN_LIMITS = { free: 50, starter: 100, pro: Infinity };
+    let pollTimer = null;
+    let currentPlan = 'free';
+
+    function renderTopnavLoggedOut() {
+      topnavRight.innerHTML = '<a class="topnav-login" href="/signin.html">' + t('nav.signin','Sign In') + '</a>'
+        + '<a class="topnav-login topnav-signup" href="/signup.html">' + t('nav.signup','Sign Up') + '</a>';
+    }
+    function renderTopnavLoggedIn(user) {
+      topnavRight.innerHTML = `<span class="topnav-user">${escapeHtml(user.name || user.email)}</span>`;
+      const acc = document.createElement('button');
+      acc.className = 'topnav-account'; acc.id = 'accountBtn';
+      acc.textContent = t('nav.account','Account');
+      acc.setAttribute('data-i18n','nav.account'); // 双保险：语言切换时 applyI18n 也能直接刷新
+      acc.onclick = () => openAccountSettings(user);
+      topnavRight.appendChild(acc);
+      if (user.role === 'admin') {
+        const a = document.createElement('a');
+        a.href = '/admin.html'; a.className = 'topnav-admin';
+        a.textContent = t('admin.link','Admin');
+        a.setAttribute('data-i18n','admin.link'); // 双保险：防语言切换后管理后台链接停留旧语言
+        topnavRight.appendChild(a);
+      }
+    }
+
+    function showAuth() {
+      dash.classList.add('hidden');
+      window.__currentUser = null;
+      const landing = document.getElementById('landing');
+      if (landing) landing.classList.remove('hidden');
+      upgradeNudge.classList.add('hidden');
+      authBar.innerHTML = '';
+      const vb = document.getElementById('verifyBanner'); if (vb) vb.classList.add('hidden');
+      renderTopnavLoggedOut();
+    }
+
+    function ensureAuth() {
+      const user = window.__currentUser;
+      if (user && user.id && user.email) return user;
+      const next = encodeURIComponent(location.pathname + location.search);
+      location.href = '/signup.html?next=' + next;
+      return false;
+    }
+
+    function openPaddleCheckout(plan, annualOverride) {
+      const run = () => {
+        // 计费周期：升级弹窗路径显式传参；价目表路径读年付开关
+        // （旧 bug：dashboard 里价目表隐藏但 billToggle 默认勾选年付，导致升级链接直接跳年付付款页）
+        const annual = typeof annualOverride === 'boolean'
+          ? annualOverride
+          : !!(document.getElementById('billToggle') && document.getElementById('billToggle').checked);
+        const id = plan === 'starter'
+          ? (annual ? (cfg.starterAnnualPriceId || cfg.starterPriceId) : cfg.starterPriceId)
+          : (annual ? (cfg.proAnnualPriceId || cfg.proPriceId) : cfg.proPriceId);
+        if (!id) { showGlobal(t('upgrade.nocfg', 'Upgrade is temporarily unavailable, please try again later')); return; }
+        const user = ensureAuth();
+        if (!user) return;
+        Paddle.Checkout.open({ items: [{ priceId: id, quantity: 1 }], customer: { email: user.email }, customData: { userId: String(user.id) } });
+      };
+      if (cfg && (cfg.starterPriceId || cfg.starterAnnualPriceId)) run();
+      else fetch('/api/paddle-config').then((r) => r.json()).then((j) => { cfg = j; run(); })
+        .catch(() => showGlobal(t('upgrade.nocfg', 'Upgrade is temporarily unavailable, please try again later')));
+    }
+
+    // Creem 托管结账（PAYMENT_PROVIDER=creem 时启用；Paddle 代码保持不动）
+    function openCreemCheckout(plan, annual) {
+      const user = ensureAuth();
+      if (!user) return;
+      showGlobal(t('upgrade.creating', 'Preparing checkout...'));
+      fetch('/api/creem/checkout?plan=' + encodeURIComponent(plan) + '&annual=' + (annual ? '1' : '0'))
+        .then((r) => r.json())
+        .then((j) => {
+          if (j.url) window.location.href = j.url;
+          else showGlobal(errMsg(j) || t('upgrade.nocfg', 'Upgrade is temporarily unavailable, please try again later'));
+        })
+        .catch(() => showGlobal(t('upgrade.nocfg', 'Upgrade is temporarily unavailable, please try again later')));
+    }
+
+    // 升级入口（方案C）：按当前套餐给对比弹窗，月/年由用户选，替代直接跳 checkout
+    // - free     → Free vs Starter
+    // - starter  → Starter vs Pro
+    function openUpgrade(plan) {
+      const li = (k, d) => '<li>' + t(k, d) + '</li>';
+      if (plan === 'starter') {
+        const body =
+          '<p class="story">' + t('upgrade.narrative',
+            'Scenario: your checkout page goes down for 14 minutes at night. On Free, checks run every 5 minutes \u2014 the alert can arrive after your customer is already gone. On Starter, checks run every 60 seconds, so you would know in under a minute. ')
+          + '</p>'
+          + '<div class="cmp">'
+          + '<div class="cmp-col"><h4>' + t('upgrade.freeLabel', 'Your current plan \u00b7 Free') + '</h4><ul>'
+          + li('landing.plan.free.feature1', '50 monitors')
+          + li('landing.plan.free.feature2', '5-minute checks')
+          + li('landing.plan.free.feature3', '7-day history')
+          + li('landing.plan.free.feature4', 'HTTP/HTTPS + Keyword')
+          + '</ul></div>'
+          + '<div class="cmp-col cmp-hl"><h4>' + t('upgrade.starterLabel', 'Starter \u2014 everything in Free, plus') + '</h4><ul>'
+          + li('landing.plan.starter.feature1', '100 monitors')
+          + li('landing.plan.starter.feature2', '1-minute checks')
+          + li('landing.plan.starter.feature3', '90-day history')
+          + li('landing.plan.starter.feature4', 'All monitor types')
+          + li('landing.plan.starter.feature5', 'Email + Slack alerts')
+          + li('landing.plan.starter.feature6', 'Public status page')
+          + '</ul></div>'
+          + '</div>'
+          + '<p class="cmp-bill">' + t('upgrade.billNote', 'Choose how you pay \u2014 switch or cancel anytime:') + '</p>';
+        showGenericModal(t('upgrade.modalTitle', 'Free vs Starter'), body, [
+          { text: t('upgrade.monthlyBtn', 'Monthly \u2014 $4/mo'), onClick: () => creemActive ? openCreemCheckout('starter', false) : openPaddleCheckout('starter', false) },
+          { text: t('upgrade.yearlyBtn', 'Yearly \u2014 $40/yr (save 2 months)'), primary: true, onClick: () => creemActive ? openCreemCheckout('starter', true) : openPaddleCheckout('starter', true) },
+        ]);
+        return;
+      }
+      if (plan === 'pro') {
+        const body =
+          '<p class="story">' + t('upgrade.proNarrative',
+            'Scenario: a client asks for a status page on your own domain with your logo. On Starter, status pages live on a pingory subdomain \u2014 no custom domain, no team seats, 1-minute checks. On Pro, you get a custom domain with white-label branding, team access for up to 3, 30-second checks, every alert channel, and a full year of history. ')
+          + '</p>'
+          + '<div class="cmp">'
+          + '<div class="cmp-col"><h4>' + t('upgrade.proCurrentLabel', 'Your current plan \u00b7 Starter') + '</h4><ul>'
+          + li('landing.plan.starter.feature1', '100 monitors')
+          + li('landing.plan.starter.feature2', '1-minute checks')
+          + li('landing.plan.starter.feature3', '90-day history')
+          + li('landing.plan.starter.feature4', 'All monitor types')
+          + li('landing.plan.starter.feature5', 'Email + Slack alerts')
+          + li('landing.plan.starter.feature6', 'Public status page')
+          + '</ul></div>'
+          + '<div class="cmp-col cmp-hl"><h4>' + t('upgrade.proLabel', 'Pro \u2014 everything in Starter, plus') + '</h4><ul>'
+          + li('landing.plan.pro.feature1', 'Unlimited monitors')
+          + li('landing.plan.pro.feature2', '30-second checks')
+          + li('landing.plan.pro.feature3', '365-day history')
+          + li('landing.plan.pro.feature4', 'All monitor types')
+          + li('landing.plan.pro.feature5', 'All alert channels')
+          + li('landing.plan.pro.feature6', 'Custom domain status page')
+          + li('landing.plan.pro.feature7', 'Team access (up to 3)')
+          + '</ul></div>'
+          + '</div>'
+          + '<p class="cmp-bill">' + t('upgrade.billNote', 'Choose how you pay \u2014 switch or cancel anytime:') + '</p>';
+        showGenericModal(t('upgrade.proModalTitle', 'Starter vs Pro'), body, [
+          { text: t('upgrade.proMonthlyBtn', 'Monthly \u2014 $6/mo'), onClick: () => creemActive ? openCreemCheckout('pro', false) : openPaddleCheckout('pro', false) },
+          { text: t('upgrade.proYearlyBtn', 'Yearly \u2014 $60/yr (save 2 months)'), primary: true, onClick: () => creemActive ? openCreemCheckout('pro', true) : openPaddleCheckout('pro', true) },
+        ]);
+        return;
+      }
+      // 兜底（理论上不会走到）：直接跳结账
+      if (creemActive) openCreemCheckout(plan, !!(document.getElementById('billToggle') && document.getElementById('billToggle').checked));
+      else openPaddleCheckout(plan);
+    }
+    function showUpgradeNudge() {
+      const key = 'pingory_upgrade_dismissed';
+      let dismissed = false; try { dismissed = localStorage.getItem(key) === '1'; } catch {}
+      if (dismissed) { upgradeNudge.classList.add('hidden'); return; }
+      upgradeNudge.classList.remove('hidden');
+      upgradeNudge.innerHTML = '<button class="dismiss" id="upgradeDismiss">' + t('upgrade.dismiss','Dismiss') + '</button>'
+        + '<p class="story">' + t('upgrade.narrative',
+            'Scenario: your checkout page goes down for 14 minutes at night. On Free, checks run every 5 minutes — the alert can arrive after your customer is already gone. On Starter, checks run every 60 seconds, so you would know in under a minute. ')
+        + '<a class="upgrade-link" id="upgradeLink">' + t('upgrade.cta', 'See what Starter quietly adds →') + '</a></p>';
+      const link = document.getElementById('upgradeLink');
+      if (link) link.onclick = () => openUpgrade('starter');
+      const dis = document.getElementById('upgradeDismiss');
+      if (dis) dis.onclick = () => { try { localStorage.setItem(key, '1'); } catch {} upgradeNudge.classList.add('hidden'); };
+    }
+    // Starter→Pro 叙事式升级卡（方案C：复用同一个 #upgradeNudge 容器，按套餐切换内容）
+    function showProNudge() {
+      const key = 'pingory_pro_dismissed';
+      let dismissed = false; try { dismissed = localStorage.getItem(key) === '1'; } catch {}
+      if (dismissed) { upgradeNudge.classList.add('hidden'); return; }
+      upgradeNudge.classList.remove('hidden');
+      upgradeNudge.innerHTML = '<button class="dismiss" id="proDismiss">' + t('upgrade.dismiss', 'Dismiss') + '</button>'
+        + '<p class="story">' + t('upgrade.proNarrative',
+            'Scenario: a client asks for a status page on your own domain with your logo. On Starter, status pages live on a pingory subdomain — no custom domain, no team seats, 1-minute checks. On Pro, you get a custom domain with white-label branding, team access for up to 3, 30-second checks, every alert channel, and a full year of history. ')
+        + '<a class="upgrade-link" id="proUpgradeLink">' + t('upgrade.proCta', 'See what Pro adds →') + '</a></p>';
+      const link = document.getElementById('proUpgradeLink');
+      if (link) link.onclick = () => openUpgrade('pro');
+      const dis = document.getElementById('proDismiss');
+      if (dis) dis.onclick = () => { try { localStorage.setItem(key, '1'); } catch {} upgradeNudge.classList.add('hidden'); };
+    }
+
+    function showDash(user) {
+      window.__currentUser = user;
+      dash.classList.remove('hidden');
+      const landing = document.getElementById('landing');
+      if (landing) landing.classList.add('hidden');
+      currentPlan = user.plan || 'free';
+      // 升级引导（方案C）：free → Starter 叙事卡；starter → Pro 叙事卡；pro/其它隐藏
+      if (currentPlan === 'free') showUpgradeNudge();
+      else if (currentPlan === 'starter') showProNudge();
+      else upgradeNudge.classList.add('hidden');
+      authBar.innerHTML = `<span>${escapeHtml(user.name ? user.name + ' (' + user.email + ')' : user.email)}</span><button id="logoutBtn" data-i18n="logout">${t('logout','Logout')}</button>`;
+      renderTopnavLoggedIn(user);
+      // 邮箱未验证横幅
+      ensureVerifyBanner().classList.toggle('hidden', !!user.emailVerified);
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        showAuth();
+        monList.innerHTML = '';
+      });
+      loadPlanFeatures();
+      loadStatusPage(user);
+      mountAdvanced(user);
+      renderOnboarding();
+    }
+
+    // ===== 套餐能力与动态表单 =====
+    let FEATURES = null, TYPE_LABELS = {}, CHANNEL_LABELS = {};
+    // ===== 账户级告警渠道凭据（Plan A）：一次配置，表单只勾选 =====
+    let ACCOUNT_CHANNELS = {};
+    function channelConfigured(c) {
+      const g = ACCOUNT_CHANNELS[c];
+      if (!g) return false;
+      if (c === 'telegram') return !!(g.botToken && g.chatId);
+      return !!g.url;
+    }
+    async function loadAccountChannels() {
+      try {
+        const r = await fetch('/api/account/channels', { credentials: 'same-origin' });
+        if (r.ok) { const d = await r.json(); ACCOUNT_CHANNELS = d.channels || {}; }
+      } catch { /* 配置缺失只是渠道不可勾选，不影响类型下拉 */ }
+      renderChannels();
+    }
+    // 兜底类型列表：即使 /api/plan-features 失败，类型下拉也必须可用，否则无法添加监控
+    const DEFAULT_TYPES = ['http', 'keyword', 'ping', 'tcp', 'ssl', 'domain', 'api', 'dns', 'heartbeat'];
+    // 填充类型下拉。⚠️ map 形参绝不可命名为 t —— 会遮蔽全局翻译函数 t()（历史 bug：下拉恒为空 → type='' → 403 无法添加监控）
+    function fillTypeOptions() {
+      const sel = document.getElementById('typeInput');
+      if (!sel) return;
+      const types = (FEATURES && Array.isArray(FEATURES.types) && FEATURES.types.length) ? FEATURES.types : DEFAULT_TYPES;
+      sel.innerHTML = types.map((ty) => `<option value="${ty}">${t('type.' + ty, TYPE_LABELS[ty] || ty)}</option>`).join('');
+      if (!sel.value) sel.value = 'http';
+    }
+    async function loadPlanFeatures() {
+      try {
+        const res = await fetch('/api/plan-features');
+        if (res.ok) {
+          const data = await res.json();
+          FEATURES = data.features;
+          TYPE_LABELS = data.typeLabels || {};
+          CHANNEL_LABELS = data.channelLabels || {};
+        }
+      } catch { /* 网络异常也要保证类型下拉可用 */ }
+      fillTypeOptions();
+      renderCfg();
+      await loadAccountChannels();
+    }
+
+    function renderCfg() {
+      const type = document.getElementById('typeInput').value;
+      const box = document.getElementById('cfgBox');
+      const urlHint = {
+        http: 'https://example.com', keyword: 'https://example.com', api: 'https://api.example.com/health',
+        heartbeat: t('cfg.hint.heartbeat', 'Your site must call POST /api/heartbeat/<id> periodically'),
+      };
+      let html = '';
+      if (urlHint[type]) html += `<label>${t('cfg.target','Target URL')}</label><div class="hint">${urlHint[type]}</div>`;
+      if (type === 'keyword') {
+        html += `<label>${t('cfg.keyword','Keyword')}</label><input id="cfgKeyword" placeholder="${t('cfg.kwph','String the page must contain')}" />`;
+      } else if (type === 'tcp') {
+        html += `<label>${t('cfg.port','Port')}</label><input id="cfgPort" type="number" value="80" />`;
+      } else if (type === 'ssl') {
+        html += `<label>${t('cfg.port','Port')}</label><input id="cfgPort" type="number" value="443" />`;
+        html += `<label>${t('cfg.warnDays','Alert days before expiry')}</label><input id="cfgWarnDays" type="number" value="30" />`;
+      } else if (type === 'domain') {
+        html += `<label>${t('cfg.warnDays','Alert days before expiry')}</label><input id="cfgWarnDays" type="number" value="30" />`;
+      } else if (type === 'api') {
+        html += `<label>${t('cfg.method','HTTP method')}</label><input id="cfgMethod" value="GET" />`;
+        html += `<label>${t('cfg.headers','Custom headers (JSON)')}</label><textarea id="cfgHeaders" placeholder='{"Authorization":"Bearer x"}'></textarea>`;
+        html += `<label>${t('cfg.assertPath','Assert path (e.g. data.status)')}</label><input id="cfgAssertPath" placeholder="status" />`;
+        html += `<label>${t('cfg.assertEq','Expected value')}</label><input id="cfgAssertEq" placeholder="ok" />`;
+      } else if (type === 'dns') {
+        html += `<label>${t('cfg.recordType','Record type')}</label><input id="cfgRecordType" value="A" />`;
+        html += `<label>${t('cfg.expected','Expected values (comma separated)')}</label><input id="cfgExpected" placeholder="1.2.3.4,1.2.3.5" />`;
+      }
+      if (type === 'http' || type === 'api') {
+        html += `<label>${t('cfg.slow','Slow response threshold (ms, optional)')}</label><input id="cfgSlow" type="number" placeholder="2000" />`;
+      }
+      if (type === 'http') {
+        html += `<label>${t('cfg.codes','Expected status codes (comma separated, empty = 2xx/3xx OK)')}</label><input id="cfgCodes" placeholder="200,201" />`;
+      }
+      box.innerHTML = html;
+      box.classList.toggle('hidden', html === '');
+    }
+
+    function renderChannels() {
+      const box = document.getElementById('chanBox');
+      if (!box) return;
+      const chs = FEATURES ? FEATURES.channels.filter((c) => c !== 'email') : [];
+      if (!chs.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+      let html = `<div class="sec-title">${t('chan.title','Alert channels (email is always on)')}</div>`;
+      let unconfigured = 0;
+      for (const c of chs) {
+        const label = t('channel.'+c, CHANNEL_LABELS[c] || c);
+        const ok = channelConfigured(c);
+        if (!ok) unconfigured++;
+        // 已配置 → 默认勾选（账户级「配一次、自动挂上」）；未配置 → 禁用并引导去账户设置
+        const input = `<input type="checkbox" id="chan_${c}" ${ok ? 'checked' : 'disabled'} />`;
+        const note = ok ? '' : `<span class="chan-note">${t('chan.notConfigured','Not set up')} · <a href="#" data-open-acct="1">${t('chan.configure','Set up')}</a></span>`;
+        html += `<div class="chan-row"><label class="chan-head">${input}<span>${label}</span></label>${note}</div>`;
+      }
+      if (unconfigured) html += `<p class="chan-note">${t('chan.acctHint','Set credentials once in Account settings, then just tick channels here.')}</p>`;
+      box.innerHTML = html;
+      box.classList.remove('hidden');
+      box.querySelectorAll('[data-open-acct]').forEach((a) => {
+        a.onclick = (e) => { e.preventDefault(); if (window.__currentUser) openAccountSettings(window.__currentUser); };
+      });
+    }
+
+    function collectConfig() {
+      const type = document.getElementById('typeInput').value;
+      const c = {};
+      const val = (id) => document.getElementById(id)?.value?.trim();
+      if (type === 'keyword') { const k = val('cfgKeyword'); if (k) c.keyword = k; }
+      else if (type === 'tcp') { const p = val('cfgPort'); if (p) c.port = Number(p); }
+      else if (type === 'ssl') { const p = val('cfgPort'); if (p) c.port = Number(p); const w = val('cfgWarnDays'); if (w) c.sslWarnDays = Number(w); }
+      else if (type === 'domain') { const w = val('cfgWarnDays'); if (w) c.domainWarnDays = Number(w); }
+      else if (type === 'api') {
+        const m = val('cfgMethod'); if (m) c.method = m;
+        const h = val('cfgHeaders'); if (h) { try { c.headers = JSON.parse(h); } catch {} }
+        const ap = val('cfgAssertPath'); if (ap) c.assertPath = ap;
+        const ae = val('cfgAssertEq'); if (ae != null) c.assertEquals = ae;
+      } else if (type === 'dns') {
+        const rt = val('cfgRecordType'); if (rt) c.recordType = rt;
+        const ex = val('cfgExpected'); if (ex) c.expectedValues = ex.split(',').map((s) => s.trim()).filter(Boolean);
+      } else if (type === 'http') {
+        const s = val('cfgSlow'); if (s) c.slowThresholdMs = Number(s);
+        const cd = val('cfgCodes'); if (cd) c.expectedStatuses = cd.split(',').map((s) => Number(s.trim())).filter(Boolean);
+      }
+      if (type === 'http' || type === 'api') {
+        const s = val('cfgSlow'); if (s) c.slowThresholdMs = Number(s);
+      }
+      return c;
+    }
+
+    function collectChannels() {
+      const chs = FEATURES ? FEATURES.channels.filter((c) => c !== 'email') : [];
+      const out = { email: { enabled: true } };
+      for (const c of chs) {
+        const el = document.getElementById(`chan_${c}`);
+        // 只存开关；凭据取自账户级（服务器 resolveChannels 合并）
+        if (el && el.checked && !el.disabled) out[c] = { enabled: true };
+      }
+      return out;
+    }
+
+    // ===== 新手引导（3 步清单；方案A：free 第③步=升级变现点）=====
+    window.__monitorCount = 0;
+    async function resendVerifyFromOnb(){
+      const r = await fetch('/api/auth/resend-verify', { method: 'POST' });
+      const d = await r.json();
+      showGlobal(d.ok ? t('verify.sent', 'Verification email resent. Please check your inbox.') : (errMsg(d) || t('verify.fail', 'Failed to send')));
+    }
+    async function enableStatusFromOnb(){
+      const p = await fetch('/api/me/status-page', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true }) });
+      if (!p.ok) { const e = await p.json().catch(()=>({})); showGlobal(errMsg(e) || t('onb.step3.fail','Could not enable the status page, please try again')); return; }
+      const r = await fetch('/api/me'); window.__currentUser = (await r.json()).user;
+      renderOnboarding(); renderStatusBarText();
+    }
+    function renderOnboarding(){
+      const wrap = document.getElementById('onbWrap'); if (!wrap) return;
+      const user = window.__currentUser;
+      let dismissed=false; try { dismissed = localStorage.getItem('pingory_onb_dismissed')==='1'; } catch {}
+      if (!user || dismissed) { if (wrap.innerHTML) wrap.innerHTML=''; window.__onbSig=''; return; }
+      const hasMon = (window.__monitorCount||0) >= 1;
+      const emailOk = !!user.emailVerified;
+      const plan = user.plan || 'free';
+      const spOk = !!user.statusPageEnabled;
+      // 免费用户：完成监控+验证邮箱即视为搞定（第③步为升级项，不硬卡）；付费用户：额外需开启状态页
+      const complete = hasMon && emailOk && (plan==='free' ? true : spOk);
+      // 状态签名：状态与语言均未变化时跳过重建（pollTimer 每 5s 触发一次，避免无谓 DOM 重建）
+      const sig = [user.id, plan, hasMon, emailOk, spOk, I18N && I18N['onb.title']].join('|');
+      if (complete) { if (window.__onbSig !== '') { wrap.innerHTML=''; window.__onbSig=''; } return; }
+      if (sig === window.__onbSig) return;
+      window.__onbSig = sig;
+
+      const done1 = hasMon, done2 = emailOk, done3 = spOk;
+      const doneCount = [done1, done2, (plan!=='free' ? done3 : false)].filter(Boolean).length;
+      const totalSteps = plan==='free' ? 2 : 3;
+      const pct = Math.round(doneCount/totalSteps*100);
+
+      const st = (done, locked, tKey, tDef, dKey, dDef, actHtml) => `
+        <div class="onb-step ${done?'done':(locked?'locked':'')}">
+          <div class="onb-check">${done?'✓':(locked?'🔒':'')}</div>
+          <div class="onb-body">
+            <p class="onb-t">${t(tKey,tDef)}</p>
+            <p class="onb-d">${t(dKey,dDef)}</p>
+            ${actHtml||''}
+          </div>
+        </div>`;
+
+      // 第①步：创建监控（Free/付费都能做）
+      let s1;
+      if (done1) {
+        s1 = st(true,false,'onb.step1.t','Add your first monitor','onb.step1.doneD','Your site is being watched — you\u2019ll get an alert the moment it goes down.');
+      } else {
+        s1 = st(false,false,'onb.step1.t','Add your first monitor','onb.step1.pendingD','Use the form above to add the URL you want to watch. It takes about 30 seconds.');
+      }
+
+      // 第②步：验证邮箱=告警通道（email 始终开启，验证后才有保障）
+      let s2;
+      if (done2) {
+        s2 = st(true,false,'onb.step2.t','Verify email for downtime alerts','onb.step2.doneD','Email alerts are on and verified — you\u2019ll be the first to know.');
+      } else {
+        s2 = st(false,false,'onb.step2.t','Verify email for downtime alerts','onb.step2.pendingD','Email is your alert channel on every plan. Verify it so downtime alerts actually reach you.')
+          + '<div class="onb-act"><button onclick="resendVerifyFromOnb()">'+t('onb.step2.btn','Resend verification email')+'</button></div>';
+      }
+
+      // 第③步：状态页（free=升级变现点；starter+ = 真实开启动作）
+      let s3='';
+      if (plan !== 'free') {
+        if (done3) {
+          s3 = st(true,false,'onb.step3.t','Publish a status page','onb.step3.doneD','Your status page is live — share it with your users.');
+        } else {
+          s3 = st(false,false,'onb.step3.t','Publish a status page','onb.step3.pendingD','Give customers a page they can check when things look slow.')
+            + '<div class="onb-act"><button onclick="enableStatusFromOnb()">'+t('onb.step3.btn','Publish my status page')+'</button></div>';
+        }
+      } else {
+        // free：升级点
+        s3 = st(false,true,'onb.step3.t','Publish a status page','onb.step3.freeD','A public status page is a Starter feature — let customers see you\u2019re on top of it.')
+          + '<div class="onb-act"><button class="lk" onclick="openUpgrade(\'starter\')">'+t('onb.step3.up','Unlock with Starter \u2192 $4/mo')+'</button></div>';
+      }
+
+      wrap.innerHTML =
+        '<div class="onb">'
+        + '<div class="onb-head"><div><p class="onb-title">'+t('onb.title','Get Pingory set up in 3 steps')+'</p>'
+        + '<p class="onb-sub">'+t('onb.sub','Each step takes under a minute. You\u2019ll get a green check as you go.')+'</p></div>'
+        + '<button class="onb-dismiss" onclick="dismissOnb()">'+t('onb.dismiss','Skip')+'</button></div>'
+        + '<div class="onb-bar"><div class="onb-fill" style="width:'+pct+'%"></div></div>'
+        + '<div class="onb-steps">'+s1+s2+s3+'</div>'
+        + '</div>';
+    }
+    function dismissOnb(){ try { localStorage.setItem('pingory_onb_dismissed','1'); } catch {} renderOnboarding(); }
+    function renderStatusBarText(){ const u=window.__currentUser; if(u) loadStatusPage(u); }
+
+    // ===== 状态页设置 =====
+    async function loadStatusPage(user) {
+      const bar = document.getElementById('statusBar');
+      if (!user.statusPageEnabled && !(FEATURES && FEATURES.statusPage)) { bar.classList.add('hidden'); return; }
+      bar.classList.remove('hidden');
+      if (user.statusPageEnabled && user.publicSlug) {
+        bar.innerHTML = `<span data-i18n="status.on">${t('status.on', 'Public status page is on:')}</span> <a href="/status/${user.publicSlug}" target="_blank">/status/${user.publicSlug}</a>
+          <button class="pub" id="spDisable" data-i18n="status.disable">${t('status.disable', 'Disable')}</button>`;
+      } else {
+        bar.innerHTML = `<span data-i18n="status.off">${t('status.off', 'Generate a public status page for your customers (Starter and above):')}</span>
+          <button class="pub" id="spEnable" data-i18n="status.enable">${t('status.enable', 'Enable status page')}</button>`;
+      }
+      const en = document.getElementById('spEnable');
+      const dis = document.getElementById('spDisable');
+      if (en) en.onclick = async () => {
+        await fetch('/api/me/status-page', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true }) });
+        const r = await fetch('/api/me'); const u = (await r.json()).user; window.__currentUser = u; loadStatusPage(u); renderOnboarding();
+      };
+      if (dis) dis.onclick = async () => {
+        await fetch('/api/me/status-page', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: false }) });
+        const r = await fetch('/api/me'); const u = (await r.json()).user; window.__currentUser = u; loadStatusPage(u); renderOnboarding();
+      };
+    }
+
+    async function checkAuth() {
+      const res = await fetch('/api/me');
+      const data = await res.json();
+      if (data.user) {
+        showDash(data.user);
+        loadMonitors();
+        if (!pollTimer) pollTimer = setInterval(loadMonitors, 5000);
+      } else {
+        showAuth();
+      }
+    }
+
+    // ===== 监控管理 =====
+    const monList = document.getElementById('monList');
+    const addForm = document.getElementById('addForm');
+    // 语言切换重绘缓冲：缓存已展开区域的数据，切换语言时原样重建（否则动态区停留旧语言）
+    const OPEN_HIST = {}, OPEN_STATS = {};
+
+    function fmtTime(ts) {
+      if (!ts) return t('never','never');
+      return new Date(ts).toLocaleTimeString();
+    }
+
+    // 检查失败原因：服务端存 `code|detail` 稳定错误码，这里按当前语言翻译。
+    // 未知值（HTTP 500 / ECONNREFUSED / err.message 等语言中立的原文）原样显示。
+    // ⚠️ 新增错误码须同步 src/monerr.js 与 8 语 monerr.* 键。
+    const MONERR_CODES = ['timeout','kw_missing','kw_not_found','ping_no_response','ping_failed','connect_timeout','ssl_no_cert','ssl_expired','ssl_handshake','ssl_timeout','whois_no_expiry','domain_expired','assert_failed','heartbeat_never','heartbeat_late','ssl_expiring','domain_expiring'];
+    function fmtMonitorError(raw) {
+      if (!raw) return '';
+      const p = String(raw).split('|');
+      if (!MONERR_CODES.includes(p[0])) return String(raw);
+      const s = t('monerr.' + p[0], String(raw));
+      if (p[0] === 'assert_failed') return s.replace('{p}', p[1] || '').replace('{a}', p[2] || '').replace('{e}', p[3] || '');
+      return s.replace('{detail}', p[1] || '');
+    }
+
+    function renderMonitors(list) {
+      window.__lastMonitors = list;   // 供语言切换时重绘（见 __afterLang）
+      if (!list.length) {
+        monList.innerHTML = '<p class="empty">' + t('mon.empty', 'No monitors yet. Add one above.') + '</p>';
+        return;
+      }
+      monList.innerHTML = list.map((m) => `
+        <div class="mon" data-id="${m.id}">
+          <span class="dot ${m.status}"></span>
+          <div class="info">
+            <div class="url">${escapeHtml(m.name)}</div>
+            <div class="meta">${escapeHtml(m.url)} · ${m.type} · ${t('mon.last','last check')} ${fmtTime(m.lastChecked)}
+              ${m.lastResponseTime != null ? '· ' + m.lastResponseTime + 'ms' : ''}
+              ${m.status === 'down' && m.lastError ? '· ' + escapeHtml(fmtMonitorError(m.lastError)) : ''}</div>
+          </div>
+          <div class="acts">
+            <button class="stats" data-id="${m.id}">${t('mon.stats','Stats')}</button>
+            <button class="hist" data-id="${m.id}">${t('mon.hist','History')}</button>
+            <button class="pub" data-id="${m.id}">${m.statusPublic ? t('mon.pubOn','Public ✓') : t('mon.pub','Public')}</button>
+            <button class="del" data-id="${m.id}">${t('mon.del','Delete')}</button>
+          </div>
+          <div class="history hidden" id="hist-${m.id}"></div>
+          <div class="chart hidden" id="chart-${m.id}"></div>
+        </div>
+      `).join('');
+      monList.querySelectorAll('button.del').forEach((b) => {
+        b.addEventListener('click', async () => {
+          await fetch('/api/monitors/' + b.dataset.id, { method: 'DELETE' });
+          loadMonitors();
+        });
+      });
+      monList.querySelectorAll('button.hist').forEach((b) => {
+        b.addEventListener('click', async () => {
+          const box = document.getElementById('hist-' + b.dataset.id);
+          if (!box.classList.contains('hidden')) { box.classList.add('hidden'); box.innerHTML = ''; delete OPEN_HIST[b.dataset.id]; return; }
+          const res = await fetch('/api/monitors/' + b.dataset.id + '/history');
+          const evs = await res.json();
+          OPEN_HIST[b.dataset.id] = evs;
+          box.innerHTML = histHtml(evs);
+          box.classList.remove('hidden');
+        });
+      });
+      monList.querySelectorAll('button.stats').forEach((b) => {
+        b.addEventListener('click', async () => {
+          const box = document.getElementById('chart-' + b.dataset.id);
+          if (!box.classList.contains('hidden')) { box.classList.add('hidden'); box.innerHTML = ''; delete OPEN_STATS[b.dataset.id]; return; }
+          const res = await fetch('/api/monitors/' + b.dataset.id + '/stats');
+          if (!res.ok) { box.innerHTML = '<div class="evt">' + t('chart.needPlan','Trend chart requires Starter or above') + '</div>'; box.classList.remove('hidden'); return; }
+          const s = await res.json();
+          OPEN_STATS[b.dataset.id] = s;
+          box.innerHTML = renderChart(s);
+          box.classList.remove('hidden');
+        });
+      });
+      monList.querySelectorAll('button.pub').forEach((b) => {
+        b.addEventListener('click', async () => {
+          const id = b.dataset.id;
+          const m = list.find((x) => x.id === id);
+          const res = await fetch('/api/monitors/' + id, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ statusPublic: !(m.statusPublic) }),
+          });
+          if (res.ok) loadMonitors();
+          else { const e = await res.json(); showAlert(errMsg(e) || t('op.fail','Operation failed')); }
+        });
+      });
+      redrawMonitorExtras();   // 恢复上一轮已展开的历史/图表（见 redrawMonitorExtras 注释）
+    }
+
+    // 历史事件列表模板（点击展开与语言切换重绘共用，避免两处文案漂移）
+    function histHtml(evs) {
+      return evs.length
+        ? evs.map((e) => `
+              <div class="evt"><span class="t">${new Date(e.created_at).toLocaleString()}</span>
+              <span>${e.to_status === 'up' ? '✅ ' + t('hist.up','Recovered') : (e.event_type === 'warning' ? '⚠️ ' + t('hist.warn','Warning') : '❌ ' + t('hist.down','Down'))}${e.error ? ' (' + escapeHtml(fmtMonitorError(e.error)) + ')' : ''}</span></div>`).join('')
+        : '<div class="evt">' + t('hist.none','No events yet') + '</div>';
+    }
+    // 重绘已展开的历史/图表区块：① 切换语言时刷新 t() 文案 ② 轮询重绘列表后被清空时恢复
+    // （历史缺陷：loadMonitors 每 5 秒整体重建 #monList，用户刚展开的「历史/趋势」会在 5 秒内消失）
+    function redrawMonitorExtras() {
+      for (const id of Object.keys(OPEN_HIST)) {
+        const box = document.getElementById('hist-' + id);
+        if (!box) continue;
+        box.innerHTML = histHtml(OPEN_HIST[id]);
+        box.classList.remove('hidden');
+      }
+      for (const id of Object.keys(OPEN_STATS)) {
+        const box = document.getElementById('chart-' + id);
+        if (!box) continue;
+        box.innerHTML = renderChart(OPEN_STATS[id]);
+        box.classList.remove('hidden');
+      }
+    }
+    // 套餐用量提示（含 t()，随语言/清单变化刷新）
+    function refreshPlanInfo() {
+      if (!planInfo) return;
+      // Pro 套餐上限为 Infinity：直接插值会渲染成字面量「Infinity」，改用 ∞（与落地页一致）
+      const n = PLAN_LIMITS[currentPlan] ?? 20;
+      const limit = Number.isFinite(n) ? n : '∞';
+      const used = (window.__lastMonitors || []).length;
+      planInfo.textContent = t('plan.info', 'Plan: {plan} · {used} / {limit} monitors used', { plan: t('plan.'+currentPlan, currentPlan), used, limit });
+    }
+
+    function renderChart(s) {
+      if (!s.series || !s.series.length) return '<div class="evt">' + t('chart.noData', 'No data in last 30 days') + '</div>';
+      const W = 680, H = 140, pad = 20;
+      const rts = s.series.filter((p) => p.rt != null).map((p) => p.rt);
+      const max = Math.max(1, ...rts);
+      const n = s.series.length;
+      const x = (i) => pad + (i / Math.max(1, n - 1)) * (W - 2 * pad);
+      const y = (v) => H - pad - (v / max) * (H - 2 * pad);
+      const pts = s.series.map((p, i) => `${x(i)},${p.rt != null ? y(p.rt) : H - pad}`).join(' ');
+      const downPts = s.series.map((p, i) => p.status === 'down' ? `<circle cx="${x(i)}" cy="${H - pad}" r="3" fill="#ff5c5c"/>` : '').join('');
+      return `<svg class="chart" viewBox="0 0 ${W} ${H}" width="100%">
+        <line x1="${pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad}" stroke="#cbd5d0"/>
+        <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+        ${downPts}
+        <text x="${pad}" y="14" fill="#9aa0a6" font-size="11">${t('chart.rt','Response time (ms)')} · ${t('chart.max','max')} ${max} · ${t('chart.uptime','uptime')} ${s.uptime != null ? s.uptime.toFixed(2) + '%' : 'N/A'} · ${t('chart.avg','avg')} ${s.avgRt ?? '?'}ms · P95 ${s.p95Rt ?? '?'}</text>
+      </svg>`;
+    }
+
+    async function loadMonitors() {
+      if (dash.classList.contains('hidden')) return;
+      const res = await fetch('/api/monitors');
+      if (res.status === 401) return;
+      const list = await res.json();
+      renderMonitors(list);
+      window.__monitorCount = list.length;
+      renderOnboarding();
+      refreshPlanInfo();
+    }
+
+    addForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = document.getElementById('urlInput').value.trim();
+      const name = document.getElementById('nameInput').value.trim();
+      const interval = document.getElementById('intervalInput').value;
+      const type = document.getElementById('typeInput').value || 'http';
+      const config = collectConfig();
+      const channels = (FEATURES && FEATURES.channels.length) ? collectChannels() : { email: { enabled: true } };
+      const minInterval = FEATURES ? FEATURES.minInterval || 300 : 300;
+      const res = await fetch('/api/monitors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, name, interval: Number(interval) || minInterval, type, config, channels }),
+      });
+      if (res.ok) {
+        addForm.reset();
+        document.getElementById('intervalInput').value = minInterval;
+        renderCfg(); renderChannels();
+        loadMonitors();
+      } else {
+        const err = await res.json();
+        showAlert(errMsg(err) || t('op.fail','Operation failed'));
+      }
+    });
+
+    document.getElementById('typeInput').addEventListener('change', renderCfg);
+
+    // 初始加载统一由文件末尾的 startApp() 负责（先等 i18n 就绪再渲染，避免先闪英文）。
+    // ⚠️ 切勿在此处再调 checkAuth()/handleVerifyParam()：会造成重复初始化
+    //    （历史 bug：验证链接被请求两次，第二次报 token 失效）。
+
+    function advPanel(title, bodyNode){
+      const d = document.createElement('div');
+      d.style.cssText = 'background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin:14px 0;';
+      const h = document.createElement('h3'); h.textContent = title; h.style.cssText='margin:0 0 12px;font-size:1.05rem;';
+      d.appendChild(h); d.appendChild(bodyNode);
+      return d;
+    }
+    function mountAdvanced(user){
+      const zone = document.getElementById('advZone'); if(!zone) return;
+      zone.innerHTML='';
+      const plan = user.plan || 'free';
+
+      // --- G9 Account API key (Pro) ---
+      if (plan === 'pro') {
+        const body = document.createElement('div');
+        body.innerHTML = '<button id="apiKeyBtn" class="pub">'+t('apikey.gen','Generate / View API Key')+'</button><div id="apiKeyOut" class="empty" style="margin-top:8px;word-break:break-all;"></div>';
+        zone.appendChild(advPanel(t('apikey.title','Account API (manage monitors programmatically)'), body));
+        body.querySelector('#apiKeyBtn').onclick = async ()=>{
+          const r = await fetch('/api/account/apikey',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+          const j = await r.json();
+          body.querySelector('#apiKeyOut').textContent = j.apiKey || errMsg(j);
+        };
+      }
+
+      // --- G7 状态页高级设置 (Pro) ---
+      if (plan === 'pro' && user.statusPageEnabled) {
+        const body = document.createElement('div');
+        body.innerHTML = `
+          <label>${t('sp.domain','Custom domain (CNAME to this service)')}</label>
+          <input id="spDomain" placeholder="status.yourdomain.com" value="${user.statusCustomDomain||''}" style="width:100%;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;"/>
+          <label style="display:block;margin-top:10px;"><input type="checkbox" id="spWhite" ${user.statusWhiteLabel?'checked':''}/> ${t('sp.white','White-label (hide Pingory branding)')}</label>
+          <label style="display:block;margin-top:6px;">${t('sp.pw','Private status page password (leave empty = public):')}</label>
+          <input id="spPw" type="password" placeholder="${t('sp.pwph','Set, or leave empty to clear')}" style="width:100%;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;"/>
+          <button id="spSave" class="pub" style="margin-top:10px;">${t('sp.save','Save status page settings')}</button>
+          <div id="spMsg" class="empty" style="margin-top:8px;"></div>
+          <div id="subZone" style="margin-top:14px;"></div>`;
+        zone.appendChild(advPanel(t('sp.title','Advanced status page settings'), body));
+        body.querySelector('#spSave').onclick = async ()=>{
+          const payload = { customDomain: body.querySelector('#spDomain').value.trim(), whiteLabel: body.querySelector('#spWhite').checked, password: body.querySelector('#spPw').value };
+          const r = await fetch('/api/me/status-page',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+          const j = await r.json();
+          body.querySelector('#spMsg').textContent = r.ok ? t('sp.saved','Saved') : (errMsg(j)||t('err.fail','Failed'));
+          if(r.ok) loadSubscribers(body.querySelector('#subZone'), user);
+        };
+        loadSubscribers(body.querySelector('#subZone'), user);
+      }
+
+      // --- G8 维护窗口 (Pro) ---
+      if (plan === 'pro') {
+        const body = document.createElement('div');
+        body.innerHTML = `
+          <div id="mwList" class="empty">${t('mw.loading','Loading…')}</div>
+          <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+            <div>${t('mw.add','Add maintenance window')}</div>
+            <input id="mwTitle" placeholder="${t('mw.titleph','Title (e.g. server upgrade)')}" style="width:100%;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;margin-top:6px;"/>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+            <input id="mwStart" type="text" placeholder="${t('mw.startph','Start: YYYY-MM-DD HH:mm')}" style="flex:1;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;"/>
+            <input id="mwEnd" type="text" placeholder="${t('mw.endph','End: YYYY-MM-DD HH:mm')}" style="flex:1;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;"/>
+            </div>
+            <div class="empty" style="margin-top:6px;">${t('mw.scope','Scope: all monitors of this user')}</div>
+            <button id="mwAdd" class="pub" style="margin-top:8px;">${t('mw.addbtn','Add maintenance window')}</button>
+          </div>`;
+        zone.appendChild(advPanel(t('mw.title','Maintenance windows (no false alerts during planned downtime)'), body));
+        loadMaintenance(body);
+      }
+
+      // --- G9 团队席位 (Pro) ---
+      if (plan === 'pro') {
+        const body = document.createElement('div');
+        body.innerHTML = `<div id="teamBox" class="empty">${t('team.loading','Loading…')}</div>`;
+        zone.appendChild(advPanel(t('team.title','Team seats'), body));
+        loadTeam(body.querySelector('#teamBox'));
+      }
+
+      // --- 推荐码系统（暂时下线：佣金仅记账、Creem Customer Credits 打款未实现，避免兑现不了的承诺；打款上线后把 REFERRAL_ENABLED 改回 true）---
+      const REFERRAL_ENABLED = false;
+      if (REFERRAL_ENABLED) {
+        const body = document.createElement('div');
+        body.innerHTML = `<div id="refBox" class="empty">${t('referral.loading','Loading…')}</div>`;
+        zone.appendChild(advPanel(t('referral.title','Refer a friend — earn 10%'), body));
+        loadReferral(body.querySelector('#refBox'));
+      }
+
+      // --- 一键导入（#288）---
+      {
+        const body = document.createElement('div');
+        body.innerHTML = `<button id="importBtn" class="pub">${t('import.btn','Import monitors (UptimeRobot / CSV / JSON)')}</button><div class="empty" style="margin-top:8px;">${t('import.hint','Paste an export from UptimeRobot or a generic CSV / JSON to bulk-create monitors.')}</div>`;
+        zone.appendChild(advPanel(t('import.title','Import monitors'), body));
+        body.querySelector('#importBtn').onclick = () => openImportModal();
+      }
+    }
+    async function loadSubscribers(box, user){
+      try {
+        const r = await fetch('/api/me/subscribers'); const list = await r.json();
+        box.innerHTML = '<div style="font-weight:600;margin-bottom:6px;">'+t('sp.subs','Status page subscribers')+'</div>' +
+          (list.length ? list.map((s)=>`<div style="display:flex;justify-content:space-between;gap:8px;"><span>${s.email}</span><button data-del="${s.id}" style="background:none;border:none;color:#ff5c5c;cursor:pointer;">`+t('btn.del','Delete')+`</button></div>`).join('') : '<div class="empty">'+t('sp.nosub','No subscribers yet')+'</div>');
+        box.querySelectorAll('[data-del]').forEach((b)=> b.onclick = async ()=>{ await fetch('/api/me/subscribers/'+b.dataset.del,{method:'DELETE'}); loadSubscribers(box, user); });
+      } catch {}
+    }
+    async function loadMaintenance(body){
+      const list = document.getElementById('mwList');
+      try {
+        const r = await fetch('/api/maintenance-windows'); const arr = await r.json();
+        list.innerHTML = arr.length ? arr.map((m)=>`<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;"><span>${m.title} · ${new Date(m.startAt).toLocaleString()} → ${new Date(m.endAt).toLocaleString()}</span><button data-del="${m.id}" style="background:none;border:none;color:#ff5c5c;cursor:pointer;">`+t('btn.del','Delete')+`</button></div>`).join('') : '<div class="empty">'+t('mw.none','No maintenance windows')+'</div>';
+        list.querySelectorAll('[data-del]').forEach((b)=> b.onclick = async ()=>{ await fetch('/api/maintenance-windows/'+b.dataset.del,{method:'DELETE'}); loadMaintenance(body); });
+        body.querySelector('#mwAdd').onclick = async ()=>{
+          const start = new Date(body.querySelector('#mwStart').value).getTime();
+          const end = new Date(body.querySelector('#mwEnd').value).getTime();
+          if(!start||!end){ showAlert(t('mw.pick','Please pick start and end time')); return; }
+          const r2 = await fetch('/api/maintenance-windows',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:body.querySelector('#mwTitle').value,startAt:start,endAt:end,monitorIds:'all'})});
+          if(r2.ok) loadMaintenance(body); else { const j=await r2.json(); showAlert(errMsg(j)||t('err.fail','Failed')); }
+        };
+      } catch {}
+    }
+    async function loadTeam(box){
+      try {
+        const r = await fetch('/api/team'); const j = await r.json();
+        if(!j.team){
+          box.innerHTML = '<button id="teamCreate" class="pub">'+t('team.create','Create team')+'</button><div class="empty" style="margin-top:6px;">'+t('team.hint','Create a team to invite members and share monitors')+'</div>';
+          box.querySelector('#teamCreate').onclick = async ()=>{ showPrompt(t('team.nameph','Team name'), '', async (name)=>{ if(!name) return; const r2=await fetch('/api/team',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})}); if(r2.ok) loadTeam(box); else { const j=await r2.json(); showAlert(errMsg(j)||t('err.fail','Failed')); } }); };
+          return;
+        }
+        const tm = j.team;
+        box.innerHTML = `<div style="font-weight:600;">${tm.name}</div>` +
+          '<div style="margin:8px 0;">'+t('team.members','Members')+'：' + tm.members.map((m)=>`<div>${m.email} (${m.teamRole})</div>`).join('') + '</div>' +
+          '<div class="empty">'+t('team.shared','Shared monitors')+'：' + (tm.monitors?tm.monitors.length:0) + ' '+(t('team.count',''))+'</div>' +
+          '<div style="margin-top:8px;"><input id="teamInvite" placeholder="'+t('team.inviteph','Invite member email')+'" style="padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;"/><button id="teamInviteBtn" class="pub" style="margin-left:6px;">'+t('team.invitebtn','Invite')+'</button></div>' +
+          '<button id="teamLeave" style="margin-top:10px;background:none;border:1px solid var(--border);color:#ff5c5c;padding:6px 10px;border-radius:6px;cursor:pointer;">'+t('team.leave','Leave team')+'</button>';
+        box.querySelector('#teamInviteBtn').onclick = async ()=>{ const email=box.querySelector('#teamInvite').value; const r2=await fetch('/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}); const j2=await r2.json(); showAlert(r2.ok?(j2.result==='already'?t('team.already','Already a member'):t('team.joined','Invited')):(errMsg(j2)||t('err.fail','Failed'))); if(r2.ok) loadTeam(box); };
+        box.querySelector('#teamLeave').onclick = async ()=>{ await fetch('/api/team/leave',{method:'POST'}); loadTeam(box); };
+      } catch {}
+    }
+    async function loadReferral(box){
+      try {
+        const r = await fetch('/api/me/referral'); const j = await r.json();
+        if (!j.referralCode) { box.innerHTML = '<div class="empty">'+t('referral.none','Referral is not available for your account yet.')+'</div>'; return; }
+        const link = j.referralLink;
+        const st = j.stats || {};
+        const earnings = (Number(st.earnings)||0).toFixed(2);
+        box.innerHTML =
+          '<div style="font-weight:600;margin-bottom:6px;">'+t('referral.share','Share your invite link')+'</div>' +
+          '<div style="display:flex;gap:8px;">' +
+            '<input id="refLink" readonly value="'+escapeHtml(link)+'" style="flex:1;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;"/>' +
+            '<button id="refCopy" class="pub">'+t('referral.copy','Copy')+'</button>' +
+          '</div>' +
+          '<div class="empty" style="margin-top:8px;">'+t('referral.how','When someone signs up with your link and upgrades to a paid plan, you earn a one-time 10% commission.')+'</div>' +
+          '<div style="margin-top:10px;font-size:.9rem;">' +
+            t('referral.statTotal','Invited')+': <b>'+(st.totalReferred||0)+'</b> · ' +
+            t('referral.statPaid','Upgraded')+': <b>'+(st.paidCount||0)+'</b> · ' +
+            t('referral.statEarn','Earned')+': <b>$'+earnings+'</b>' +
+          '</div>';
+        box.querySelector('#refCopy').onclick = async ()=>{
+          try {
+            await navigator.clipboard.writeText(link);
+            const b = box.querySelector('#refCopy'); b.textContent = t('referral.copied','Copied!');
+            setTimeout(()=>{ const b2 = box.querySelector('#refCopy'); if (b2) b2.textContent = t('referral.copy','Copy'); }, 1500);
+          } catch { showAlert(t('referral.copyfail','Copy failed, please copy manually')); }
+        };
+      } catch {}
+    }
+    // 一键导入弹窗：选来源格式 + 粘贴导出数据，批量创建监控
+    function openImportModal() {
+      const bodyHtml = `
+        <div style="margin-bottom:8px;">
+          <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px;">${t('import.format','Source format')}</label>
+          <select id="impFmt" style="width:100%;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;">
+            <option value="uptimerobot">UptimeRobot</option>
+            <option value="csv">${t('import.fmtCsv','Generic CSV')}</option>
+            <option value="json">${t('import.fmtJson','Generic JSON')}</option>
+          </select>
+        </div>
+        <textarea id="impData" rows="8" placeholder="${t('import.ph','Paste exported data here')}" style="width:100%;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;box-sizing:border-box;"></textarea>
+        <div id="impMsg" style="color:#ff5c5c;font-size:.85rem;min-height:1.2em;margin-top:8px;"></div>`;
+      showGenericModal(t('import.title','Import monitors'), bodyHtml, [
+        { text: t('import.cancel','Cancel'), onClick: ()=>{} },
+        { text: t('import.go','Import'), primary: true, onClick: async () => {
+          const fmt = document.getElementById('impFmt')?.value;
+          const data = document.getElementById('impData')?.value || '';
+          const msg = document.getElementById('impMsg');
+          if (!data.trim()) { if (msg) msg.textContent = t('import.empty','Please paste data first'); return; }
+          try {
+            const r = await fetch('/api/monitors/import', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ format: fmt, data }) });
+            const j = await r.json();
+            if (!r.ok) { if (msg) msg.textContent = errMsg(j) || t('import.fail','Import failed'); return; }
+            showGlobal(t('import.done','Imported {n} monitors', { n: j.created }) + (j.skipped ? (' (' + t('import.skipped','skipped') + ': ' + j.skipped + ')') : ''));
+            if (typeof loadMonitors === 'function') loadMonitors();
+          } catch (e) { if (msg) msg.textContent = t('import.fail','Import failed'); }
+        } },
+      ]);
+      OPEN_MODAL = () => openImportModal();
+    }
+    // 初始化 i18n（G10）：先等翻译文件加载完成，再渲染动态面板，避免先出英文
+    async function startApp(){
+      let saved='en'; try { saved = localStorage.getItem('pingory_lang')||'en'; } catch {}
+      document.documentElement.lang = saved;
+      await loadI18n(saved);
+      const lm = document.getElementById('langMount'); if (lm) { lm.innerHTML = ''; lm.appendChild(langSwitcher()); }
+      mountFeedbackWidget();
+      handleVerifyParam();
+      handleConfirmEmail();
+      await checkAuth();
+    }
+    startApp();
+
+    // UI-1：导航/反馈随滚动三态切换（参考 qwenwork 交互）
+    (function navScrollStates(){
+      const nav = document.querySelector('.topnav');
+      const fab = document.getElementById('feedbackBtn');
+      function update(){
+        const y = window.scrollY || document.documentElement.scrollTop || 0;
+        const bottomGap = document.documentElement.scrollHeight - y - window.innerHeight;
+        if (nav) { if (y <= 8) nav.classList.remove('nav-float'); else nav.classList.add('nav-float'); }
+        if (fab) { if (bottomGap <= 160) fab.classList.add('fab-bottom'); else fab.classList.remove('fab-bottom'); }
+      }
+      window.addEventListener('scroll', update, {passive:true});
+      window.addEventListener('resize', update);
+      update();
+    })();
+
+    // 简单页面分析：一次性 session id，无 cookie，只上报国家来源和停留时长
+    (function analytics(){
+      try {
+        const KEY = 'pingory_analytics_sid';
+        let sid = sessionStorage.getItem(KEY);
+        if (!sid) { sid = crypto.randomUUID(); sessionStorage.setItem(KEY, sid); }
+        function send(path, extra={}) {
+          fetch('/api/analytics/' + path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sid, ...extra }),
+            keepalive: true,
+          }).catch(() => {});
+        }
+        send('start');
+        setInterval(() => { if (!document.hidden) send('ping'); }, 30000);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) send('ping'); });
+        window.addEventListener('pagehide', () => send('ping'));
+      } catch (e) {}
+    })();
+  </script>
+<footer class="site-footer" style="border-top:1px solid var(--border,#1f2630); margin-top:60px; padding:28px 20px; text-align:center; color:var(--muted,#9aa3b2); font-size:.9rem;">
+  <nav style="display:flex; gap:20px; justify-content:center; flex-wrap:wrap; margin-bottom:10px;">
+    <a href="/compare/uptimerobot" style="color:var(--accent,#34d399); text-decoration:none;" data-i18n="footer.compare">Compare</a>
+    <a href="/terms.html" style="color:var(--accent,#34d399); text-decoration:none;" data-i18n="footer.terms">Terms</a>
+    <a href="/privacy.html" style="color:var(--accent,#34d399); text-decoration:none;" data-i18n="footer.privacy">Privacy</a>
+    <a href="/refund.html" style="color:var(--accent,#34d399); text-decoration:none;" data-i18n="footer.refund">Refund</a>
+    <a href="/#plans" style="color:var(--accent,#34d399); text-decoration:none;" data-i18n="footer.pricing">Pricing</a>
+  </nav>
+  <p style="margin:0 0 8px;"><span data-i18n="footer.contact">Contact:</span> <a href="mailto:martin@pingory.com" style="color:var(--accent,#34d399); text-decoration:none;">martin@pingory.com</a></p>
+  <p style="margin:0;" data-i18n="footer.rights">© 2026 Pingory. All rights reserved.</p>
+</footer>
+</body>
+</html>

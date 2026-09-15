@@ -1,0 +1,11 @@
+node_modules
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+*.log
+data
+coverage
+.DS_Store
+.pw-browsers

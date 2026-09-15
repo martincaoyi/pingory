@@ -1,0 +1,35 @@
+{
+  "name": "pingory",
+  "version": "0.1.0",
+  "description": "Open-source uptime monitoring — HTTP, keyword, API, TCP, ping, DNS, SSL and domain checks with alerting to email, Slack, Discord, Telegram, Teams, Webhook and PagerDuty, plus public status pages.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "homepage": "https://pingory.com",
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "uptime",
+    "monitoring",
+    "uptime-monitor",
+    "status-page",
+    "alerting",
+    "self-hosted",
+    "devops",
+    "observability"
+  ],
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "gate": "node tools/dev_gate.js"
+  },
+  "dependencies": {
+    "@paddle/paddle-node-sdk": "^3.10.0",
+    "connect-pg-simple": "^7.0.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-session": "^1.19.0",
+    "nodemailer": "^9.0.5",
+    "pg": "^8.23.0"
+  }
+}

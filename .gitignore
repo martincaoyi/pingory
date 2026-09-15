@@ -1,0 +1,24 @@
+# 密钥文件（绝不提交）
+.env
+.env.local
+.env.*.local
+
+# Node 依赖
+node_modules/
+
+# 日志
+*.log
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# AI 工具私有状态（不入库）
+.workbuddy/
+.pw-browsers/
+
+# 二进制工具（体积大，不入库，按需本地放置）
+tools/cloudflared.exe
+
+# 本地预览/对比页（一次性产物，不入库）
+preview/

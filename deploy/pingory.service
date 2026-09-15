@@ -1,0 +1,26 @@
+# Pingory systemd 单元（传统 VPS，无 PM2/Docker 时开机自启 + 崩溃重启）
+# 用法：
+#   sudo cp deploy/pingory.service /etc/systemd/system/pingory.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now pingory
+#
+# 假设：代码在 /home/app/uptime-monitor，用 app 用户运行，Node 在 PATH 中。
+# 所有环境变量放在 /home/app/uptime-monitor/.env（本项目用 dotenv 读取）。
+
+[Unit]
+Description=Pingory Uptime Monitor
+After=network.target
+
+[Service]
+Type=simple
+User=app
+WorkingDirectory=/home/app/uptime-monitor
+ExecStart=/usr/bin/node /home/app/uptime-monitor/server.js
+Restart=always
+RestartSec=5
+# 生产环境变量（若不用 .env，可在此 Environment= 注入）
+# Environment=NODE_ENV=production
+# Environment=PORT=3000
+
+[Install]
+WantedBy=multi-user.target
