@@ -8,6 +8,41 @@
 
 ---
 
+## 2026-09-15 · 前端埋点抽为共享文件 + 全站访客页覆盖
+
+> 起因：Martin 指令「你现在就把它接上」。背景是一次误判排查——AI 一度判断「埋点链路断裂、`page_sessions` 恒空」，
+> 后经线上 `curl` + 直连生产库实测**推翻该判断**：首页埋点一直在正常工作，数据库已有 51 条真实会话记录。
+> 真正的问题是**覆盖面**，不是可用性。
+
+**一、问题（实测确认）**
+
+- 埋点脚本原本只内联在 `public/index.html`（原第 1800–1818 行），其余 9 个访客页面**完全未覆盖**。
+- 后果：访客若直接落到 `/compare/uptimerobot` 等页面，访问不会被记录 → 渠道效果被系统性低估。
+
+**二、变更**
+
+- 新增 `public/analytics.js`：把内联实现抽为共享文件。行为与逻辑与原实现等价（sessionStorage 一次性 id、无 cookie），
+  并把上报方式升级为 **`sendBeacon` 优先、`fetch` + `keepalive` 兜底**（页面卸载时更不易丢包）。
+- `public/index.html`：删除内联 IIFE，改为 `<script src="/analytics.js"></script>`（单一实现，避免两份拷贝漂移）。
+- 8 个访客页在 `</body>` 前引入：`compare-uptimerobot` / `signup` / `signin` / `status` / `terms` / `privacy` / `refund` / `reset-password`。
+- **`admin.html` 刻意不引入**：站长自身浏览会污染统计数据。
+
+**三、顺带修复（门禁既有 FAIL，非本次引入）**
+
+- `public/signup.html`：`captureRef()` 内用 `t()` 拼 `#refHint`，但不在语言切换钩子链里 → 切换语言后提示停留旧语言。
+  已将渲染移入 `window.__afterLang`，`captureRef` 只负责写入 localStorage。**文案未改动。**
+- `tools/dev_gate.js` 门禁：1 项 FAIL → 全绿。
+
+**四、影响范围**
+
+- 行为变化：9 个页面的访问开始计入 `page_sessions`；`admin.html` 不计入。
+- 数据影响：`Sessions today` / `Top countries` 覆盖面扩大；此前仅首页有数据。
+- 接口与数据库 schema **均未变更**（`docs/API-REFERENCE.md` 无需更新）。
+
+**关联**：`PROMO-PLAN.md`
+
+---
+
 ## 2026-09-15 · 开源前内部文档移出 + 公开仓库准备
 
 > 决策：Martin 确认按 `方案资料\uptime-monitor\OPEN-SOURCE-PLAN.md` 执行开源（**AGPL-3.0**）。

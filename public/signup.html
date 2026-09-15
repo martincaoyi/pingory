@@ -116,22 +116,28 @@
     window.__afterLang = function(){
       document.getElementById('alt').innerHTML = t('signup.alt', 'Already have an account? {link}',
         { link: '<a href="/signin.html">' + t('signup.altLink','Sign In') + '</a>' });
+      // 邀请提示随语言切换重绘
+      const hint = document.getElementById('refHint');
+      if (hint) {
+        const ref = (function(){ try { return localStorage.getItem('pingory_ref'); } catch { return null; } })();
+        if (ref) {
+          hint.textContent = t('signup.refHint', 'You joined via a friend\'s invite link — they earn a 10% bonus when you upgrade. 🎉');
+          hint.style.display = 'block';
+        }
+      }
     };
 
     const form = document.getElementById('form');
     const msg = document.getElementById('msg');
 
-    // 推荐码：从 ?ref= 读取并暂存到 localStorage，注册时回传；同时展示邀请提示
+    // 推荐码：从 ?ref= 读取并暂存到 localStorage，注册时回传
     (function captureRef(){
       try {
         const p = new URLSearchParams(location.search).get('ref');
         if (p) localStorage.setItem('pingory_ref', p.trim());
       } catch {}
-      const ref = (function(){ try { return localStorage.getItem('pingory_ref'); } catch { return null; } })();
-      if (ref) {
-        const h = document.getElementById('refHint');
-        if (h) { h.textContent = t('signup.refHint', 'You joined via a friend\'s invite link — they earn a 10% bonus when you upgrade. 🎉'); h.style.display = 'block'; }
-      }
+      // 邀请提示的渲染统一走 __afterLang，保证语言切换后同步更新
+      if (typeof window.__afterLang === 'function') window.__afterLang();
     })();
 
     form.addEventListener('submit', async (e) => {
@@ -185,5 +191,6 @@
       });
     })();
   </script>
+<script src="/analytics.js"></script>
 </body>
 </html>

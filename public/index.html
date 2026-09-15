@@ -1796,26 +1796,7 @@
       update();
     })();
 
-    // 简单页面分析：一次性 session id，无 cookie，只上报国家来源和停留时长
-    (function analytics(){
-      try {
-        const KEY = 'pingory_analytics_sid';
-        let sid = sessionStorage.getItem(KEY);
-        if (!sid) { sid = crypto.randomUUID(); sessionStorage.setItem(KEY, sid); }
-        function send(path, extra={}) {
-          fetch('/api/analytics/' + path, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sid, ...extra }),
-            keepalive: true,
-          }).catch(() => {});
-        }
-        send('start');
-        setInterval(() => { if (!document.hidden) send('ping'); }, 30000);
-        document.addEventListener('visibilitychange', () => { if (!document.hidden) send('ping'); });
-        window.addEventListener('pagehide', () => send('ping'));
-      } catch (e) {}
-    })();
+    // 简单页面分析：已抽到 /analytics.js（无 cookie，只上报国家来源和停留时长），引用见 </body> 前
   </script>
 <footer class="site-footer" style="border-top:1px solid var(--border,#1f2630); margin-top:60px; padding:28px 20px; text-align:center; color:var(--muted,#9aa3b2); font-size:.9rem;">
   <nav style="display:flex; gap:20px; justify-content:center; flex-wrap:wrap; margin-bottom:10px;">
@@ -1829,5 +1810,6 @@
   <p style="margin:0 0 8px;"><span data-i18n="footer.contact">Contact:</span> <a href="mailto:martin@pingory.com" style="color:var(--accent,#34d399); text-decoration:none;">martin@pingory.com</a></p>
   <p style="margin:0;" data-i18n="footer.rights">© 2026 Pingory. All rights reserved.</p>
 </footer>
+<script src="/analytics.js"></script>
 </body>
 </html>
