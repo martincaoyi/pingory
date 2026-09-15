@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<!--
+  Pingory vs Better Stack 对比页（SEO 独立内容页，英文优先）
+  路由：/compare/betterstack；别名 /vs/betterstack 与 .html 直链 301 到规范 URL。
+  英文首版（搜索量以英文为主），暂不做 7 语变体；若页面起量再补翻译与 hreflang。
+  事实核对：Better Stack 免费版 10 监控/3 分钟/1 状态页、Responder $29/月(年付 $34 月付)、
+  追加 50 监控 $21/月、附加公开状态页 $15/月 —— 2026-09 经 stackscored/freetier/betterstack.com
+  community 页交叉核实。
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pingory vs Better Stack 2026: Price, Simplicity &amp; Honest Verdict</title>
+  <meta name="description" content="Pingory vs Better Stack 2026: an honest Better Stack alternative comparison — free plans, pricing per monitor, status pages, on-call features, and where Better Stack still wins." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://pingory.com/compare/betterstack" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Pingory vs Better Stack (2026): An Honest Comparison" />
+  <meta property="og:description" content="Pingory vs Better Stack 2026: pricing per monitor, status pages, on-call and log management compared — including where Better Stack still wins." />
+  <meta property="og:url" content="https://pingory.com/compare/betterstack" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Is there a free Better Stack alternative?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pingory's free plan includes 50 monitors with 5-minute checks and requires no credit card. Better Stack's free tier includes 10 monitors at 3-minute checks plus one status page." } },
+          { "@type": "Question", "name": "Is Pingory cheaper than Better Stack?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pingory's paid plans start at $4/month for 100 monitors with 60-second checks. Better Stack's responder license starts around $29/month (annual), and 50 additional uptime monitors cost $21/month on top of any plan." } },
+          { "@type": "Question", "name": "Does Pingory include a status page?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — a public status page from $4/month, with custom domain, white-label and password protection at $6/month. Better Stack includes one status page free; additional public pages cost $15/month." } },
+          { "@type": "Question", "name": "Can I self-host Pingory?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pingory is open source under AGPL-3.0, so you can self-host it on your own server for free. Better Stack is a managed platform only." } },
+          { "@type": "Question", "name": "When does Better Stack still win?", "acceptedAnswer": { "@type": "Answer", "text": "If you need on-call schedules, phone and SMS alerting, escalation policies, or bundled log management, Better Stack is the stronger product — that is what most of its price pays for." } }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Pingory", "item": "https://pingory.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Compare", "item": "https://pingory.com/compare/betterstack" },
+          { "@type": "ListItem", "position": 3, "name": "Pingory vs Better Stack", "item": "https://pingory.com/compare/betterstack" }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    :root { --bg:#f5f8f6; --bg-2:#eef3f0; --card:#ffffff; --border:#dbe4df; --accent:#1faa6b; --accent-soft:rgba(31,170,107,0.10); --text:#16241d; --muted:#5d6b63; --nav-bg:rgba(245,248,246,0.92); }
+    [data-theme="dark"] { --bg:#0e1310; --bg-2:#151b17; --card:#161d18; --border:#2a322c; --text:#e6efe9; --muted:#9fb0a6; --accent:#2bd585; --accent-soft:rgba(43,213,133,0.14); --nav-bg:rgba(14,19,16,0.92); }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); line-height:1.7;
+           font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+    a { color:var(--accent); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .topnav { position:sticky; top:0; z-index:20; background:var(--nav-bg); backdrop-filter:blur(8px);
+              border-bottom:1px solid var(--border); padding:12px 20px; display:flex; align-items:center; gap:12px; }
+    .brand { display:inline-flex; align-items:center; gap:8px; font-weight:700; font-size:1.15rem; color:var(--accent); }
+    .spacer { margin-left:auto; }
+    .btn { border:1px solid var(--border); border-radius:7px; padding:7px 14px; font-size:.88rem; color:var(--text); white-space:nowrap; }
+    .btn-primary { border-color:var(--accent); color:var(--accent); font-weight:600; }
+    #themeToggle { border:1px solid var(--border); background:transparent; color:var(--text); cursor:pointer;
+                   font-size:1rem; border-radius:7px; padding:5px 9px; }
+    .doc { max-width:920px; margin:0 auto; padding:38px 20px 72px; }
+    h1 { font-size:2.05rem; line-height:1.28; margin:0 0 10px; }
+    .verified { color:var(--muted); font-size:.88rem; margin:0 0 26px; }
+    h2 { font-size:1.32rem; margin:40px 0 12px; border-left:3px solid var(--accent); padding-left:12px; }
+    h3 { font-size:1rem; margin:22px 0 6px; }
+    p, li { margin:0 0 12px; }
+    ul { padding-left:22px; }
+    .lead { font-size:1.06rem; }
+    .short li { margin-bottom:9px; }
+    .tablewrap { overflow-x:auto; border:1px solid var(--border); border-radius:12px; background:var(--card); }
+    table { border-collapse:collapse; width:100%; min-width:660px; font-size:.9rem; }
+    caption { text-align:left; padding:14px 16px 0; color:var(--muted); font-size:.85rem; }
+    th, td { text-align:left; padding:11px 14px; border-bottom:1px solid var(--border); vertical-align:top; }
+    thead th { background:var(--accent-soft); color:var(--text); font-weight:700; white-space:nowrap; }
+    tbody tr:last-child td { border-bottom:0; }
+    tbody th { font-weight:600; color:var(--text); }
+    td.win { color:var(--accent); font-weight:700; }
+    .note { color:var(--muted); font-size:.85rem; margin:10px 0 0; }
+    details.faq-item { border:1px solid var(--border); border-radius:10px; background:var(--card); margin:0 0 10px; padding:0 16px; }
+    details.faq-item summary { cursor:pointer; font-weight:600; padding:14px 0; list-style:none; }
+    details.faq-item summary::-webkit-details-marker { display:none; }
+    details.faq-item summary::after { content:'+'; float:right; color:var(--accent); font-weight:700; }
+    details.faq-item[open] summary::after { content:'−'; }
+    details.faq-item p { padding-bottom:4px; color:var(--text); }
+    .cta { background:var(--card); border:1px solid var(--accent); border-radius:14px; padding:26px 24px;
+           margin:40px 0 0; text-align:center; }
+    .cta h2 { border:0; padding:0; margin:0 0 8px; }
+    .cta p { color:var(--muted); }
+    .cta a.btn-primary { display:inline-block; padding:11px 26px; font-size:1rem; margin-top:6px; }
+    .back { display:inline-block; color:var(--muted); font-size:.88rem; margin-bottom:22px; }
+    .src { color:var(--muted); font-size:.83rem; margin-top:34px; }
+    .site-footer { border-top:1px solid var(--border); margin-top:56px; padding:26px 20px; text-align:center;
+                   color:var(--muted); font-size:.88rem; }
+    .site-footer nav { display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin-bottom:10px; }
+  </style>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+  <span class="spacer"></span>
+  <button id="themeToggle" type="button" title="Toggle dark mode">🌙</button>
+  <a class="btn" href="/signin.html">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+</nav>
+
+<main class="doc">
+  <a class="back" href="/">← Back to Pingory</a>
+  <h1>Pingory vs Better Stack (2026): An Honest Comparison</h1>
+  <p class="verified">Last verified: September 2026. Prices are in USD.</p>
+  <p class="lead">If you are looking for a <strong>Better Stack alternative</strong>, you already know the product: Better Stack (formerly Better Uptime) is one of the most polished monitoring suites on the market, bundling uptime checks with <strong>incident management, on-call scheduling, and log management</strong>. This page compares Pingory and Better Stack on the numbers that show up on an invoice — price, monitor limits, check intervals, and <strong>status pages</strong> — and says plainly where Better Stack still wins.</p>
+
+  <h2>The short version</h2>
+  <ul class="short">
+    <li>Better Stack's free tier: <strong>10 monitors at 3-minute checks</strong> plus 1 status page. Pingory's free tier: <strong>50 monitors at 5-minute checks</strong>. Neither requires a credit card.</li>
+    <li>Pingory's paid plans start at <strong>$4/month for 100 monitors with 60-second checks</strong>. Better Stack's responder license starts around <strong>$29/month (annual billing)</strong>, and 50 additional uptime monitors cost <strong>$21/month on top</strong>.</li>
+    <li>At <strong>$6/month</strong>, Pingory gives you <strong>unlimited monitors and 30-second checks</strong>. Better Stack's 30-second checks sit on its paid tiers.</li>
+    <li>Better Stack wins on <strong>incident management, on-call rotations with phone and SMS alerts, bundled log management, and a beautiful UI</strong>.</li>
+    <li>Pingory wins on <strong>price per monitor, status page economics, simplicity, 8 UI languages, and open source code (AGPL-3.0) you can self-host</strong>.</li>
+  </ul>
+
+  <h2>Pricing at a glance</h2>
+  <p class="note">Prices below are as published in September 2026. Better Stack discounts annual billing and sells add-ons separately; verify current figures on each vendor's site before you buy.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Pricing at a glance</caption>
+      <thead>
+        <tr>
+          <th scope="col">Feature</th>
+          <th scope="col">Pingory</th>
+          <th scope="col">Better Stack</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Free plan</th>
+          <td>$0 — 50 monitors, 5-minute checks</td>
+          <td>$0 — 10 monitors, 3-minute checks, 1 status page</td>
+        </tr>
+        <tr>
+          <th scope="row">Cheapest paid plan</th>
+          <td class="win">Starter — $4/mo ($40/yr)</td>
+          <td>Responder license — ~$29/mo annual ($34 monthly)</td>
+        </tr>
+        <tr>
+          <th scope="row">Monitors on that plan</th>
+          <td class="win">100 monitors, 60-second checks</td>
+          <td>10 monitors included; 50 more cost $21/mo extra</td>
+        </tr>
+        <tr>
+          <th scope="row">Top self-serve plan</th>
+          <td class="win">Pro — $6/mo, unlimited monitors</td>
+          <td>Team/Responder tiers with per-seat licenses + usage-based add-ons</td>
+        </tr>
+        <tr>
+          <th scope="row">Fastest check interval</th>
+          <td class="win">30 seconds at $6/mo</td>
+          <td>30 seconds on premium tiers</td>
+        </tr>
+        <tr>
+          <th scope="row">Public status page</th>
+          <td class="win">Included from $4/mo; custom domain, white-label and password protection at $6/mo</td>
+          <td>1 free page; additional public page $15/mo, private page $50/mo</td>
+        </tr>
+        <tr>
+          <th scope="row">On-call / phone &amp; SMS alerts</th>
+          <td>Not offered — Pingory focuses on uptime, not pager workflows</td>
+          <td class="win">Unlimited phone and SMS alerts with responder license, on-call schedules, escalations</td>
+        </tr>
+        <tr>
+          <th scope="row">Log management</th>
+          <td>Not offered</td>
+          <td class="win">Bundled (Logtail heritage), usage-based</td>
+        </tr>
+        <tr>
+          <th scope="row">Alert channels</th>
+          <td>Email, Slack, Telegram, Discord, MS Teams, webhook, PagerDuty</td>
+          <td>Email, Slack + many integrations; native phone/SMS on paid</td>
+        </tr>
+        <tr>
+          <th scope="row">Self-hosting</th>
+          <td class="win">Open source (AGPL-3.0) — self-host free</td>
+          <td>Managed only</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Better Stack's free status page is genuinely useful and one of the reasons the product is popular — we say so plainly. The comparison above is about what happens when you outgrow the free tier.</p>
+
+  <h2>Where Better Stack still wins</h2>
+  <p>If your outage response involves <strong>people being woken up</strong>, Better Stack is the stronger product. Its responder license includes unlimited phone and SMS alerts, on-call schedules, escalation policies and acknowledgement flows. It also bundles log management (the former Logtail product), session replay and error tracking — a real observability suite. And the UI is, frankly, excellent. If you are running a SaaS with a team and an on-call rotation, most of Better Stack's price buys exactly that.</p>
+
+  <h2>Where Pingory wins</h2>
+  <p>If what you actually need is <strong>uptime monitoring and a status page</strong>, Better Stack's pricing model means you are paying for an incident-management platform you may not use. Its <strong>responder license starts around $29/month per seat</strong>, and scaling monitors is usage-based on top of that. On Pingory, <strong>$4/month gets you 100 monitors at 60-second checks with a public status page included</strong>, and $6 removes the monitor cap entirely. Pingory is also <strong>open source under AGPL-3.0</strong> — you can inspect the code or self-host it — and ships an interface in 8 languages.</p>
+
+  <h2>Monitor types</h2>
+  <p>Both cover the essentials: HTTP/HTTPS status, keyword content, ping, TCP port, SSL certificate expiry, DNS records, and heartbeat/cron monitoring. Pingory adds JSON/API assertions on every plan. Better Stack goes further at the high end with Playwright-based browser checks sold as metered minutes — a genuinely different capability class if you need user-journey testing.</p>
+
+  <h2>Frequently asked questions</h2>
+  <details class="faq-item">
+    <summary>Is there a free Better Stack alternative?</summary>
+    <p>Yes. Pingory's free plan includes <strong>50 monitors with 5-minute checks</strong> and requires no credit card. Better Stack's free tier includes 10 monitors at 3-minute checks plus one status page — better if you mainly want a free status page, worse on monitor count.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Is Pingory cheaper than Better Stack?</summary>
+    <p>Yes. Pingory's paid plans start at <strong>$4/month for 100 monitors</strong>. On Better Stack, 50 additional uptime monitors cost <strong>$21/month</strong> — more than Pingory's entire Starter plan — before you even count the responder license that paid tiers are built around.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Does Pingory include a status page?</summary>
+    <p>Yes — a public one from <strong>$4/month</strong>, with custom domain, white-label and password protection at <strong>$6/month</strong>. Better Stack includes one status page free; additional public pages cost $15/month and private pages $50/month.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Can I self-host Pingory?</summary>
+    <p>Yes. Pingory is <strong>open source under AGPL-3.0</strong> — clone it from GitHub and run it on your own server for free. Better Stack is a managed platform.</p>
+  </details>
+  <details class="faq-item">
+    <summary>When is Better Stack the better choice?</summary>
+    <p>When you need <strong>on-call schedules, phone/SMS alerting, escalation policies, or bundled log management</strong>. Pingory deliberately does not build pager workflows — if that is your requirement, Better Stack earns its price.</p>
+  </details>
+
+  <p class="src">Sources: Pingory limits and prices come from the product itself (plans as published at pingory.com). Better Stack figures are from its official pricing pages, community comparisons and pricing trackers, checked in September 2026. Third-party pricing and limits change; verify current details on each vendor's site before you buy.</p>
+
+  <h2>More comparisons</h2>
+  <ul>
+    <li><a href="/compare/uptimerobot">Pingory vs UptimeRobot</a> — the 2M-user default against a $4 flat plan.</li>
+    <li><a href="/compare/pingdom">Pingory vs Pingdom</a> — when you do not need RUM and page-speed reports.</li>
+  </ul>
+
+  <div class="cta">
+    <h2>Looking for a cheaper uptime monitor?</h2>
+    <p>Create a free account and monitor 50 endpoints in about 30 seconds. No credit card required.</p>
+    <a class="btn btn-primary" href="/signup.html">Sign Up Free</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <nav>
+    <a href="/compare/uptimerobot">vs UptimeRobot</a>
+    <a href="/compare/betterstack">vs Better Stack</a>
+    <a href="/compare/pingdom">vs Pingdom</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/refund.html">Refund</a>
+    <a href="/#plans">Pricing</a>
+    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+  </nav>
+  <p style="margin:0 0 8px;">Contact: <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p style="margin:0;">© 2026 Pingory. All rights reserved.</p>
+</footer>
+
+<script>
+// 主题切换（无 i18n：本页为英文首版）
+(function () {
+  const tt = document.getElementById('themeToggle');
+  function sync() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+  if (tt) tt.addEventListener('click', () => {
+    const dark = document.documentElement.dataset.theme === 'dark';
+    if (dark) document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = 'dark';
+    try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch {}
+    sync();
+  });
+  sync();
+})();
+</script>
+<script src="/analytics.js"></script>
+</body>
+</html>

@@ -614,6 +614,8 @@
   "monerr.domain_expiring": "도메인이 {detail}일 후에 만료됩니다",
   "nav.compare": "UptimeRobot과 비교 →",
   "footer.compare": "비교",
+  "footer.compareBs": "Better Stack 비교",
+  "footer.comparePd": "Pingdom 비교",
   "cmp.meta.title": "Pingory vs UptimeRobot 2026: 가격, 한도, 솔직한 평가",
   "cmp.meta.desc": "Pingory vs UptimeRobot 2026: UptimeRobot 대안에 대한 솔직한 비교입니다. 가격, 모니터 한도, 알림, 상태 페이지, 그리고 UptimeRobot이 여전히 앞서는 부분을 다룹니다.",
   "cmp.h1": "Pingory vs UptimeRobot (2026): 솔직한 비교",

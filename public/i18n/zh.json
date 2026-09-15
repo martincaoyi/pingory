@@ -614,6 +614,8 @@
   "monerr.domain_expiring": "域名将在 {detail} 天后到期",
   "nav.compare": "与 UptimeRobot 对比 →",
   "footer.compare": "对比",
+  "footer.compareBs": "对比 Better Stack",
+  "footer.comparePd": "对比 Pingdom",
   "cmp.meta.title": "Pingory 与 UptimeRobot 2026 对比：价格、配额与客观结论",
   "cmp.meta.desc": "Pingory 与 UptimeRobot 2026 客观对比：价格、监控数量上限、告警渠道、状态页，以及 UptimeRobot 仍然更胜一筹的场景。",
   "cmp.h1": "Pingory 与 UptimeRobot 对比（2026）：一份客观的比较",

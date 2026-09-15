@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /api/
+Disallow: /signin.html
+
+Sitemap: https://pingory.com/sitemap.xml

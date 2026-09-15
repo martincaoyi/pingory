@@ -8,6 +8,33 @@
 
 ---
 
+## 2026-09-15 · SEO 对比页扩至 3 竞品 + robots.txt / sitemap.xml 基础设施
+
+**背景**：既有 `/compare/uptimerobot`（8 语模板页）已上线；经竞品调研（Better Stack 免费版 10 监控/3 分钟、付费 $29-34/月；Pingdom 无免费版、Starter ~$10-11/月仅 10 监控——2026-09 经多源交叉核实）确定补 Better Stack 与 Pingdom 两页；同时补齐全站缺失的 robots.txt 与 sitemap.xml。UptimeRobot 现有页面价格表述（$9-10 Solo / $35-41 Team）经官方定价页当日复核一致，未改动。
+
+**新增**
+
+- `public/compare-betterstack.html`：英文首版（搜索量以英文为主，起量后再补 7 语与 hreflang）。
+  完整 SEO 头：canonical / og:* / twitter / `FAQPage`+`BreadcrumbList` JSON-LD / index,follow。
+  内容含定价对照表、「Better Stack 仍赢在哪」（on-call/电话短信告警/日志管理——诚实陈述）、「Pingory 赢在哪」（每监控价格/状态页/开源）、FAQ、跨页内链。
+- `public/compare-pingdom.html`：同结构；诚实标注 Pingory **无 RUM/页面速度分析**（Pingdom 的真实强项）。
+- `public/robots.txt`：`Allow: /`；`Disallow: /admin.html`、`/api/`、`/signin.html`；声明 Sitemap。
+- `public/sitemap.xml`：首页 + `/compare/uptimerobot`（含 7 语变体）+ 两个新对比页，共 11 URL。
+
+**路由（server.js）**
+
+- `GET /compare/betterstack`、`GET /compare/pingdom` → sendFile 静态页
+- 别名 301：`/vs/betterstack`、`/compare-betterstack.html`、`/vs/pingdom`、`/compare-pingdom.html`
+
+**内链与首页 SEO**
+
+- `index.html`：新增 `canonical`（https://pingory.com/）与 `sitemap` link；页脚新增「vs Better Stack / vs Pingdom」内链（新增 8 语键 `footer.compareBs` / `footer.comparePd`）。
+- `compare-uptimerobot.html` 页脚补两个新页跨链；两个新页均含三页互链 + AGPL §13 页脚 + analytics.js。
+
+**验证**：dev_gate 全绿（API-契约已同步 docs/API-REFERENCE.md §8.1）；server.js 语法通过；两个新页内联脚本 0 错误、JSON-LD 合法（JSON 解析校验）；8 语字典键一致（716 键）。
+
+---
+
 ## 2026-09-15 · 新增累计访问数指标 + 彻底移除推荐功能死代码
 
 **一、新增「总访问数」指标（Martin 反馈「只有今日访问，看不到总的访问数」）**

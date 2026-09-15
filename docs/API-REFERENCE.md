@@ -576,7 +576,7 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 | `/status/:slug` | 公开状态页（G5，Starter+ 可开启） |
 | `/`（自定义域名根路径） | 若该 Host 命中 `users.status_custom_domain`，返回状态页（G7） |
 
-### 8.1 SEO 对比页（2026-09-14 新增）
+### 8.1 SEO 对比页（2026-09-14 新增；2026-09-15 扩至 3 竞品）
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -584,6 +584,14 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 | GET | `/{lang}/compare/uptimerobot` | `lang ∈ zh,es,pt,de,fr,ja,ko`；非白名单语言 `next()` 落到 404 |
 | GET | `/vs/uptimerobot` | **301** → `/compare/uptimerobot`（用户给出的候选 URL 别名） |
 | GET | `/compare-uptimerobot.html` | **301** → `/compare/uptimerobot`（防止模板被直出造成重复内容） |
+| GET | `/compare/betterstack` | 英文首版静态页（`express` 显式路由 sendFile；canonical 固定英文规范 URL） |
+| GET | `/vs/betterstack` | **301** → `/compare/betterstack` |
+| GET | `/compare-betterstack.html` | **301** → `/compare/betterstack` |
+| GET | `/compare/pingdom` | 英文首版静态页（同上） |
+| GET | `/vs/pingdom` | **301** → `/compare/pingdom` |
+| GET | `/compare-pingdom.html` | **301** → `/compare/pingdom` |
+
+▸ **robots.txt / sitemap.xml**（2026-09-15 新增，`public/` 静态直出）：robots 禁 `/admin.html`、`/api/`、`/signin.html` 并声明 sitemap；sitemap 列出首页 + 3 个对比页（uptimerobot 含 7 语变体，共 11 URL）。
 
 实现要点：
 

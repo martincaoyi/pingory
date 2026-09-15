@@ -614,6 +614,8 @@
   "monerr.domain_expiring": "Domain expires in {detail} days",
   "nav.compare": "Compare with UptimeRobot →",
   "footer.compare": "Compare",
+  "footer.compareBs": "vs Better Stack",
+  "footer.comparePd": "vs Pingdom",
   "cmp.meta.title": "Pingory vs UptimeRobot 2026: Price, Limits & Honest Verdict",
   "cmp.meta.desc": "Pingory vs UptimeRobot 2026: an honest UptimeRobot alternative comparison — pricing, monitor limits, alerts, status pages, and where UptimeRobot still wins.",
   "cmp.h1": "Pingory vs UptimeRobot (2026): An Honest Comparison",

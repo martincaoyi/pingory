@@ -222,6 +222,15 @@ app.get('/:lang/compare/uptimerobot', (req, res, next) => {
 app.get('/vs/uptimerobot', (_req, res) => res.redirect(301, CMP_PATH));
 app.get('/compare-uptimerobot.html', (_req, res) => res.redirect(301, CMP_PATH));
 
+// ===== SEO 对比页（英文首版静态页）：/compare/betterstack · /compare/pingdom =====
+// 起量后再补 7 语变体与 hreflang；当前 canonical 固定英文规范 URL。
+app.get('/compare/betterstack', (_req, res) => res.sendFile('compare-betterstack.html', { root: 'public' }));
+app.get('/compare/pingdom', (_req, res) => res.sendFile('compare-pingdom.html', { root: 'public' }));
+app.get('/vs/betterstack', (_req, res) => res.redirect(301, '/compare/betterstack'));
+app.get('/compare-betterstack.html', (_req, res) => res.redirect(301, '/compare/betterstack'));
+app.get('/vs/pingdom', (_req, res) => res.redirect(301, '/compare/pingdom'));
+app.get('/compare-pingdom.html', (_req, res) => res.redirect(301, '/compare/pingdom'));
+
 // Fly.io 等平台在前面终止 TLS，再以 HTTP 转发给本应用，
 // 导致应用内 req.secure 为 false；而 session cookie 设了 secure:true 时，
 // express-session 会因"请求不安全"而拒绝下发 Cookie（登录/注册后会话丢失，后台变空白）。

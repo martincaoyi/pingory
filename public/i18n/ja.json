@@ -614,6 +614,8 @@
   "monerr.domain_expiring": "ドメインはあと {detail} 日で期限切れになります",
   "nav.compare": "UptimeRobot と比較 →",
   "footer.compare": "比較",
+  "footer.compareBs": "Better Stack比較",
+  "footer.comparePd": "Pingdom比較",
   "cmp.meta.title": "Pingory と UptimeRobot の比較（2026年）：料金・上限・率直な評価",
   "cmp.meta.desc": "Pingory と UptimeRobot（2026年）の率直な比較。料金、監視数の上限、アラート、ステータスページ、そして UptimeRobot が依然として優れている点をまとめました。",
   "cmp.h1": "Pingory と UptimeRobot の比較（2026年）：率直な評価",
