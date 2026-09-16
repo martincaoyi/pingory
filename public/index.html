@@ -31,7 +31,7 @@
     .wrap { max-width: 920px; margin: 0 auto; padding: 64px 20px; }
     h1 { font-size: 2.4rem; margin: 0 0 12px; }
     .sub { color: var(--muted); font-size: 1.15rem; margin-bottom: 40px; }
-    .eyebrow { color: var(--accent); font-size: 1.05rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 12px; }
+    .eyebrow { color: var(--accent); font-size:.95rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; margin:0 0 12px; }
     .billing { display:flex; align-items:center; justify-content:center; gap:12px; margin:8px 0 28px; color:var(--muted); font-size:.95rem; }
     .billing .save { color:var(--accent); font-weight:600; font-size:.85rem; }
     .switch { position:relative; display:inline-block; width:52px; height:28px; }
@@ -208,6 +208,34 @@
     .btn-ghost { display:inline-block; padding:12px 28px; border-radius:8px; font-size:1rem; font-weight:600;
                  background:transparent; color:var(--accent); border:1px solid var(--accent); text-decoration:none; cursor:pointer; }
     .btn-ghost:hover { background:var(--accent-soft); }
+    /* A+B 档首屏改造：真实产品截图 + 一行命令自托管（self-hoster 人群的第一诉求） */
+    .hero-shot { margin:36px 0 0; }
+    .hero-shot img { display:block; width:100%; max-width:680px; height:auto; margin:0 auto;
+                     border:1px solid var(--border); border-radius:14px; background:var(--card);
+                     box-shadow:0 18px 44px rgba(22,36,29,.13); }
+    .hero-shot figcaption { text-align:center; color:var(--muted); font-size:.85rem; margin-top:12px; }
+    .selfhost { display:grid; grid-template-columns:1.08fr .92fr; gap:28px; align-items:center;
+                background:var(--card); border:1px solid var(--border); border-radius:14px;
+                padding:26px; margin:44px 0 8px; }
+    /* 关键：grid 子项默认 min-width:auto，长命令行会让列撑破容器（移动端横向溢出） */
+    .selfhost > * { min-width:0; }
+    .selfhost h2 { font-size:1.32rem; margin:0 0 10px; }
+    .selfhost p { color:var(--muted); font-size:.94rem; margin:0 0 14px; }
+    .selfhost pre { margin:0 0 12px; padding:14px 16px; border-radius:10px; overflow-x:auto; max-width:100%;
+                    background:#0f1b14; border:1px solid #243a2d; }
+    .selfhost pre code { color:#c9f0d8; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+                         font-size:.84rem; line-height:1.8; white-space:pre; }
+    .selfhost .sh-cmt { color:#7fa78d; }
+    .selfhost .sh-note { font-size:.85rem; margin:0; }
+    .selfhost .sh-note a { color:var(--accent); font-weight:600; text-decoration:none; }
+    .selfhost .sh-note a:hover { text-decoration:underline; }
+    .sh-shot { margin:0; }
+    .sh-shot img { display:block; width:100%; height:auto; border:1px solid var(--border);
+                   border-radius:12px; background:var(--card); box-shadow:0 12px 30px rgba(22,36,29,.12); }
+    .sh-shot figcaption { text-align:center; color:var(--muted); font-size:.82rem; margin-top:10px; }
+    .sh-shot figcaption a { color:var(--accent); font-weight:600; text-decoration:none; white-space:nowrap; }
+    .sh-shot figcaption a:hover { text-decoration:underline; }
+    @media (max-width:780px){ .selfhost { grid-template-columns:1fr; padding:20px; gap:22px; } }
     /* 免费用户叙事式升级卡片（软性引流，非价目表） */
     .upgrade-nudge { background:linear-gradient(135deg,#eafaf1,#f1f8f3); border:1px solid #cfe9da; border-left:3px solid var(--accent);
                      border-radius:10px; padding:14px 16px; margin:8px 0 18px; font-size:.92rem; line-height:1.6; color:#33564a; }
@@ -259,13 +287,45 @@
     <div class="authbar" id="authBar"></div>
 
     <div id="landing">
-    <p class="eyebrow" data-i18n="landing.eyebrow">Uptime monitoring your customers can rely on</p>
-    <h1 data-i18n="landing.title">Make downtime something your users never worry about.</h1>
-    <p class="sub" data-i18n="landing.sub">Pingory catches outages the moment they happen and publishes a status page your users can trust. Set up your first monitor in about 30 seconds — free for 50 monitors, paid plans from $4/month.</p>
+    <p class="eyebrow" data-i18n="landing.eyebrow">Open source · AGPL-3.0 · Self-host in one command</p>
+    <h1 data-i18n="landing.title">Know your site is down before your users do.</h1>
+    <p class="sub" data-i18n="landing.sub">Pingory watches your sites, APIs and servers around the clock and alerts you the moment something breaks. Self-host it free from GitHub — or let us run it for you from $4/month.</p>
 
     <div class="hero-cta">
       <a class="btn-primary" href="/signup.html" data-i18n="landing.ctaFree">Sign Up Free</a>
       <a class="btn-ghost" href="/signin.html" data-i18n="landing.ctaSignin">Sign In</a>
+      <a class="btn-ghost" href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener" data-i18n="landing.ctaGithub">View on GitHub</a>
+    </div>
+
+    <!-- 实物证据①：真实产品截图（本地实例连生产数据、无头浏览器实拍，已做 PII 扫描） -->
+    <figure class="hero-shot">
+      <img src="/img/pingory-dashboard.webp" width="1856" height="1964" loading="eager" decoding="async" fetchpriority="high"
+           alt="Pingory dashboard: 10 monitors, all up, with live response times" data-i18n-alt="landing.shot.dashAlt">
+      <figcaption data-i18n="landing.shot.dashCap">Real screenshot — every check green, response times to the millisecond.</figcaption>
+    </figure>
+
+    <!-- 实物证据②：一行命令自托管（self-hoster 点进来要确认的第一件事） -->
+    <div class="selfhost">
+      <div class="sh-copy">
+        <h2 data-i18n="landing.selfhost.title">Self-host it in one command</h2>
+        <p data-i18n="landing.selfhost.desc">Pingory is AGPL-3.0 open source. Clone the repo, set two secrets, and the whole stack — app, scheduler, alerts and PostgreSQL — comes up on your own machine.</p>
+        <pre><code>git clone https://github.com/martincaoyi/pingory.git
+cd pingory &amp;&amp; cp .env.example .env
+<span class="sh-cmt"># set SESSION_SECRET + STATUS_PAGE_SECRET in .env</span>
+docker compose up -d</code></pre>
+        <p class="sh-note">
+          <span data-i18n="landing.selfhost.note">No Docker? Node.js 18+ and any PostgreSQL work too.</span>
+          <a href="https://github.com/martincaoyi/pingory#quick-start-docker" target="_blank" rel="noopener" data-i18n="landing.selfhost.readme">Read the self-hosting docs</a>
+        </p>
+      </div>
+      <figure class="sh-shot">
+        <img src="/img/pingory-status-page.webp" width="1584" height="2440" loading="lazy" decoding="async"
+             alt="Public status page listing monitored services with their uptime" data-i18n-alt="landing.shot.statusAlt">
+        <figcaption>
+          <span data-i18n="landing.shot.statusCap">Every installation ships with public status pages.</span>
+          <a href="/status/demo" target="_blank" rel="noopener" data-i18n="landing.shot.statusDemo">See a live one →</a>
+        </figcaption>
+      </figure>
     </div>
 
     <!-- 交付价值（你有了它会怎样：快 / 值 / 信任，信任高亮） -->
@@ -449,6 +509,9 @@
       });
       document.querySelectorAll('[data-i18n-title]').forEach((el)=>{
         const k = el.getAttribute('data-i18n-title'); if (I18N[k]) el.title = I18N[k];
+      });
+      document.querySelectorAll('[data-i18n-alt]').forEach((el)=>{
+        const k = el.getAttribute('data-i18n-alt'); if (I18N[k]) el.alt = I18N[k];
       });
       document.documentElement.lang = (function(){ try { return localStorage.getItem('pingory_lang')||'en'; } catch { return 'en'; } })();
       // 动态区域：反馈/验证横幅等已挂载组件随语言刷新
