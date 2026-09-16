@@ -2,7 +2,7 @@
 
 > 本文档描述后端 Express REST API。登录/注册/验证邮箱/OAuth（`/api/auth/*`）与 `/api/paddle-config`、`/api/creem-config` 无需登录态；其余业务端点由各路由内部校验 Session（未登录返回 401）。
 >
-> **版本**：v2.1（2026-09-15 更正：删除从未实现的 `GET /api/monitors/:id`；此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
+> **版本**：v2.2（2026-09-16 安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
 > **最后更新**：2026-09-15
 > **关联代码**：`server.js`（路由，共 80 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）
 
@@ -533,7 +533,9 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 
 ### 7.4 安全加固
 - Cookie：`httpOnly` + `sameSite=lax`；`PADDLE_ENVIRONMENT=live` 时自动 `secure`；生命周期 7 天。
-- 基础响应头：`X-Content-Type-Options` / `X-Frame-Options: DENY` / `Referrer-Policy` / `Content-Security-Policy`（放行 Paddle CDN）。
+- 基础响应头：`X-Content-Type-Options: nosniff` / `X-Frame-Options: DENY` / `Referrer-Policy` / `X-XSS-Protection` / `Content-Security-Policy`（放行 Paddle CDN）。
+- 框架指纹：`app.disable('x-powered-by')` —— 不返回 `X-Powered-By: Express`，避免暴露后端技术栈（P1-10，2026-09-16）。
+- `Permissions-Policy: camera=(), microphone=(), geolocation=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()` —— 显式关闭页面无需的浏览器能力；**刻意不含 `payment=()`**，避免误伤 Paddle / Creem 结账 iframe（P1-10，2026-09-16）。
 - 限流（内存）：登录/注册 15 次/15 分钟/IP；反馈 10 条/小时/IP。限流 IP 取值优先级（2026-09-13 B2 修正）：`CF-Connecting-IP`（Cloudflare 强制覆写，不可伪造）→ `Fly-Client-IP`（`*.fly.dev` 直连兜底）→ `req.ip`；禁用 XFF 最左条目（CF 对已有 XFF 为追加语义，客户端可伪造假 IP 轮换绕过限流）。
 - 安全联系人文件：`GET /.well-known/security.txt`（静态文件 `public/.well-known/security.txt`，RFC 9116；2026-09-13 B2 新增，清 Cloudflare Security Insights「Security.txt 未配置」项）。
 - 密码策略：注册最小 8 位。

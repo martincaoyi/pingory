@@ -61,11 +61,16 @@ function apiErr(code, params) { return { error: code, ep: params || {} }; }
 
 // ===== 基础安全响应头（G-SEC）=====
 // 防 MIME 嗅探 / 点击劫持 / 内容注入；CSP 仅限同源资源，避免破坏 Paddle.js 等外链可单独放开
+// 不发送 X-Powered-By（默认会暴露 "Express" 框架指纹，便于攻击者按已知漏洞定向探测）
+app.disable('x-powered-by');
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'same-origin');
   res.setHeader('X-XSS-Protection', '1; mode=block');
+  // 本服务不使用摄像头/麦克风/定位等浏览器能力，显式关闭以缩小攻击面
+  // （不含 payment=()：结账依赖 Paddle/Creem 的 iframe，避免误伤支付链路）
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()');
   res.setHeader(
     'Content-Security-Policy',
     // 注：本项目的 index.html / admin.html 均为内联 <script> 单页，故 script-src 需 'unsafe-inline'；
