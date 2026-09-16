@@ -280,11 +280,14 @@ export async function getStats(id, days = 30) {
 export async function getStatusIncidents(monitorIds, days = 30, limit = 20) {
   const pool = await getPool();
   if (!monitorIds || !monitorIds.length) return [];
+  // ⚠️ monitor_events.created_at 是 TIMESTAMPTZ：必须传 ISO 串/Date，不能传毫秒整数
+  // （传毫秒会被 Postgres 当成「秒」→ date/time field value out of range → 状态页整个 500。P1-9）
+  const since = new Date(Date.now() - days * 86400 * 1000).toISOString();
   const { rows } = await pool.query(
     `SELECT monitor_id, event_type, from_status, to_status, error, detail, created_at
      FROM monitor_events WHERE monitor_id = ANY($1) AND created_at >= $2
      ORDER BY created_at DESC LIMIT $3`,
-    [monitorIds, Date.now() - days * 86400 * 1000, limit]
+    [monitorIds, since, limit]
   );
   return rows;
 }
