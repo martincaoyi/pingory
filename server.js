@@ -1081,7 +1081,7 @@ app.get('/api/status/:slug', async (req, res) => {
       return { ...m, uptime: s.uptime, avgRt: s.avgRt, spark: dailySpark(s.series) };
     }));
     const incidents = await getStatusIncidents(page.monitors.map((m) => m.id), 30, 20);
-    res.json({ owner: page.owner, whiteLabel: page.whiteLabel, monitors: enriched, incidents });
+    res.json({ title: page.title, whiteLabel: page.whiteLabel, monitors: enriched, incidents });
   } catch (err) {
     res.status(500).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
   }
@@ -1102,7 +1102,7 @@ app.get('/api/status-page', async (req, res) => {
       return { ...m, uptime: s.uptime, avgRt: s.avgRt, spark: dailySpark(s.series) };
     }));
     const incidents = await getStatusIncidents(page.monitors.map((m) => m.id), 30, 20);
-    res.json({ owner: page.owner, whiteLabel: page.whiteLabel, monitors: enriched, incidents });
+    res.json({ title: page.title, whiteLabel: page.whiteLabel, monitors: enriched, incidents });
   } catch (err) {
     res.status(500).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
   }
@@ -1198,13 +1198,13 @@ app.patch('/api/me/status-page', async (req, res) => {
   if (!userId) return res.status(401).json(apiErr(E.AUTH_REQUIRED));
   const user = await getUserById(userId);
   if (!planHasStatusPage(user?.plan)) return res.status(403).json(apiErr(E.SP_REQUIRES_STARTER));
-  const { enabled, slug, customDomain, whiteLabel, password } = req.body || {};
-  // 高级状态页能力（自定义域名/白标/私有）仅 Pro
-  if ((customDomain !== undefined || whiteLabel !== undefined || password !== undefined) && user.plan !== 'pro') {
+  const { enabled, slug, customDomain, whiteLabel, password, title } = req.body || {};
+  // 高级状态页能力（自定义域名/白标/私有/自定义标题）仅 Pro
+  if ((customDomain !== undefined || whiteLabel !== undefined || password !== undefined || title !== undefined) && user.plan !== 'pro') {
     return res.status(403).json(apiErr(E.SP_PRO_ONLY));
   }
-  await updateStatusPage(userId, { enabled, slug, customDomain, whiteLabel, password });
-  recordUserEvent({ userId, eventType: 'status_page_update', metadata: { enabled, slug, customDomain, whiteLabel }, req });
+  await updateStatusPage(userId, { enabled, slug, customDomain, whiteLabel, password, title });
+  recordUserEvent({ userId, eventType: 'status_page_update', metadata: { enabled, slug, customDomain, whiteLabel, title }, req });
   const updated = await getUserById(userId);
   res.json({ user: updated });
 });

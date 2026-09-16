@@ -512,6 +512,8 @@
   "signup.termsHint": "Mit der Registrierung stimmst du zu, eine Bestätigungs-E-Mail zu erhalten. Wir hassen Spam ebenfalls.",
   "signup.title": "Registrieren",
   "sp.domain": "Eigene Domain (CNAME auf diesen Dienst)",
+  "sp.name": "Titel der Statusseite",
+  "sp.nameph": "z. B. Acme Inc",
   "sp.nosub": "Noch keine Abonnenten",
   "sp.pw": "Passwort für private Statusseite (leer = öffentlich):",
   "sp.pwph": "Festlegen oder leer lassen zum Löschen",

@@ -512,6 +512,8 @@
   "signup.termsHint": "By signing up you agree to receive a verification email. We hate spam too.",
   "signup.title": "Sign Up",
   "sp.domain": "Custom domain (CNAME to this service)",
+  "sp.name": "Status page title",
+  "sp.nameph": "e.g. Acme Inc",
   "sp.nosub": "No subscribers yet",
   "sp.pw": "Private status page password (leave empty = public):",
   "sp.pwph": "Set, or leave empty to clear",

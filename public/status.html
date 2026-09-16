@@ -214,7 +214,11 @@
       window.__lastStatusData = data; // 供语言切换时重渲染动态区
       const wrap = document.getElementById('wrap');
       if (data.whiteLabel) wrap.classList.add('branding-hidden');
-      document.getElementById('title').textContent = data.owner + ' — ' + t('status.title', 'Service Status');
+      // 🔴 标题只能用展示名（后端不再返回 email）——未配置时回退到通用文案
+      const pageTitle = (data.title || '').trim();
+      document.getElementById('title').textContent = pageTitle
+        ? pageTitle + ' — ' + t('status.title', 'Service Status')
+        : t('status.title', 'Service Status');
       document.getElementById('sub').textContent = t('status.sub', 'Last 30-day availability');
 
       // 总状态横幅

@@ -512,6 +512,8 @@
   "signup.termsHint": "Ao se cadastrar você concorda em receber um email de verificação. Também odiamos spam.",
   "signup.title": "Cadastre-se",
   "sp.domain": "Domínio personalizado (CNAME para este serviço)",
+  "sp.name": "Título da página de status",
+  "sp.nameph": "ex.: Acme Inc",
   "sp.nosub": "Ainda não há assinantes",
   "sp.pw": "Senha da página de status privada (vazio = pública):",
   "sp.pwph": "Defina ou deixe vazio para limpar",

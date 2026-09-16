@@ -512,6 +512,8 @@
   "signup.termsHint": "Al registrarte aceptas recibir un email de verificación. También odiamos el spam.",
   "signup.title": "Regístrate",
   "sp.domain": "Dominio personalizado (CNAME a este servicio)",
+  "sp.name": "Título de la página de estado",
+  "sp.nameph": "p. ej. Acme Inc",
   "sp.nosub": "Aún no hay suscriptores",
   "sp.pw": "Contraseña para estado privado (vacío = público):",
   "sp.pwph": "Establece o deja vacío para borrar",

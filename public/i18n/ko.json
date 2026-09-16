@@ -512,6 +512,8 @@
   "signup.termsHint": "가입하면 인증 메일 수신에 동의한 것으로 간주됩니다.",
   "signup.title": "가입",
   "sp.domain": "커스텀 도메인 (본 서비스로 CNAME)",
+  "sp.name": "상태 페이지 제목",
+  "sp.nameph": "예: Acme Inc",
   "sp.nosub": "아직 구독자가 없습니다",
   "sp.pw": "비공개 상태 페이지 비밀번호 (비워두면 공개):",
   "sp.pwph": "설정하거나 비워두면 삭제",

@@ -133,6 +133,10 @@ async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS status_custom_domain TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS status_white_label BOOLEAN NOT NULL DEFAULT false;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS status_password_hash TEXT;
+    -- status_page_title：公开状态页标题（自定义展示名）
+    -- 🔴 状态页标题**不得回退到 email** —— 那会把用户邮箱直接印在公开页面上（P1-5 修复）
+    -- 回退链：status_page_title → name → 前端通用文案（Service Status）
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS status_page_title TEXT;
 
     CREATE TABLE IF NOT EXISTS status_subscribers (
       id          TEXT PRIMARY KEY,

@@ -1606,7 +1606,11 @@
       // --- G7 状态页高级设置 (Pro) ---
       if (plan === 'pro' && user.statusPageEnabled) {
         const body = document.createElement('div');
+        // 状态页标题：null 时留空 → 后端回退到 name / 通用文案（绝不回退到邮箱）
+        const spTitleVal = String(user.statusPageTitle || '').replace(/"/g, '&quot;');
         body.innerHTML = `
+          <label>${t('sp.name','Status page title')}</label>
+          <input id="spTitle" maxlength="80" placeholder="${t('sp.nameph','e.g. Acme Inc')}" value="${spTitleVal}" style="width:100%;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;"/>
           <label>${t('sp.domain','Custom domain (CNAME to this service)')}</label>
           <input id="spDomain" placeholder="status.yourdomain.com" value="${user.statusCustomDomain||''}" style="width:100%;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;"/>
           <label style="display:block;margin-top:10px;"><input type="checkbox" id="spWhite" ${user.statusWhiteLabel?'checked':''}/> ${t('sp.white','White-label (hide Pingory branding)')}</label>
@@ -1617,7 +1621,7 @@
           <div id="subZone" style="margin-top:14px;"></div>`;
         zone.appendChild(advPanel(t('sp.title','Advanced status page settings'), body));
         body.querySelector('#spSave').onclick = async ()=>{
-          const payload = { customDomain: body.querySelector('#spDomain').value.trim(), whiteLabel: body.querySelector('#spWhite').checked, password: body.querySelector('#spPw').value };
+          const payload = { customDomain: body.querySelector('#spDomain').value.trim(), whiteLabel: body.querySelector('#spWhite').checked, password: body.querySelector('#spPw').value, title: body.querySelector('#spTitle').value };
           const r = await fetch('/api/me/status-page',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
           const j = await r.json();
           body.querySelector('#spMsg').textContent = r.ok ? t('sp.saved','Saved') : (errMsg(j)||t('err.fail','Failed'));

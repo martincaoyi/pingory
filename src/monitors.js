@@ -164,7 +164,7 @@ async function loadStatusPageUser(slugOrHost, byHost) {
   const pool = await getPool();
   const col = byHost ? 'status_custom_domain' : 'public_slug';
   const { rows } = await pool.query(
-    `SELECT id, email, public_slug, status_page_enabled, status_white_label, status_password_hash
+    `SELECT id, email, name, public_slug, status_page_enabled, status_white_label, status_password_hash, status_page_title
      FROM users WHERE ${col} = $1`,
     [slugOrHost]
   );
@@ -192,7 +192,9 @@ async function buildStatusPage(u) {
     [u.id]
   );
   return {
-    owner: u.email,
+    // 🔴 不返回 email：状态页是公开页面，标题只能用展示名（P1-5）
+    // 回退链：status_page_title → name → null（前端回退到通用文案）
+    title: u.status_page_title || u.name || null,
     whiteLabel: !!u.status_white_label,
     private: !!u.status_password_hash,
     monitors: ms.map((m) => ({

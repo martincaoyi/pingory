@@ -37,6 +37,7 @@ function rowToUser(row) {
     statusPageEnabled: row.status_page_enabled,
     statusCustomDomain: row.status_custom_domain || null,
     statusWhiteLabel: !!row.status_white_label,
+    statusPageTitle: row.status_page_title || null,
     emailVerified: !!row.email_verified,
     hasPassword: !!row.password_hash,
     role: row.role || 'user',
@@ -402,8 +403,8 @@ export async function recordBillingEvent(ev) {
   return id;
 }
 
-// 更新公开状态页设置（G7 扩展：自定义域名 / 白标 / 私有密码）
-export async function updateStatusPage(userId, { enabled, slug, customDomain, whiteLabel, password } = {}) {
+// 更新公开状态页设置（G7 扩展：自定义域名 / 白标 / 私有密码 / 页面标题）
+export async function updateStatusPage(userId, { enabled, slug, customDomain, whiteLabel, password, title } = {}) {
   const pool = await getPool();
   const sets = [];
   const params = [userId];
@@ -415,6 +416,11 @@ export async function updateStatusPage(userId, { enabled, slug, customDomain, wh
     sets.push(`status_custom_domain = $${i++}`); params.push(cd);
   }
   if (whiteLabel !== undefined) { sets.push(`status_white_label = $${i++}`); params.push(!!whiteLabel); }
+  if (title !== undefined) {
+    // 公开状态页标题：去空白 + 限长 80；空串表示清除（回退到 name / 通用文案）
+    const tt = String(title || '').trim().slice(0, 80) || null;
+    sets.push(`status_page_title = $${i++}`); params.push(tt);
+  }
   if (password !== undefined) {
     if (password) {
       const h = await hashPagePassword(password);

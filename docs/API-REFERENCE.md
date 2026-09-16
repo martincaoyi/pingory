@@ -389,7 +389,7 @@ Heartbeat 监控的回填端点（G1，**无需登录**，凭监控 id）。
 
 **响应 200**
 ```json
-{ "owner": { "email": "user@example.com", "slug": "base-1a2b3c" },
+{ "title": "Acme Inc", "whiteLabel": false,
   "monitors": [ { "id": "...", "name": "My Site", "status": "up", "uptime": 0.998, "avgRt": 124,
                   "spark": [ { "day": "2026-08-01", "avgRt": 120, "down": false }, ... ] } ],
   "incidents": [ { "monitor_id": "...", "event_type": "status", "to_status": "down", "error": "HTTP 503", "created_at": 1693000000000 } ] }
@@ -409,8 +409,9 @@ Heartbeat 监控的回填端点（G1，**无需登录**，凭监控 id）。
 { "enabled": true, "slug": "my-status" }
 ```
 - `slug`：可选，缺省保留原 slug 或自动生成；含 `public_slug` 字段
+- `title`：可选（**Pro**），公开状态页标题，≤80 字符；留空=清除。未设置时状态页标题回退到 `users.name`，再回退到前端通用文案
 
-**响应 200** `{ user }`（含 `statusPageEnabled` / `publicSlug`）；**403** 套餐不支持；**401** 未登录
+**响应 200** `{ user }`（含 `statusPageEnabled` / `publicSlug` / `statusPageTitle`）；**403** 套餐不支持；**401** 未登录
 
 ### GET /api/plan-features
 返回当前用户套餐的可用能力（前端渲染表单用，需登录）。
@@ -608,8 +609,8 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 ## 9. G7–G11 新增端点
 
 ### 9.1 状态页增强（G7，Pro）
-- **PATCH /api/me/status-page**：扩展字段 `{ customDomain, whiteLabel, password }`（Pro 专属；`password` 留空=取消私有）。
-- **GET /api/status/:slug**：返回 `{ owner, whiteLabel, monitors[], incidents[] }`；`monitors[].spark` 为近 30 日每日降采样；`incidents` 为近 30 日 down/up 事件（供状态页横幅/可用率/sparkline/事故时间线）。私有页未解锁返回 `401 {needsPassword:true,whiteLabel}`。
+- **PATCH /api/me/status-page**：扩展字段 `{ customDomain, whiteLabel, password, title }`（Pro 专属；`password` 留空=取消私有；`title` 留空=清除自定义标题）。
+- **GET /api/status/:slug**：返回 `{ title, whiteLabel, monitors[], incidents[] }`；`title` = 状态页展示名，回退链 `status_page_title → users.name → null`（前端回退通用文案）。**⚠️ 不返回 email**——状态页是公开页面，回退到邮箱会把用户邮箱印在公开页面上（P1-5 修复）；`monitors[].spark` 为近 30 日每日降采样；`incidents` 为近 30 日 down/up 事件（供状态页横幅/可用率/sparkline/事故时间线）。私有页未解锁返回 `401 {needsPassword:true,whiteLabel}`。
 - **GET /api/status-page**：按 `Host` 解析自定义域名状态页（同上结构）。
 - **POST /api/status/:slug/unlock** / **POST /api/status-page/unlock**：私有页密码解锁，成功写 capability cookie。
 - **POST /api/status/:slug/subscribe** / **POST /api/status-page/subscribe**：公开订阅（入库 `status_subscribers`，事件时邮件通知）。slug 不存在 → **404** `{ error: "status_page_not_found" }`（v1.9 起错误码化，此前返回裸中文串）。

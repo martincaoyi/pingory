@@ -512,6 +512,8 @@
   "signup.termsHint": "注册即表示同意接收验证邮件。我们同样讨厌垃圾邮件。",
   "signup.title": "注册",
   "sp.domain": "自定义域名（CNAME 指向本服务）",
+  "sp.name": "状态页标题",
+  "sp.nameph": "例如：Acme 公司",
   "sp.nosub": "暂无订阅者",
   "sp.pw": "私有状态页密码（留空 = 公开）：",
   "sp.pwph": "设置，或留空以清除",
