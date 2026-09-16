@@ -55,6 +55,7 @@ const E = {
   API_TYPE_NOT_SUPPORTED:   'api_type_not_supported',
   CHANNEL_NOT_SUPPORTED:    'channel_not_supported',
   CHANNEL_NOT_CONFIGURED:   'channel_not_configured',
+  ENDPOINT_NOT_FOUND:       'endpoint_not_found',
 };
 /** 构造 i18n 错误响应 { error: code, ep: params } */
 function apiErr(code, params) { return { error: code, ep: params || {} }; }
@@ -1881,6 +1882,14 @@ app.delete('/api/v1/monitors/:id', requireApiKey, async (req, res) => {
 // 健康检查（供编排平台 / Uptime Robot 探测本服务存活）
 app.get('/health', (_req, res) => {
   res.json({ ok: true, ts: Date.now(), region: process.env.PROBE_REGION_NAME || 'local' });
+});
+
+// ===== 未匹配的 /api/* 统一兜底（P1-11）=====
+// 背景：未匹配任何 API 路由的请求会落到 Express 默认 404（HTML `Cannot GET /api/xxx`），
+// 与全局「错误码 + {error, ep} JSON」约定不一致 —— 前端按 JSON 解析会拿到 HTML 而抛异常。
+// 必须注册在全部 API 路由之后、且不拦截非 /api 路径（静态资源/SPA 的默认行为保持不变）。
+app.use('/api', (_req, res) => {
+  res.status(404).json(apiErr(E.ENDPOINT_NOT_FOUND));
 });
 
 // ===== 启动告警 + 轮询 + 数据库初始化 =====

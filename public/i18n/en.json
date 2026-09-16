@@ -284,6 +284,7 @@
   "err.api_type_not_supported": "Plan does not support \"{type}\"",
   "err.channel_not_configured": "The {channel} channel is not set up yet. Configure it in Account settings.",
   "err.channel_not_supported": "Your {plan} plan does not support the {channel} channel, please upgrade",
+  "err.endpoint_not_found": "This API endpoint does not exist",
   "fb.btn": "Feedback",
   "fb.cancel": "Cancel",
   "fb.emailph": "Your email (optional, so we can reply)",

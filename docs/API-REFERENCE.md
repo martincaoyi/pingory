@@ -2,8 +2,8 @@
 
 > 本文档描述后端 Express REST API。登录/注册/验证邮箱/OAuth（`/api/auth/*`）与 `/api/paddle-config`、`/api/creem-config` 无需登录态；其余业务端点由各路由内部校验 Session（未登录返回 401）。
 >
-> **版本**：v2.2（2026-09-16 安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
-> **最后更新**：2026-09-15
+> **版本**：v2.3（2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
+> **最后更新**：2026-09-16（P1-10 安全响应头：关闭 `X-Powered-By`、补 `Permissions-Policy`，见 §7.4；P1-11 `/api` 404 兜底，见「未匹配路由的统一兜底」）
 > **关联代码**：`server.js`（路由，共 80 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）
 
 ---
@@ -22,7 +22,7 @@
 ▸ 字典缺键时回退显示原始错误码（便于定位）
 ▸ 内容自由文本（如监控历史时间线的 `error` 字段记录 HTTP 错误原文）不走错误码，保持原样
 
-### 错误码清单（36）
+### 错误码清单（37）
 
 | 错误码 | HTTP | 含义 / 占位符 |
 |---|---|---|
@@ -62,10 +62,26 @@
 | `self_delete` | 400 | 不能删除自己 |
 | `no_team` | 404 | 团队不存在 |
 | `server_error` | 500 | 服务器内部错误 `{msg}` |
+| `endpoint_not_found` | 404 | 请求的 API 路径不存在（未匹配任何 `/api/*` 路由时的统一兜底，2026-09-16 P1-11 新增） |
+
+### 未匹配路由的统一兜底（2026-09-16 P1-11 新增）
+
+未匹配任何 API 路由的请求，原会落到 **Express 默认 404**（HTML 响应体 `Cannot GET /api/xxx`），
+与「错误码 + `{error, ep}` JSON」约定不一致 —— 前端按 JSON 解析会拿到 HTML 而抛异常。
+
+现由 `app.use('/api', ...)` 兜底统一返回：
+
+```json
+{ "error": "endpoint_not_found", "ep": {} }
+```
+
+▸ **注册位置**：全部 API 路由注册之后（`server.js` 的 `/health` 之后），因此不会遮蔽任何真实路由
+▸ **作用域**：仅 `/api` 前缀；非 `/api` 路径（静态资源、页面路由、对比页等）**行为完全不变**
+▸ **方法无关**：任意 HTTP 方法（含未实现的 `PATCH` 等）命中都会得到该 JSON，而非 HTML
 
 ### 变更原因（2026-09-13）
 
-此前后端直接返回英文句子（例：`Your pro plan does not support "", please upgrade`），前端 `showAlert(d.error)` 原样弹出 → **中文界面下显示英文**。现改为「错误码 + 8 语字典」：`err.*` 键在 en/zh/es/pt/de/fr/ja/ko 各 37 个（36 个错误码 + 既有 `err.fail`，v1.8 起），全语言 parity 由 `tools/dev_gate.js` 的 `i18n-缺键` / `i18n-未翻译` 门禁守。
+此前后端直接返回英文句子（例：`Your pro plan does not support "", please upgrade`），前端 `showAlert(d.error)` 原样弹出 → **中文界面下显示英文**。现改为「错误码 + 8 语字典」：`err.*` 键在 en/zh/es/pt/de/fr/ja/ko 各 38 个（37 个错误码 + 既有 `err.fail`，v1.8 起；`err.endpoint_not_found` 为 2026-09-16 P1-11 新增），全语言 parity 由 `tools/dev_gate.js` 的 `i18n-缺键` / `i18n-未翻译` 门禁守。
 
 另：`/api/monitors` 的 `url` 字段自 2026-09-13 起支持**只填域名**（如 `baidu.com`），后端自动补全 `https://` 并归一化；非 HTTP 类类型（ping/tcp/ssl/domain/dns）若粘贴完整 URL，自动取 host。
 

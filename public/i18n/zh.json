@@ -284,6 +284,7 @@
   "err.api_type_not_supported": "该套餐不支持「{type}」类型",
   "err.channel_not_configured": "{channel} 渠道尚未配置，请先在账户设置里配置",
   "err.channel_not_supported": "您的 {plan} 套餐不支持 {channel} 渠道，请升级",
+  "err.endpoint_not_found": "请求的接口不存在",
   "fb.btn": "反馈",
   "fb.cancel": "取消",
   "fb.emailph": "你的邮箱（选填，方便我们回复）",

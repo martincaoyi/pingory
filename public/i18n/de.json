@@ -284,6 +284,7 @@
   "err.api_type_not_supported": "Dieser Plan unterstützt \"{type}\" nicht",
   "err.channel_not_configured": "Der Kanal {channel} ist noch nicht eingerichtet. Konfiguriere ihn in den Kontoeinstellungen.",
   "err.channel_not_supported": "Dein {plan}-Tarif unterstützt den Kanal {channel} nicht – bitte upgraden",
+  "err.endpoint_not_found": "Dieser API-Endpunkt existiert nicht",
   "fb.btn": "Feedback",
   "fb.cancel": "Abbrechen",
   "fb.emailph": "Deine E-Mail (optional, für Antworten)",

@@ -284,6 +284,7 @@
   "err.api_type_not_supported": "このプランは「{type}」に対応していません",
   "err.channel_not_configured": "{channel} チャネルはまだ設定されていません。アカウント設定で設定してください。",
   "err.channel_not_supported": "ご利用の {plan} プランは {channel} チャネルに対応していません。アップグレードしてください",
+  "err.endpoint_not_found": "この API エンドポイントは存在しません",
   "fb.btn": "フィードバック",
   "fb.cancel": "キャンセル",
   "fb.emailph": "メールアドレス（任意、返信用）",
