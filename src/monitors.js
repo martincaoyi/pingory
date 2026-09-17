@@ -602,8 +602,51 @@ async function checkMonitor(monitor) {
 
 // 启动轮询
 const inFlight = new Set(); // 防止同一监控并发检查（检查耗时可能 > 轮询间隔）
+
+// ===== Leader 租约（P1-12）=====
+// 多实例（Fly 双机）下只允许一个实例跑轮询：否则两台机器各自检查、各自派发告警
+// ⇒ 每封告警发两份，且内存级冷却（slowState）在双实例下失效。
+// 租约落库（双实例共享），leader 每 5 秒续租、TTL 30 秒；leader 挂掉后另一实例在 ≤30s 内接管。
+const LEASE_NAME = 'poll';
+const LEASE_TTL_SEC = 30;
+const INSTANCE_ID = `${os.hostname()}-${process.pid}-${crypto.randomBytes(3).toString('hex')}`;
+let isLeader = false;
+
+// 尝试取得/续租 leader 租约；返回 true = 本实例当前持有租约。
+// holder/name 参数化以便测试模拟多实例竞争（生产用默认值）。
+export async function tryAcquireLease(holder = INSTANCE_ID, name = LEASE_NAME) {
+  const pool = await getPool();
+  const { rows } = await pool.query(
+    `INSERT INTO leader_lease (name, holder, expires_at)
+     VALUES ($1, $2, now() + make_interval(secs => $3))
+     ON CONFLICT (name) DO UPDATE
+       SET holder = $2, expires_at = now() + make_interval(secs => $3)
+       WHERE leader_lease.holder = $2 OR leader_lease.expires_at < now()
+     RETURNING holder`,
+    [name, holder, LEASE_TTL_SEC]
+  );
+  return rows.length > 0;
+}
+
 export function startPolling() {
   setInterval(async () => {
+    // 1) 竞争 / 续租 leader（仅 leader 才继续往下扫描）
+    try {
+      const won = await tryAcquireLease();
+      if (won && !isLeader) {
+        isLeader = true;
+        console.log(`[poll] 本实例取得 leader 租约，开始轮询 (${INSTANCE_ID})`);
+      } else if (!won && isLeader) {
+        isLeader = false;
+        console.warn(`[poll] leader 租约丢失，转为 standby (${INSTANCE_ID})`);
+      }
+    } catch (e) {
+      // 租约表查询失败时不改变当前角色（避免网络抖动导致频繁切换）
+      console.error('[poll] 租约检查失败:', e.message);
+    }
+    if (!isLeader) return; // standby：不扫描、不派发告警
+
+    // 2) 扫描到期监控（仅 leader 执行）
     const now = Date.now();
     const all = await listMonitors();
     for (const m of all) {

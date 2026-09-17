@@ -86,6 +86,14 @@ SMTP_PASS=<Resend API Key，re_ 开头>
 SMTP_FROM="Pingory Alerts <alerts@yourdomain.com>"  # 必须是已验证域名下的地址
 ALERT_TO_EMAIL=admin@yourdomain.com  # 客户反馈通知收件人（非告警收件人；告警发往监控归属账号的注册邮箱）
 
+# ===== 告警邮件发送配额（P1-12）=====
+# 背景：Resend 免费档 = 100 封/天。一次事故（监控长时间宕机 × 多订阅者）即可打爆额度，
+# 额度耗尽后 Resend 拒发 ⇒ 关键告警静默丢失。故发送前先过配额，超限跳过并留日志。
+# 计数落库（email_budget 表，双实例共享），按 UTC 日期分桶、跨天自动归零。均可省略，用默认值。
+EMAIL_DAILY_CAP=90       # 全站每日邮件上限（默认 90，留 10 封余量给验证/重置邮件；务必 ≤ 服务商额度）
+EMAIL_ACCOUNT_CAP=60     # 单账号每日上限（默认 60，防单个账号吃光全局额度）
+EMAIL_WARN_SHARE=0.4     # 非关键告警（慢响应/证书即将到期）只能用全局额度的前 40%，其余预留给关键告警（down/escalation/recovered）
+
 # ===== 支付 · Creem（推荐，当前生产通道）=====
 PAYMENT_PROVIDER=creem             # ⚠️ 不设则默认 paddle —— 用 Creem 必须显式写这一行
 CREEM_ENVIRONMENT=live             # test（测试）或 live（正式）

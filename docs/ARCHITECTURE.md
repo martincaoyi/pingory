@@ -108,13 +108,19 @@
 - `getHistory` / `getStats`（可用率/平均/P95+时序）/ `getStatusPage` / `getStatusPageByHost`（自定义域名）
 - **9 类检查器**：checkHttp / checkKeyword / checkPing / checkTcp / checkSsl / checkDomain(自建WHOIS) / checkApi(header+JSON断言) / checkDns / checkHeartbeat
 - `runCheck(monitor, plan)`：读 `PROBE_REGIONS` 多区域，多数确认降误报；`consecutive_failures` 支持连续失败计数（Free 连续 2 次才告警）
-- `startPolling()`：每 5 秒扫描 + `inFlight` Set 并发锁
+- `startPolling()`：每 5 秒扫描 + `inFlight` Set 并发锁 + **DB leader 租约**（`tryAcquireLease`）
+  ▸ **仅 leader 实例执行扫描与告警派发**。Fly 双实例下若都轮询，会各自派发 ⇒ 每封告警发两份、内存级冷却失效；
+    故用 `leader_lease` 表做租约（TTL 30s、每 5s 续租），leader 挂掉后另一实例 ≤30s 接管（P1-12）
 - `setCheckResultHandler(fn)`（注册 alerts handler）
 
 ### `src/alerts.js`（告警，~248 行）
 - `initAlerts()` → 注册检查结果 handler
 - 状态机：down / up / escalation（按 escalationIntervalMin 重发）/ warning（慢响应+SSL/域名到期）
-- 渠道发送：sendEmail / sendSlack / sendWebhook / sendTelegram / sendDiscord / sendTeams / sendPagerduty
+- 渠道发送：sendAlertEmail（带配额）/ sendSlack / sendWebhook / sendTelegram / sendDiscord / sendTeams / sendPagerduty
+- **邮件发送配额（P1-12）**：`consumeEmailBudget(scope, ceiling)` 原子自增（`email_budget` 表，双实例共享、按 UTC 日分桶）
+  ▸ 全局闸 `EMAIL_DAILY_CAP`（默认 90，护 Resend 免费档 100/天）+ 单账号闸 `EMAIL_ACCOUNT_CAP`（默认 60）
+  ▸ **方案 A 优先级**：warning（慢响应/即将到期）只能用全局额度前 `EMAIL_WARN_SHARE`（默认 40%），
+    其余**预留给关键告警**（down / escalation / recovered）⇒ 事故时关键邮件发得出去；超限跳过并 `console.warn`（不静默）
 - `resolveChannels(monitor, plan)`：按套餐过滤启用渠道（降档后超档渠道静默不发、不删配置）
 - 维护窗口：命中 active 窗口的监控 down 不派发告警（仍 saveEvent）
 - 订阅者通知：状态页订阅者（status_subscribers）在 down/恢复时收邮件
@@ -126,7 +132,7 @@
 
 ### `src/db.js`（数据库，~226 行）
 - `getPool()` → pg Pool 单例（SSL verify-full）
-- `initDb()` → 9 表 CREATE IF NOT EXISTS + ALTER 迁移（幂等、禁 DROP）
+- `initDb()` → 11 表 CREATE IF NOT EXISTS + ALTER 迁移（幂等、禁 DROP）
 - `startKeepAlive(intervalMs)` → 每 4 分钟 SELECT 1
 
 ### 多区域探针 Worker（`src/worker.js`，~56 行）

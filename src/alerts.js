@@ -6,6 +6,7 @@ import { getUserById, isMonitorInMaintenance, getSubscriberEmails, getAlertChann
 import nodemailer from 'nodemailer';
 import { planHasChannel, planHasStats } from './plans.js';
 import { monErrText } from './monerr.js';
+import { getPool } from './db.js';
 
 // 邮件告警的收件人 = 监控归属账号的注册邮箱（多租户各归各）。
 // ⚠️ 不再使用全局 ALERT_TO_EMAIL 作为告警收件人（该变量仅剩「客户反馈通知」用途，见 src/email.js）。
@@ -24,10 +25,57 @@ function getTransporter() {
   return transporter;
 }
 
+// ===== 邮件发送配额（P1-12）=====
+// 背景：SMTP = Resend 免费档 100 封/天。一次事故（监控长时间宕机 × 多订阅者）即可打爆额度，
+// 额度耗尽后 Resend 拒发 ⇒ 关键告警会静默丢失。故发送前先消费配额，超限则跳过并**响亮记录**。
+// 计数落库（双实例共享），按 UTC 日期分桶、跨天自动归零。
+const EMAIL_DAILY_CAP = Number(process.env.EMAIL_DAILY_CAP || 90);     // 全站每日上限（留余量给验证/重置邮件）
+const EMAIL_ACCOUNT_CAP = Number(process.env.EMAIL_ACCOUNT_CAP || 60); // 单账号每日上限（防单账号吃光全局额度）
+// 非关键告警（warning：慢响应 / 证书即将到期）只能用全局额度的前 X%；
+// 其余额度**预留给关键告警**（down / escalation / recovered），保证事故时关键邮件发得出去。
+const EMAIL_WARN_SHARE = Number(process.env.EMAIL_WARN_SHARE || 0.4);
+
+// 原子消费一封配额；返回 true = 允许发送。scope：'global' | 'acct:<userId>'
+export async function consumeEmailBudget(scope, ceiling) {
+  if (!(ceiling > 0)) return false;
+  try {
+    const pool = await getPool();
+    const { rows } = await pool.query(
+      `INSERT INTO email_budget (scope, day, used, updated_at)
+       VALUES ($1, (now() AT TIME ZONE 'utc')::date, 1, now())
+       ON CONFLICT (scope, day) DO UPDATE
+         SET used = email_budget.used + 1, updated_at = now()
+         WHERE email_budget.used + 1 <= $2
+       RETURNING used`,
+      [scope, ceiling]
+    );
+    return rows.length > 0;
+  } catch (e) {
+    // 配额表故障时放行（宁可发也不因计数故障彻底静默），但留日志便于排查
+    console.error('[alert] 邮件配额检查失败（放行）:', e.message);
+    return true;
+  }
+}
+
 // ===== 渠道发送实现 =====
-async function sendEmail(to, subject, text) {
+// 发送一封告警邮件：先过配额（全局 + 账号），再发。priority='critical' | 'warning'
+async function sendAlertEmail(to, subject, text, { priority = 'critical', accountId = null } = {}) {
+  if (!to) return false;
   const t = getTransporter();
-  if (!t || !to) return;
+  if (!t) return false; // 未配置 SMTP：直接返回，不消耗配额
+  const isWarn = priority === 'warning';
+  const globalCeiling = isWarn ? Math.max(1, Math.floor(EMAIL_DAILY_CAP * EMAIL_WARN_SHARE)) : EMAIL_DAILY_CAP;
+  if (!(await consumeEmailBudget('global', globalCeiling))) {
+    console.warn(`[alert] 全局邮件配额已用尽（priority=${priority}, ceiling=${globalCeiling}），已跳过: ${subject} -> ${to}`);
+    return false;
+  }
+  if (accountId) {
+    const acctCeiling = isWarn ? Math.max(1, Math.floor(EMAIL_ACCOUNT_CAP * EMAIL_WARN_SHARE)) : EMAIL_ACCOUNT_CAP;
+    if (!(await consumeEmailBudget(`acct:${accountId}`, acctCeiling))) {
+      console.warn(`[alert] 账号邮件配额已用尽（${accountId}, priority=${priority}, ceiling=${acctCeiling}），已跳过: ${subject} -> ${to}`);
+      return false;
+    }
+  }
   try {
     await t.sendMail({
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -36,25 +84,25 @@ async function sendEmail(to, subject, text) {
       text,
     });
     console.log('[alert] 邮件已发送 ->', to);
+    return true;
   } catch (err) {
     console.error('[alert] 邮件发送失败:', err.message);
+    return false;
   }
 }
 
-// 给指定收件人发（订阅者通知复用）
-async function sendEmailTo(to, subject, text) {
-  return sendEmail(to, subject, text);
-}
-
-// 状态页订阅者通知（G7）：返回实际发送数量
-async function notifySubscribers(monitor, title, text) {
+// 状态页订阅者通知（G7）：逐人发送，配额耗尽即停
+async function notifySubscribers(monitor, title, text, priority = 'critical') {
   if (!monitor.userId) return;
   try {
     const emails = await getSubscriberEmails(monitor.userId);
+    let sent = 0;
     for (const e of emails) {
-      await sendEmailTo(e, title, text + '\n\n（你正在订阅该用户的状态页，可忽略此邮件）');
+      const ok = await sendAlertEmail(e, title, text + '\n\n（你正在订阅该用户的状态页，可忽略此邮件）', { priority, accountId: monitor.userId });
+      if (!ok) break; // 配额耗尽 → 后续订阅者不再尝试（避免刷日志与无谓请求）
+      sent += 1;
     }
-    if (emails.length) console.log(`[alert] 已通知 ${emails.length} 名订阅者: ${monitor.name}`);
+    if (emails.length) console.log(`[alert] 已通知 ${sent}/${emails.length} 名订阅者: ${monitor.name}`);
   } catch (err) {
     console.error('[alert] 订阅者通知失败:', err.message);
   }
@@ -136,14 +184,14 @@ function resolveChannels(monitor, plan, accountChannels) {
 }
 
 // ===== 统一分发 =====
-async function dispatch(monitor, plan, title, text, channelExtra = {}, accountChannels = {}, emailTo = null) {
+async function dispatch(monitor, plan, title, text, channelExtra = {}, accountChannels = {}, emailTo = null, priority = 'critical') {
   const channels = resolveChannels(monitor, plan, accountChannels);
   for (const [ch, cfg] of Object.entries(channels)) {
     try {
       switch (ch) {
         case 'email':
           // 发给该监控归属账号的注册邮箱；无归属邮箱时跳过并留日志，绝不回退到固定个人邮箱。
-          if (emailTo) await sendEmail(emailTo, title, text);
+          if (emailTo) await sendAlertEmail(emailTo, title, text, { priority, accountId: monitor.userId });
           else console.warn(`[alert] email 渠道跳过：监控无归属账号邮箱（${monitor.name}）`);
           break;
         case 'slack': await sendSlack(cfg.url, text); break;
@@ -225,8 +273,8 @@ export function initAlerts() {
         await saveMonitor(monitor);
         if (inMaintenance) { console.log(`[alert] 维护窗口内跳过告警: ${monitor.name}`); }
         else {
-          await dispatch(monitor, plan, `Pingory DOWN: ${monitor.name}`, text, { severity: 'critical' }, accountChannels, userEmail);
-          await notifySubscribers(monitor, `Status page alert: ${monitor.name} is DOWN`, text);
+          await dispatch(monitor, plan, `Pingory DOWN: ${monitor.name}`, text, { severity: 'critical' }, accountChannels, userEmail, 'critical');
+          await notifySubscribers(monitor, `Status page alert: ${monitor.name} is DOWN`, text, 'critical');
         }
       } else if ((monitor.alertCount || 0) > 0) {
         // 持续 down：升级告警（G2）
@@ -240,8 +288,8 @@ export function initAlerts() {
           monitor.alertCount = count;
           await saveMonitor(monitor);
           if (!inMaintenance) {
-            await dispatch(monitor, plan, `Pingory STILL DOWN: ${monitor.name}`, text, { severity: 'critical' }, accountChannels, userEmail);
-            await notifySubscribers(monitor, `Status page alert: ${monitor.name} still DOWN`, text);
+            await dispatch(monitor, plan, `Pingory STILL DOWN: ${monitor.name}`, text, { severity: 'critical' }, accountChannels, userEmail, 'critical');
+            await notifySubscribers(monitor, `Status page alert: ${monitor.name} still DOWN`, text, 'critical');
           }
         }
       }
@@ -258,8 +306,8 @@ export function initAlerts() {
         monitor.alertCount = 0;
         await saveMonitor(monitor);
         if (!inMaintenance) {
-          await dispatch(monitor, plan, `Pingory RECOVERED: ${monitor.name}`, text, { severity: 'info' }, accountChannels, userEmail);
-          await notifySubscribers(monitor, `Status page alert: ${monitor.name} recovered`, text);
+          await dispatch(monitor, plan, `Pingory RECOVERED: ${monitor.name}`, text, { severity: 'info' }, accountChannels, userEmail, 'critical');
+          await notifySubscribers(monitor, `Status page alert: ${monitor.name} recovered`, text, 'critical');
         }
       }
       // ---- up 状态下的 warning：慢响应 / 证书或域名即将到期（G2 / G1）----
@@ -270,7 +318,7 @@ export function initAlerts() {
         warnText = `⚠️ WARNING ${monitor.name} (${monitor.url})\n${monErrText(result.warn)}\nTime: ${fmt()}`;
       }
       if (warnText) {
-        await dispatch(monitor, plan, `Pingory WARNING: ${monitor.name}`, warnText, { severity: 'warning' }, accountChannels, userEmail);
+        await dispatch(monitor, plan, `Pingory WARNING: ${monitor.name}`, warnText, { severity: 'warning' }, accountChannels, userEmail, 'warning');
         await saveEvent(monitor.id, { eventType: 'warning', fromStatus: 'up', toStatus: 'up', responseTime: result.responseTime, error: result.warn || null, detail: warnText });
       }
       return;
@@ -298,7 +346,9 @@ export async function generateMonthlyReport(userId) {
   }
 
   const text = lines.join('\n');
-  await sendEmail(user.email, 'Pingory 月度报告', text);
+  // 月度报告属非关键邮件：走 warning 档，不占用为关键告警预留的额度
+  const ok = await sendAlertEmail(user.email, 'Pingory 月度报告', text, { priority: 'warning', accountId: userId });
+  if (!ok) { console.warn('[report] 月度报告未发送（配额或发送失败）:', user.email); return false; }
   console.log('[report] 月度报告已发送至', user.email);
   return true;
 }

@@ -8,6 +8,45 @@
 
 ---
 
+## 2026-09-17 · 告警邮件发送配额 + 轮询 leader 租约（P1-12）
+
+**背景**：Martin 指出报警邮件可能打爆 Resend 免费档（100 封/天）。经逐行核查，代码中**没有任何邮件数量上限**，且存在两个未被察觉的倍增器与一个可靠性隐患：
+
+1. **双实例重复发送**：`server.js` 无条件调用 `startPolling()`，而并发锁 `inFlight` 是内存级 Set → Fly 两台 nrt 机器各自轮询、各自派发告警 ⇒ **每封告警发两份**（首封 DOWN 在并发读 `alertCount===0` 时两机都发；升级告警两机各自计时）。同时内存级 warning 冷却（`slowState`）在双实例下失效。
+2. **订阅者扇出 ×N**：`notifySubscribers()` 对每个事件给**每个订阅者各发一封**，一个事件 = 1 封给 owner + N 封给订阅者。
+3. **超额静默丢失**：`sendEmail` 的 `try/catch` 吞掉 Resend 拒发（额度耗尽）→ 配额打满时**最关键的 DOWN 告警会被静默丢掉**。
+
+一次事故测算：1 个监控宕 24h（默认 30 分钟升级）+ 10 订阅者 ≈ 50 事件 ×(1+10)×2 ≈ **1100 封**，一次即爆免费额度 11 倍。
+
+**新增（`src/db.js`）**
+
+- `email_budget(scope, day, used)`：邮件配额计数表（双实例共享、按 UTC 日期分桶、跨天自动归零、支持并发原子自增）。
+- `leader_lease(name, holder, expires_at)`：轮询 leader 租约表。
+
+**新增（`src/alerts.js`）**
+
+- `consumeEmailBudget(scope, ceiling)`：原子消费一封配额（`ON CONFLICT ... DO UPDATE ... WHERE used+1 <= ceiling`）。
+- `sendAlertEmail(to, subject, text, { priority, accountId })`：发送前先过配额（全局 + 账号），超限跳过并 `console.warn`。
+- **方案 A 优先级**（Martin 2026-09-17 拍板）：`warning`（慢响应 / 证书即将到期）只能用全局额度的前 `EMAIL_WARN_SHARE`（默认 40%），其余**预留给关键告警**（down / escalation / recovered）⇒ 保证事故时关键邮件发得出去。
+- 月度报告改走 `warning` 档，不占用为关键告警预留的额度。
+
+**修改（`src/monitors.js`）**
+
+- `tryAcquireLease(holder, name)`：DB 租约（TTL 30s、每 5s 续租）；`startPolling()` 仅 leader 实例执行扫描与派发，leader 挂掉后另一实例 ≤30s 接管。
+- 该改动同时修复了内存级 `slowState` warning 冷却在多实例下失效的问题（单 leader 轮询后内存状态恢复一致）。
+
+**新增环境变量（均可省略，用默认值）**
+
+- `EMAIL_DAILY_CAP=90`（全局每日上限，留余量给验证/重置邮件）
+- `EMAIL_ACCOUNT_CAP=60`（单账号每日上限，防单账号吃光全局额度）
+- `EMAIL_WARN_SHARE=0.4`（非关键告警可用额度占比）
+
+**备选（未采用）**：Resend 付费档（2000 封/天 $20/月）Martin 判定过贵；如需扩容，评估 Cloudflare $5/月方案。
+
+**关联文档**：`ARCHITECTURE.md`（startPolling / alerts 章节）、`DEPLOYMENT.md`（环境变量）。
+
+---
+
 ## 2026-09-15 · SEO 对比页扩至 3 竞品 + robots.txt / sitemap.xml 基础设施
 
 **背景**：既有 `/compare/uptimerobot`（8 语模板页）已上线；经竞品调研（Better Stack 免费版 10 监控/3 分钟、付费 $29-34/月；Pingdom 无免费版、Starter ~$10-11/月仅 10 监控——2026-09 经多源交叉核实）确定补 Better Stack 与 Pingdom 两页；同时补齐全站缺失的 robots.txt 与 sitemap.xml。UptimeRobot 现有页面价格表述（$9-10 Solo / $35-41 Team）经官方定价页当日复核一致，未改动。

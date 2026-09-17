@@ -281,6 +281,29 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_user_events_user_id ON user_events(user_id);
     CREATE INDEX IF NOT EXISTS idx_user_events_type ON user_events(event_type);
     CREATE INDEX IF NOT EXISTS idx_user_events_created_at ON user_events(created_at DESC);
+
+    -- ===== 告警邮件发送配额（P1-12）=====
+    -- 背景：SMTP 用 Resend 免费档 = 100 封/天。一次事故（监控长时间宕机 × 多订阅者）
+    -- 即可打爆额度；额度耗尽后 Resend 拒发，告警会静默丢失。
+    -- 双实例共享计数 → 必须落库（内存计数在多实例下不可靠）；按 UTC 日期分桶，跨天自动归零。
+    -- scope：'global'（全站总闸）或 'acct:<userId>'（单账号闸，防单个账号吃光全局额度）
+    CREATE TABLE IF NOT EXISTS email_budget (
+      scope       TEXT NOT NULL,
+      day         DATE NOT NULL,
+      used        INTEGER NOT NULL DEFAULT 0,
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (scope, day)
+    );
+
+    -- ===== 轮询 leader 租约（P1-12）=====
+    -- 背景：Fly 双实例都会执行 startPolling()，而并发锁 inFlight 是内存级 → 两台机器
+    -- 各自检查、各自派发告警 ⇒ 每封告警发两份（且内存级 warning 冷却在双实例下失效）。
+    -- 方案：DB 租约，仅持有租约的实例跑轮询；leader 挂掉后租约到期，另一实例接管。
+    CREATE TABLE IF NOT EXISTS leader_lease (
+      name        TEXT PRIMARY KEY,
+      holder      TEXT,
+      expires_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
   `);
 
   // monitors.user_id 补外键级联（历史是裸列，删用户后监控会变孤儿 → 后台显示「匿名」）。
