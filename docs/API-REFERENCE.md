@@ -5,6 +5,8 @@
 > **版本**：v2.3（2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
 > **最后更新**：2026-09-16（P1-10 安全响应头：关闭 `X-Powered-By`、补 `Permissions-Policy`，见 §7.4；P1-11 `/api` 404 兜底，见「未匹配路由的统一兜底」）
 > **关联代码**：`server.js`（路由，共 80 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）
+>
+> **2026-09-19 探针可靠性**：本地检查与多区域 `/probe` 均经 `runLocalCheckRetry` 执行——单次检查遇超时 / 网络抖动类错误会重试一次（间隔 1.5s）后再判定 down，消除东京探针偶发抖动造成的假故障；单点 HTTP/Keyword 超时从硬编码 10s 提至 15s（可经 `CHECK_TIMEOUT_MS` 环境变量调参，无需重新部署）。
 
 ---
 

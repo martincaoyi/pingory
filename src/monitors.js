@@ -15,6 +15,10 @@ import { MON_ERR } from './monerr.js';
 
 const execAsync = promisify(exec);
 
+// 单点 HTTP/Keyword 检查超时（ms）。东京探针探远端偶发抖动，10s 偏紧易误判 down；
+// 提到 15s，并允许经环境变量 CHECK_TIMEOUT_MS 调参，无需重新部署即可微调。
+const HTTP_TIMEOUT_MS = Number(process.env.CHECK_TIMEOUT_MS) || 15000;
+
 // 检查结果回调（由 alerts.js 注入），签名：(monitor, result, ctx)
 let onCheckResult = null;
 export function setCheckResultHandler(fn) {
@@ -304,7 +308,7 @@ function codeInExpected(resStatus, expected) {
 async function checkHttp(url, config) {
   const expected = config.expectedStatuses; // e.g. [200,201]
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const timeout = setTimeout(() => controller.abort(), HTTP_TIMEOUT_MS);
   try {
     const res = await fetch(url, {
       method: config.method || 'GET',
@@ -328,7 +332,7 @@ async function checkKeyword(url, config) {
   const kw = config.keyword;
   if (!kw) return { status: 'down', error: MON_ERR.KW_MISSING };
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const timeout = setTimeout(() => controller.abort(), HTTP_TIMEOUT_MS);
   try {
     const res = await fetch(url, { method: 'GET', redirect: 'follow', signal: controller.signal, headers: { 'User-Agent': 'Pingory/1.0' } });
     clearTimeout(timeout);
@@ -488,6 +492,38 @@ export async function runLocalCheck(monitor) {
   }
 }
 
+// 瞬时失败判定：仅对超时 / 网络抖动类错误重试，不重试真实故障（HTTP 状态不符、关键字缺失、断言失败等）
+function isTransientError(error) {
+  if (!error) return false;
+  const e = String(error).toLowerCase();
+  return (
+    e === 'timeout' ||
+    e.includes('timeout') ||
+    e.includes('econnreset') ||
+    e.includes('econnrefused') ||
+    e.includes('enotfound') ||
+    e.includes('etimedout') ||
+    e.includes('eai_again') ||
+    e.includes('fetch failed') ||
+    e.includes('socket hang up') ||
+    e.includes('und_err') ||
+    e.includes('network') ||
+    e.includes('getaddrinfo')
+  );
+}
+
+// 本地单点检查 + 瞬时失败单次重试：消除东京探针偶发抖动造成的假 down，避免 demo/状态页红标误报
+export async function runLocalCheckRetry(monitor) {
+  const start = Date.now();
+  let res = await runLocalCheck(monitor);
+  if (res.status === 'down' && isTransientError(res.error)) {
+    await new Promise((r) => setTimeout(r, 1500));
+    res = await runLocalCheck(monitor);
+  }
+  res.responseTime = res.responseTime ?? (Date.now() - start);
+  return res;
+}
+
 // 探针区域（G3）：默认单点；配置 PROBE_REGIONS 后多区域确认降误报
 function getProbeRegions(plan) {
   const feats = planFeatures(plan);
@@ -510,7 +546,7 @@ async function runCheck(monitor, plan) {
       // 委托给 worker 探针（部署多节点时使用）；未实现时回退本地
       try {
         const controller = new AbortController();
-        const to = setTimeout(() => controller.abort(), 10000);
+        const to = setTimeout(() => controller.abort(), HTTP_TIMEOUT_MS + 20000);
         const headers = { 'Content-Type': 'application/json' };
         if (process.env.PROBE_SECRET) headers['x-probe-secret'] = process.env.PROBE_SECRET;
         const resp = await fetch(`${r.baseUrl}/probe`, {
@@ -525,7 +561,7 @@ async function runCheck(monitor, plan) {
         res = { status: 'down', error: `探针 ${r.name} 不可达` };
       }
     } else {
-      res = await runLocalCheck(monitor);
+      res = await runLocalCheckRetry(monitor);
     }
     res.responseTime = res.responseTime ?? (monitor.type === 'heartbeat' ? null : Date.now() - start);
     if (res.status === 'down') { down++; lastError = res.error; }

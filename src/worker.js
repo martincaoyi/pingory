@@ -9,7 +9,7 @@
 
 import express from 'express';
 import os from 'node:os';
-import { runLocalCheck } from './monitors.js';
+import { runLocalCheckRetry } from './monitors.js';
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
@@ -31,7 +31,7 @@ app.post('/probe', async (req, res) => {
   }
   const start = Date.now();
   try {
-    const r = await runLocalCheck(monitor);
+    const r = await runLocalCheckRetry(monitor);
     const responseTime =
       r.responseTime != null
         ? r.responseTime
