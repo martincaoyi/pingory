@@ -5,14 +5,21 @@ import 'dotenv/config';
 import { Pool } from 'pg';
 
 // 模块级连接池：业务查询与会话存储（connect-pg-simple）共用同一 pool
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// ssl.rejectUnauthorized=false：仍走 TLS 加密，但不校验 CA 链。
+// 背景：pg v8 把连接串里的 sslmode=require 当作 verify-full，而 Supabase 池化器
+// 证书链的 CA 不在 Node 默认信任库内，会报 self-signed certificate in certificate chain。
+// 这是 Supabase 官方 Node 示例采用的通用做法，仅关闭 CA 校验、加密不受影响。
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
 
 async function getPool() {
   return pool;
 }
 
-// 保活：Neon 免费档 5 分钟无查询会休眠，首次请求需唤醒（很慢）。
-// 每 4 分钟发一次 SELECT 1，让连接保持活跃，注册/登录不再卡顿。
+// 保活：Supabase 免费档仅在「连续 7 天零查询」时才暂停计算；本服务每 4 分钟查询一次，
+// 永不满足该条件，因此数据库不会休眠。同时防止连接池空闲超时断开。
 let keepAliveTimer = null;
 export function startKeepAlive(intervalMs = 4 * 60 * 1000) {
   if (keepAliveTimer) return;
