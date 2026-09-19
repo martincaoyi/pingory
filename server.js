@@ -1896,7 +1896,7 @@ app.use('/api', (_req, res) => {
 (async () => {
   await initDb();
   await seedAdmin(); // 启动时按 ADMIN_EMAIL/ADMIN_PASSWORD 建立超级管理员
-  startKeepAlive(); // 防止 Neon 免费档休眠导致首请求卡顿
+  startKeepAlive(); // 防止查询间歇冷却（Supabase free 档无休眠，但保留此机制）
   initAlerts();
   startPolling();
 

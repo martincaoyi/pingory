@@ -14,7 +14,7 @@
 |---|---|---|---|
 | VPS | Hetzner CX22 / Oracle Free Tier / DigitalOcean $6 月 | ¥50–45/月 | Node.js 18+、2GB 内存足够 |
 | 域名 | `.com`（Cloudflare Registrar $9.15/年） | ¥66/年 | 禁 .xyz/.top/.site/.online（Spamhaus 滥用榜） |
-| 数据库 | Neon Free（Postgres） | 免费 | 5 分钟无查询自动休眠；本项目用 keepalive 保活 |
+| 数据库 | Supabase Free（Postgres，ap-northeast-1） | 免费 | Session Pooler；free 档无休眠问题，但保留 keepalive 防间歇冷却 |
 | CDN / DNS | Cloudflare（免费） | 免费 | 代理模式 + 强制 HTTPS |
 | 邮件 | Paddle MoR 自带通知；告警邮件用阿里云 SMTP 或个人 Gmail | 免费 | 生产建议换企业邮箱 |
 | 支付 | Paddle Sandbox → 切 Live | 费率 ~5%+5p | Merchant of Record，自动代扣 VAT |
@@ -216,12 +216,12 @@ curl -X POST http://localhost:3000/api/test-email   # （可选：在 server.js 
 
 | 症状 | 排查点 |
 |---|---|
-| 注册/登录慢（>10s） | Neon 休眠：检查 `src/db.js:startKeepAlive()` 是否每 4 分钟发 `SELECT 1` |
+| 注册/登录慢（>10s） | 检查 `src/db.js:startKeepAlive()` 是否每 4 分钟发 `SELECT 1`（保留以防间歇冷却） |
 | webhook 返回 400/401（验签失败） | Creem 通道：检查 `CREEM_WEBHOOK_SECRET`；Paddle 通道：检查 `PADDLE_WEBHOOK_SECRET` 是否含完整 `pdl_ntfset_` 前缀。日志里 `[creem webhook] 验签失败` 会打印收到的签名前 24 位与本地计算值，可直接比对 |
 | 支付后 plan 没变 | 先看 `event_type` 是否在代码处理列表内（见第 7 节）；Creem 搜日志 `[creem webhook]`，Paddle 搜 `subscription.`；另检查 `PAYMENT_PROVIDER` 与实际收款通道是否一致 |
 | 页面不显示结账入口 | `/api/creem-config`（或 `/api/paddle-config`）返回 `active:false` → 对应通道的环境变量未配齐 |
 | 告警邮件收不到 | SMTP 配置：检查 `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS`；用 Resend 时 `SMTP_USER=resend`、`SMTP_PASS` = Resend API Key（`re_` 开头） |
-| `Invalid Date` 前端显示 | Neon BIGINT → JS Number 转换：`rowToMonitor` 里 `lastChecked: Number(row.last_checked)` |
+| `Invalid Date` 前端显示 | Postgres BIGINT → JS Number 转换：`rowToMonitor` 里 `lastChecked: Number(row.last_checked)` |
 | 配额不生效 | 检查 `PLAN_LIMITS` 定义与 `users.plan` 字段是否一致 |
 | 端口冲突 | 检查 `PORT` 环境变量；`lsof -i :3000` |
 

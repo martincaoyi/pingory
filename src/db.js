@@ -1,4 +1,4 @@
-// 数据库层：连接 Neon Postgres，初始化表结构
+// 数据库层：连接 Supabase Postgres，初始化表结构
 // 首次运行自动建表；后续启动静默通过
 
 import 'dotenv/config';

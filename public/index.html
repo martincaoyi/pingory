@@ -394,7 +394,7 @@ docker compose up -d</code></pre>
 
       <div class="plan featured">
         <h3 data-i18n="landing.plan.starter.title">Starter</h3>
-        <div class="price" id="priceStarter"><span class="eq">$3.33</span><small>/mo</small><s>$4</s><span class="billed">billed $40/yr · save 2 months</span></div>
+        <div class="price" id="priceStarter"><span class="eq">$40</span><small>/yr</small> = <span class="eq">$3.33</span><small>/mo</small><span class="billed">billed $40/yr · save 2 months</span></div>
         <ul>
           <li data-i18n="landing.plan.starter.feature1">100 monitors</li>
           <li data-i18n="landing.plan.starter.feature2">1-minute checks</li>
@@ -534,10 +534,10 @@ docker compose up -d</code></pre>
       const annual = document.getElementById('billToggle') && document.getElementById('billToggle').checked;
       const ps = document.getElementById('priceStarter');
       const pp = document.getElementById('pricePro');
-      const yearlyHtml = (eq, mo, yr) => `<span class="eq">${eq}</span><small>/mo</small><s>${mo}</s><span class="billed">${t('billing.billedYear','billed {yr}/yr · save 2 months',{yr:'$'+yr})}</span>`;
-      const monthlyHtml = (mo) => `<span class="eq">${mo}</span><small>/mo</small>`;
-      if (ps) ps.innerHTML = annual ? yearlyHtml('$3.33', '$4', '40') : monthlyHtml('$4');
-      if (pp) pp.innerHTML = annual ? yearlyHtml('$5', '$6', '60') : monthlyHtml('$6');
+      const yearlyHtml = (yr, eq) => `<span class="eq">$${yr}</span><small>/yr</small> = <span class="eq">$${eq}</span><small>/mo</small>`;
+      const monthlyHtml = (mo) => `<span class="eq">$${mo}</span><small>/mo</small>`;
+      if (ps) ps.innerHTML = annual ? yearlyHtml('40', '3.33') : monthlyHtml('4');
+      if (pp) pp.innerHTML = annual ? yearlyHtml('60', '5') : monthlyHtml('6');
       const save = document.getElementById('billSave');
       if (save) save.style.display = annual ? 'inline' : 'none';
     }

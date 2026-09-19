@@ -5,7 +5,7 @@
  * 检查项：
  *   1. /health → {"ok":true}
  *   2. 8 语言 i18n 键 parity（en/zh/ja/es/fr/de/ko/pt 任一缺失键即 FAIL）
- *   3. Neon keepAlive / 支付 webhook 等需凭证项 → 仅提示人工确认（脚本不持密钥）
+ *   3. Supabase keepAlive / 支付 webhook 等需凭证项 → 仅提示人工确认（脚本不持密钥）
  *
  * 用法：
  *   node tools/verify_deploy.js                # 默认 http://localhost:3000
@@ -61,7 +61,7 @@ const ok = (n, d) => checks.push({ l: 'OK', n, d });
   }
 
   // 3) 需凭证项（人工）
-  warn('session/keepAlive/Paddle/邮件', '以下需登录态或密钥，脚本不持凭证，请人工回归：session 跨双机、Neon 首请求无卡顿、Paddle Checkout 测试卡、告警邮件实际送达（TECHNICAL 第4节）');
+  warn('session/keepAlive/Paddle/邮件', '以下需登录态或密钥，脚本不持凭证，请人工回归：session 跨双机、Supabase 首请求无卡顿、Paddle Checkout 测试卡、告警邮件实际送达（TECHNICAL 第4节）');
 
   // 汇总
   const bad = checks.filter(c => c.l === 'FAIL');

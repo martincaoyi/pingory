@@ -108,7 +108,7 @@ export async function getDormantUsers({ sinceDays = 30, limit = 20 } = {}) {
          (SELECT MAX(e.created_at) FROM user_events e WHERE e.user_id = u.id) IS NULL
          OR (SELECT MAX(e.created_at) FROM user_events e WHERE e.user_id = u.id) < $1
        )
-     ORDER BY (SELECT MAX(e.created_at) FROM user_events e WHERE e.user_id = u.id) ASC NULLS FIRST,
+     ORDER BY last_active ASC NULLS FIRST,
               u.created_at DESC
      LIMIT $2`,
     [since, limit]

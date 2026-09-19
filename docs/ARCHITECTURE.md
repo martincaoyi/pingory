@@ -61,7 +61,7 @@
       ┌───────────────────────────────────────────────┐
       │    src/db.js (pg Pool · initDb 幂等迁移 ·       │
       │    startKeepAlive 每 4min SELECT 1 防休眠)      │
-      │    Neon Postgres (9 表)                         │
+      │    Supabase Session Pooler (Postgres, ap-northeast-1)           │
       │    users · monitors · monitor_events           │
       │    monitor_checks · feedback · referrals        │
       │    teams · status_subscribers                   │
@@ -200,7 +200,7 @@ Paddle POST /api/paddle/webhook
 
 ---
 
-## 4. 数据库 Schema（Neon Postgres · 9 表 · 2026-09-04 线上实况）
+## 4. 数据库 Schema（Supabase Postgres · 13 表 · 2026-09-19 线上实况）
 
 ### users
 | 字段 | 类型 | 说明 |
@@ -280,7 +280,7 @@ id / user_id / title / monitor_ids(JSON 'all' 或数组) / start_at / end_at / c
 | nodemailer | SMTP 邮件 |
 | express-session | Cookie Session |
 
-**无 AI / 无外部 API 依赖**（除 Paddle/Neon/SMTP），边际成本 ≈ $0。
+**无 AI / 无外部 API 依赖**（除 Paddle/Supabase/SMTP），边际成本 ≈ $0。
 
 ---
 
