@@ -44,7 +44,7 @@
         "@type": "FAQPage",
         "mainEntity": [
           { "@type": "Question", "name": "Is there a free UptimeRobot alternative?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pingory's free plan includes 50 monitors with 5-minute checks and requires no credit card — the same headline limit as UptimeRobot's free tier." } },
-          { "@type": "Question", "name": "Is Pingory cheaper than UptimeRobot?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pingory's paid plans start at $4/month; UptimeRobot's start at $9–$10/month. For 100 monitors at 60-second checks, that is $4 versus $35–$41." } },
+          { "@type": "Question", "name": "Is Pingory cheaper than UptimeRobot?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pingory's paid plans start at $4/month; UptimeRobot's start at $9–$10/month. For 100 monitors, that is $4 with 60-second checks on Pingory versus $35–$41 on UptimeRobot's Team plan, which includes 30-second checks." } },
           { "@type": "Question", "name": "Does Pingory include a status page?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — a public status page from $4/month, with custom domain, white-label and password protection at $6/month." } },
           { "@type": "Question", "name": "Can I move my existing monitors over from UptimeRobot?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pingory imports UptimeRobot's export format directly, so you can migrate in a single paste." } }
         ]
@@ -135,7 +135,7 @@
     <li data-i18n="cmp.short.1">Both services offer a free plan with <strong>50 monitors at 5-minute checks</strong> and no credit card required.</li>
     <li data-i18n="cmp.short.2">Pingory's paid plans start at <strong>$4/month</strong>. UptimeRobot's start at <strong>$9–$10/month</strong> (Solo).</li>
     <li data-i18n="cmp.short.3">At <strong>$6/month</strong>, Pingory gives you <strong>unlimited monitors and 30-second checks</strong>. UptimeRobot's closest tier is <strong>$35–$41/month for 100 monitors</strong>.</li>
-    <li data-i18n="cmp.short.4">UptimeRobot wins on scale and enterprise needs: <strong>2M+ users since 2010, 20+ probe locations, SMS and voice alerts, SOC 2, and a much larger integration catalog.</strong></li>
+    <li data-i18n="cmp.short.4">UptimeRobot wins on scale and enterprise needs: <strong>3M+ users since 2010, 4 selectable monitoring regions, SMS and voice alerts, SOC 2, and a much larger integration catalog.</strong></li>
     <li data-i18n="cmp.short.5">Pingory wins on <strong>price per monitor, language coverage (8 UI languages), and a simpler, developer-focused product</strong>.</li>
   </ul>
 
@@ -168,7 +168,7 @@
           <td data-i18n="cmp.v.r9.u">100 monitors, 30-second checks</td>
         </tr>
         <tr>
-          <th scope="row" data-i18n="cmp.tbl.r6">Fastest check on that plan</th>
+          <th scope="row" data-i18n="cmp.tbl.r6">Fastest check on the cheapest paid plan</th>
           <td class="win" data-i18n="cmp.v.r6.p">60 seconds</td>
           <td data-i18n="cmp.v.r6.p">60 seconds</td>
         </tr>
@@ -180,7 +180,7 @@
         <tr>
           <th scope="row" data-i18n="cmp.tbl.r2">Free plan includes</th>
           <td data-i18n="cmp.v.r2.p">HTTP/HTTPS and keyword checks, email alerts</td>
-          <td data-i18n="cmp.v.r2.u">Web/API/port/ping checks, a basic status page, 5 integrations</td>
+          <td data-i18n="cmp.v.r2.u">Website, port, ping and keyword checks; a basic status page; 5 integrations</td>
         </tr>
         <tr>
           <th scope="row" data-i18n="cmp.tbl.r3">Status page on the free plan</th>
@@ -195,7 +195,7 @@
         <tr>
           <th scope="row" data-i18n="cmp.tbl.r10">Highest self-serve tier</th>
           <td>—</td>
-          <td data-i18n="cmp.v.r10.u">Scale — $77/mo, $65/mo billed yearly (200–500 monitors, 15-second checks)</td>
+          <td data-i18n="cmp.v.r10.u">Scale — $77/mo, $65/mo billed yearly (200 monitors, 15-second checks; the 500-monitor tier is $179/$149)</td>
         </tr>
         <tr>
           <th scope="row" data-i18n="cmp.tbl.r11">Status page features</th>
@@ -205,12 +205,12 @@
         <tr>
           <th scope="row" data-i18n="cmp.tbl.r12">Alert channels</th>
           <td data-i18n="cmp.v.r12.p">Email; plus Slack, Webhook and Telegram from $4; plus Discord, Microsoft Teams and PagerDuty from $6</td>
-          <td data-i18n="cmp.v.r12.u">Email, SMS, voice call, mobile push and 10+ integrations (SMS and calls are metered)</td>
+          <td data-i18n="cmp.v.r12.u">Email, SMS, voice call, mobile push and up to 12 integrations — SMS and voice credits are bought separately as top-ups (none included on Free)</td>
         </tr>
         <tr>
           <th scope="row" data-i18n="cmp.tbl.r13">Multi-location checks</th>
-          <td data-i18n="cmp.v.r13.p">Starter and above (majority-vote confirmation)</td>
-          <td data-i18n="cmp.v.r13.u">20+ global locations</td>
+          <td data-i18n="cmp.v.r13.p">Self-hosted (Starter+): deploy probe workers in any region with majority-vote confirmation. Managed service: single region.</td>
+          <td data-i18n="cmp.v.r13.u">4 selectable regions (paid plans); North America only on Free</td>
         </tr>
         <tr>
           <th scope="row" data-i18n="cmp.tbl.r14">Data history</th>
@@ -237,26 +237,26 @@
   </div>
 
   <h2 data-i18n="cmp.buy.h">What $4–$6 actually buys you</h2>
-  <p data-i18n="cmp.buy.p">On Pingory, <strong>$4/month (Starter)</strong> gets you 100 monitors, 60-second checks, all nine monitor types, four alert channels and a public status page. The equivalent capability on UptimeRobot — 60-second checks with the full set of monitor types — starts at <strong>Solo ($9–$10/month) with only 10 monitors</strong>, and 100 monitors on 60-second checks means <strong>Team ($35–$41)</strong>. Pingory's <strong>$6 Pro</strong> removes the monitor cap and drops checks to 30 seconds; UptimeRobot's 30-second tier starts at <strong>Team ($35+)</strong>.</p>
+  <p data-i18n="cmp.buy.p">On Pingory, <strong>$4/month (Starter)</strong> gets you 100 monitors, 60-second checks, all nine monitor types, four alert channels and a public status page. The equivalent capability on UptimeRobot — 60-second checks with the full set of monitor types — starts at <strong>Solo ($9–$10/month) with only 10 monitors</strong>, and reaching 100 monitors means <strong>Team ($35–$41)</strong>, which also includes 30-second checks. Pingory's <strong>$6 Pro</strong> removes the monitor cap and drops checks to 30 seconds; UptimeRobot's 30-second tier starts at <strong>Team ($35+)</strong>.</p>
 
   <h2 data-i18n="cmp.types.h">Monitor types compared</h2>
   <p data-i18n="cmp.types.p">Both platforms cover the essentials: HTTP/HTTPS status, keyword content, ping (ICMP), TCP port, SSL certificate expiry, domain expiry, DNS records, API checks and heartbeat/cron monitoring. The difference is not which types exist — it is <strong>what you pay to unlock them</strong>. Pingory opens all nine from <strong>$4/month</strong>; UptimeRobot reserves most advanced types for tiers starting at <strong>$9–$10/month</strong>.</p>
 
   <h2 data-i18n="cmp.alerts.h">Alerts and notifications</h2>
-  <p data-i18n="cmp.alerts.p">Email alerts are included on both, on every plan. Pingory adds <strong>Slack, Webhook and Telegram at $4</strong>, then <strong>Discord, Microsoft Teams and PagerDuty at $6</strong>. UptimeRobot offers more — including <strong>SMS and voice calls</strong> and a larger integration library — but SMS and calls are metered, and several integrations are limited on the free plan. If you need a phone call at 3 a.m., UptimeRobot is ahead; if email plus chat is enough, Pingory covers it for less.</p>
+  <p data-i18n="cmp.alerts.p">Email alerts are included on both, on every plan. Pingory adds <strong>Slack, Webhook and Telegram at $4</strong>, then <strong>Discord, Microsoft Teams and PagerDuty at $6</strong>. UptimeRobot offers more — including <strong>SMS and voice calls</strong> and a larger integration library — but SMS and voice are credit top-ups bought separately (none included on the free plan), and the free plan caps you at 5 integrations. If you need a phone call at 3 a.m., UptimeRobot is ahead; if email plus chat is enough, Pingory covers it for less.</p>
 
   <h2 data-i18n="cmp.sp.h">Status pages</h2>
   <p data-i18n="cmp.sp.p">This is one of the clearest pricing gaps. Pingory includes a public status page with an incident timeline from <strong>$4/month</strong>, and unlocks custom domain, white-label, password protection and subscriber notifications at <strong>$6/month</strong>. UptimeRobot offers a basic version free, but a custom domain waits until <strong>Solo ($9–$10)</strong> and white-label requires <strong>Team ($35+)</strong>.</p>
 
   <h2 data-i18n="cmp.iv.h">Check intervals and probe locations</h2>
-  <p data-i18n="cmp.iv.p">Free plans are identical at <strong>5-minute checks</strong>. Pingory runs <strong>60-second checks at $4</strong> and <strong>30-second checks at $6</strong>; UptimeRobot runs 60-second checks from <strong>$9–$10</strong>, 30-second from <strong>$35</strong>, and 15-second from <strong>$65–$77</strong>. On geography, UptimeRobot wins clearly — <strong>20+ probe locations</strong> versus Pingory's multi-region checks with majority-vote confirmation (Starter and above).</p>
+  <p data-i18n="cmp.iv.p">Free plans are identical at <strong>5-minute checks</strong>. Pingory runs <strong>60-second checks at $4</strong> and <strong>30-second checks at $6</strong>; UptimeRobot runs 60-second checks from <strong>$9–$10</strong>, 30-second from <strong>$35</strong>, and 15-second from <strong>$65–$77</strong>. On geography, UptimeRobot still leads for a hosted service — <strong>four selectable regions on paid plans</strong> (North America only on Free), versus Pingory's single managed region; Pingory's probe workers can run in any region only when self-hosted (Starter+).</p>
 
   <h2 data-i18n="cmp.lang.h">Language support</h2>
   <p data-i18n="cmp.lang.p">Pingory's interface ships in <strong>8 languages</strong>, including Spanish, Portuguese, German, French, Japanese and Korean. UptimeRobot's is primarily English. If you or your team work in a non-English language, especially in Latin America or Europe, that is a meaningful difference.</p>
 
   <h2 data-i18n="cmp.uw.h">Where UptimeRobot is still the better choice</h2>
   <ul>
-    <li data-i18n="cmp.uw.1"><strong>Scale and trust.</strong> UptimeRobot has been running since 2010 with <strong>2M+ users</strong> monitoring millions of endpoints. Its track record and community are hard to match.</li>
+    <li data-i18n="cmp.uw.1"><strong>Scale and trust.</strong> UptimeRobot has been running since 2010 with <strong>3M+ users</strong> monitoring millions of endpoints. Its track record and community are hard to match.</li>
     <li data-i18n="cmp.uw.2"><strong>Enterprise and compliance.</strong> SOC 2, DPA/MSA/SLA contracts, dedicated customer success and custom invoicing make it the safer pick for companies with procurement or compliance requirements.</li>
     <li data-i18n="cmp.uw.3"><strong>SMS and voice-call alerts</strong>, plus a much larger integration catalog (Slack, Microsoft Teams, Google Chat, Mattermost, PagerDuty, Splunk On-Call, Zapier and more).</li>
     <li data-i18n="cmp.uw.4"><strong>Deeper free tier.</strong> A basic status page and more integration channels available without paying.</li>
@@ -283,7 +283,7 @@
   </details>
   <details class="faq-item">
     <summary data-i18n="cmp.faq.q2">Is Pingory cheaper than UptimeRobot?</summary>
-    <p data-i18n="cmp.faq.a2">Yes. Pingory's paid plans start at <strong>$4/month</strong>; UptimeRobot's start at <strong>$9–$10/month</strong>. For 100 monitors at 60-second checks, that is $4 versus $35–$41.</p>
+    <p data-i18n="cmp.faq.a2">Yes. Pingory's paid plans start at <strong>$4/month</strong>; UptimeRobot's start at <strong>$9–$10/month</strong>. For 100 monitors, that is $4 with 60-second checks on Pingory versus <strong>$35–$41</strong> on UptimeRobot's Team plan, which includes 30-second checks.</p>
   </details>
   <details class="faq-item">
     <summary data-i18n="cmp.faq.q3">Does Pingory include a status page?</summary>
