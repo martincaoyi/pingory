@@ -654,3 +654,23 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 - 表结构：`user_events(id, user_id, event_type, metadata JSON, ip, user_agent, created_at)`。
 - 聚合查询：`getUserEventSummary(days)` 近 N 天按事件类型计数 + 去重活跃用户数；`getUserActivityRanking({days,limit})` 按用户聚合（事件数降序）挑高频用户；`getDormantUsers({sinceDays,limit})` 挑注册后无动作 / 长时间未活跃用户（用于召回）。对应 admin 端点 `/api/admin/user-events/ranking`。
 
+---
+
+## 10. 启动与运行契约（P1-14 启动健壮性，2026-09-22）
+
+> 本节**不涉及任何 API 路由的增删改** —— 第 1–9 节的端点、参数与错误码全部照旧。这里记录的是「进程如何启动」的对外行为契约，供运维对照 `fly logs` 判断状态。
+
+### 10.1 启动失败不再导致进程退出
+
+▸ **旧行为（故障）**：`server.js` 的启动块是无 `.catch()` 的立即执行异步函数，`src/db.js` 的 `initDb()` 无重试 ⇒ 启动瞬间数据库抖动 = unhandled rejection = 进程 `exit_code=1` 秒退（Fly 表现为 `start → exit_code=1 → restart → stopped`）。
+▸ **现行为**
+  ▸ `initDb()` 内部按指数退避重试（`2s / 4s / 8s / 16s / 32s`，共 5 次）；
+  ▸ 仍失败则由 `server.js` 的 `bootWithRetry()` 每 **15s** 重试整条启动链，**进程保持存活**；
+  ▸ 初始化成功后才执行 `app.listen(PORT)`。
+▸ **运维含义**：数据库长时间不可用时，进程存活但**尚未监听端口**（`/health` 不可达）；恢复后自动完成监听，**无需人工 `fly machine restart`**。
+▸ **`GET /health`**：响应结构不变（`{ ok, ts, region }`）。
+
+### 10.2 幂等保证（重试安全）
+
+启动链可能被重复执行，以下副作用均有守卫，不会因重试叠加：轮询定时器（`pollingStarted`）、HTTP 监听（`httpListening`，仅 `listen` 成功回调后置位）、月度报告定时器（`monthlyReportTimer`）、保活定时器（`src/db.js` 的 `keepAliveTimer`）；`initDb()` 的 DDL 全部为 `IF NOT EXISTS` 幂等语句。
+

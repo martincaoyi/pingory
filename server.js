@@ -1893,16 +1893,26 @@ app.use('/api', (_req, res) => {
 });
 
 // ===== 启动告警 + 轮询 + 数据库初始化 =====
-(async () => {
-  await initDb();
-  await seedAdmin(); // 启动时按 ADMIN_EMAIL/ADMIN_PASSWORD 建立超级管理员
-  startKeepAlive(); // 防止查询间歇冷却（Supabase free 档无休眠，但保留此机制）
-  initAlerts();
-  startPolling();
+// 🔴 启动路径必须「失败也不死」（2026-09-22 事故，P1-14 健壮性）：
+//   原实现在此处写 `(async () => { … })()` 且**结尾没有 .catch()**，加上 initDb 当时没有重试逻辑
+//   ⇒ 启动瞬间数据库/网络一抖就变成 unhandled rejection，进程以 exit_code=1 秒退
+//   （Fly 侧表现为 start → exit_code=1 → restart → 再退 → stopped，另一台机器单机顶着）。
+//   现在：initDb 自带退避重试（src/db.js），这里再兜一层 —— 失败只记日志 + 定时重试，
+//   **永不把 rejection 抛到顶层**，因此不会再出现「单机秒崩」。
+//   刻意**不**注册 process.on('unhandledRejection') 全局兜底：那会长期掩盖真实 bug；
+//   根因已在源头修掉，其它异步路径若仍有缺陷，仍按 Node 默认行为退出、由 Fly 重启（可被发现）。
+const BOOT_RETRY_MS = 15000; // 外层重试间隔：数据库恢复后自动继续完成启动
+let bootAttempt = 0;
+let httpListening = false;
+let pollingStarted = false;
+let monthlyReportTimer = null;
 
-  // 月度报告定时任务（G6）：每月 1 号近似触发（每小时检查一次，避免漏跑）
+// 月度报告定时任务（G6）：每月 1 号近似触发（每小时检查一次，避免漏跑）
+// 抽成函数 + 幂等守卫：外层重试可能再次执行 bootstrap()，避免重复注册 interval。
+function startMonthlyReportTimer() {
+  if (monthlyReportTimer) return;
   let lastReportMonth = 0;
-  setInterval(async () => {
+  monthlyReportTimer = setInterval(async () => {
     const now = new Date();
     const ym = now.getUTCFullYear() * 100 + now.getUTCMonth();
     if (now.getUTCDate() === 1 && ym !== lastReportMonth) {
@@ -1917,11 +1927,50 @@ app.use('/api', (_req, res) => {
       }
     }
   }, 60 * 60 * 1000);
+  if (monthlyReportTimer.unref) monthlyReportTimer.unref();
+}
+
+async function bootstrap() {
+  bootAttempt += 1;
+
+  await initDb();     // 内部已含退避重试；仍失败则抛给下面的启动循环
+  await seedAdmin();  // 启动时按 ADMIN_EMAIL/ADMIN_PASSWORD 建立超级管理员
+  startKeepAlive();   // 防止查询间歇冷却（Supabase free 档无休眠，但保留此机制）
+  initAlerts();
+  if (!pollingStarted) {
+    pollingStarted = true;
+    startPolling();
+  }
+  startMonthlyReportTimer();
 
   // === 临时测试端点已删除（Discord 验证通过 2026-09-06） ===
 
-  app.listen(PORT, () => {
-    console.log(`Pingory 运行中: http://localhost:${PORT}`);
-    console.log(`Paddle 环境: ${process.env.PADDLE_ENVIRONMENT}`);
-  });
-})();
+  if (!httpListening) {
+    await new Promise((resolve, reject) => {
+      const server = app.listen(PORT, () => {
+        console.log(`Pingory 运行中: http://localhost:${PORT}`);
+        console.log(`Paddle 环境: ${process.env.PADDLE_ENVIRONMENT}`);
+        resolve();
+      });
+      server.once('error', reject);
+    });
+    httpListening = true; // 仅在真正 listen 成功后置位；失败时下次重试仍会重新监听
+  }
+}
+
+// 定时重试直到启动成功；循环内部吞掉所有异常 ⇒ 该 Promise 永不 reject。
+(async function bootWithRetry() {
+  for (;;) {
+    try {
+      await bootstrap();
+      return;
+    } catch (e) {
+      console.error(`[boot] 第 ${bootAttempt} 次启动失败：${e && e.message}`);
+      console.error(`[boot] ${BOOT_RETRY_MS / 1000}s 后重试（进程保持存活，不再触发 Fly 单机秒崩）`);
+      await new Promise((resolve) => setTimeout(resolve, BOOT_RETRY_MS));
+    }
+  }
+})().catch((e) => {
+  // 兜底：上面的循环已吞掉全部异常，正常不可达；留着是为了「启动路径永不产生 unhandled rejection」
+  console.error('[boot] 启动循环出现未预期异常：', e && e.message);
+});

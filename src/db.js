@@ -35,7 +35,13 @@ export function startKeepAlive(intervalMs = 4 * 60 * 1000) {
   if (keepAliveTimer.unref) keepAliveTimer.unref();
 }
 
-async function initDb() {
+// 初始化容错（2026-09-22 事故根因之一，P1-14）：
+// 启动瞬间的数据库抖动（跨境网络 / 连接池刚建连）会让整段 DDL 失败；
+// 旧实现直接抛出，而 server.js 的启动 IIFE 当时没有 .catch() ⇒ unhandled rejection ⇒ exit_code=1 秒崩。
+// 现在：内部按指数退避重试若干次；用尽后抛给 server.js 的 bootstrap 循环继续重试（进程不退出）。
+const INIT_RETRY_DELAYS_MS = [2000, 4000, 8000, 16000, 30000]; // 5 次重试，累计等待 60s
+
+async function initDbOnce() {
   const client = await getPool();
   await client.query(`
     CREATE TABLE IF NOT EXISTS monitors (
@@ -329,6 +335,26 @@ async function initDb() {
   }
 
   console.log('[db] 表结构就绪');
+}
+
+// 带退避重试的初始化入口（唯一对外导出的那个）。签名与行为对外不变：
+// 成功即 resolve，重试全部用尽才 reject（由 server.js 的启动循环接管继续重试）。
+async function initDb() {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await initDbOnce();
+      if (attempt > 1) console.log(`[db] 表结构初始化在第 ${attempt} 次尝试成功`);
+      return;
+    } catch (e) {
+      const waitMs = INIT_RETRY_DELAYS_MS[attempt - 1];
+      if (waitMs === undefined) {
+        console.error(`[db] 初始化连续失败 ${attempt} 次，交回启动层继续重试：`, e && e.message);
+        throw e;
+      }
+      console.warn(`[db] 初始化失败（第 ${attempt} 次）：${e && e.message}；${waitMs / 1000}s 后重试`);
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+  }
 }
 
 export { getPool, initDb };

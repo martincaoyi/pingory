@@ -8,6 +8,20 @@
 
 ---
 
+## 2026-09-22 · 启动健壮性：启动失败不再秒崩（P1-14）
+
+**背景**：Fly 上一台机器出现 `start → exit_code=1(3s) → restart → exit_code=1(4s) → stopped`（`oom_killed=false`、`requested_stop=false` ⇒ 排除 OOM 与人为停机）。逐行核查定位到两个叠加缺陷：`server.js` 的启动块是**没有 `.catch()`** 的立即执行异步函数，而 `src/db.js` 的 `initDb()` **没有任何重试逻辑** ⇒ 启动瞬间数据库稍一抖动就变成 unhandled rejection，进程直接退出；Fly 反复重启仍失败，最终停机，全靠另一台机器单机顶着。
+
+**修改**
+
+- `src/db.js`：`initDb()` 拆为「`initDbOnce()`（幂等 DDL，原样保留）+ 指数退避重试包装（2/4/8/16/32s，共 5 次）」；重试用尽后抛给启动层，不再在库层无限阻塞。
+- `server.js`：启动块改为 `bootstrap()` + `bootWithRetry()` 循环 —— 失败只 `console.error` 并每 15s 重试，**永不把 rejection 抛到顶层**；`app.listen()` 改为 await（监听失败同样进入重试），并加 `httpListening` / `pollingStarted` / `monthlyReportTimer` 三个幂等守卫，防止重试把定时器/监听叠加注册。
+- **刻意未加** `process.on('unhandledRejection')` 全局兜底：那会长期掩盖真实 bug；根因已在源头修掉，其它异步路径若仍有缺陷，仍按 Node 默认行为退出、由 Fly 重启，以便被发现。
+
+**影响范围**：仅启动路径。API 路由、错误码与 `GET /health` 响应结构均不变（契约见 `docs/API-REFERENCE.md` §10）。
+
+---
+
 ## 2026-09-17 · 告警邮件发送配额 + 轮询 leader 租约（P1-12）
 
 **背景**：Martin 指出报警邮件可能打爆 Resend 免费档（100 封/天）。经逐行核查，代码中**没有任何邮件数量上限**，且存在两个未被察觉的倍增器与一个可靠性隐患：
