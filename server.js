@@ -60,6 +60,34 @@ const E = {
 /** 构造 i18n 错误响应 { error: code, ep: params } */
 function apiErr(code, params) { return { error: code, ep: params || {} }; }
 
+// ===== 异步处理器异常统一转交（P0-2，2026-09-23）=====
+// 读 express 源码确认的边界（node_modules/express/lib/router/layer.js:handle_request）：
+// Layer 只对**同步抛错**做了 try/catch → next(err)；async handler 返回的 Promise
+// 若 reject，Express 4 完全不接管 ⇒ 变成 unhandled rejection ⇒ 进程 exit_code=1
+//（2026-09-23 13:00:27 那台机器就是这么退的，且崩溃瞬间来不及写日志）。
+//
+// wrap() 的作用就是把 rejection 显式转成 next(err)，交给文件末尾的全局错误中间件。
+// 它保持 3 参数签名——Express 靠 fn.length 区分请求处理器与错误中间件（4 参数），
+// 签名一变就会被当成错误中间件而不再执行，这是必须守住的细节。
+// 注册方式见 wrapAllHandlers()：不改任何路由声明，启动时遍历 router 栈统一包装，
+// 既覆盖历史遗留，也不会漏掉将来新增的路由。
+function wrap(fn) {
+  if (fn && fn.__errWrapped) return fn;
+  const wrappedHandler = function wrappedHandler(req, res, next) {
+    let out;
+    try {
+      out = fn.call(this, req, res, next);
+    } catch (e) {
+      next(e);
+      return undefined;
+    }
+    if (out && typeof out.then === 'function') out.catch(next);
+    return out;
+  };
+  wrappedHandler.__errWrapped = true;
+  return wrappedHandler;
+}
+
 // ===== 基础安全响应头（G-SEC）=====
 // 防 MIME 嗅探 / 点击劫持 / 内容注入；CSP 仅限同源资源，避免破坏 Paddle.js 等外链可单独放开
 // 不发送 X-Powered-By（默认会暴露 "Express" 框架指纹，便于攻击者按已知漏洞定向探测）
@@ -1892,6 +1920,60 @@ app.use('/api', (_req, res) => {
   res.status(404).json(apiErr(E.ENDPOINT_NOT_FOUND));
 });
 
+// ===== 全局错误中间件（P0-2，2026-09-23）=====
+// 必须是 4 参数签名（Express 靠 fn.length 识别错误中间件），且注册在所有路由之后。
+// 背景：全站 84 条路由里曾有 16 条含 await 却既无 try 也无 .catch，而此前**没有任何兜底出口**
+// ⇒ 数据库一抖，异常直接逃逸成 unhandled rejection，进程 exit_code=1（2026-09-23 实测）。
+// 现在所有处理器都经 wrap() 包装（见 wrapAllHandlers），任何异常都会汇聚到这里：
+//   · 记录完整堆栈（保证「崩溃必有据可查」——上次 exit_code=1 查不到根因就是没有这一步的代价）
+//   · 上游瞬时故障（连接池/网络/认证超时）判 503 表示**可重试**，与代码 bug 的 500 区分开
+//   · 响应体保持 {error, ep} 约定不变，前端解析逻辑无需改动
+app.use((err, req, res, next) => {
+  const ep = `${req.method} ${req.originalUrl || req.url}`;
+  console.error(`[error] ${ep} ::`, err && err.stack ? err.stack : err);
+  if (res.headersSent) return next(err);
+  const msg = String((err && err.message) || err || '');
+  const transient = /timeout|Connection terminated|ECONNRESET|EPIPE|ECONNREFUSED|EAUTHTIMEOUT|ECIRCUITBREAKER/i.test(msg);
+  res.status(transient ? 503 : 500).json(apiErr(E.SERVER_ERROR));
+  return undefined;
+});
+
+// ===== 启动时统一包装全部处理器（P0-2）=====
+// 为什么遍历 router 栈、而不是给那 16 条路由逐个加 try/catch：
+//   ① 一次覆盖全部（含同步/异步中间件），不留历史尾巴；
+//   ② 将来新增的路由只要注册在本文件路由区，就自动被保护，不会重演「新路由又漏了」；
+//   ③ 不动任何业务代码，改动面最小、回滚最容易。
+// 🔴 依赖 Express 内部结构（app._router.stack）——注意 app.router 在 4.x 已废弃且会直接抛错，
+//    只能读 _router。为防「将来 Express 升级导致这层保护静默失效」，下面打印包装计数，
+//    计数为 0 时明确告警：宁可吵，也不要静默地少一层保护。
+function wrapAllHandlers() {
+  const stack = app._router && app._router.stack;
+  if (!Array.isArray(stack)) {
+    console.warn('[guard] 读不到 Express 路由栈，异步异常保护**未生效**（Express 内部结构可能已变化，请检查 wrapAllHandlers）');
+    return;
+  }
+  let n = 0;
+  const wrapOne = (layer) => {
+    if (!layer || typeof layer.handle !== 'function') return;
+    if (layer.handle.__errWrapped) return; // 幂等：启动重试时可能重复执行
+    if (layer.handle.length > 3) return;   // 错误中间件（4 参数）跳过，避免破坏错误链路
+    layer.handle = wrap(layer.handle);
+    n += 1;
+  };
+  for (const layer of stack) {
+    // app.get/post/... 注册的路由：真正的 handler 挂在 layer.route.stack 上，
+    // 外层 layer.handle 只是 route.dispatch（express/lib/router/route.js）。
+    if (layer && layer.route && Array.isArray(layer.route.stack)) {
+      for (const routeLayer of layer.route.stack) wrapOne(routeLayer);
+    } else {
+      wrapOne(layer); // app.use(...) 注册的中间件：handler 就是 layer.handle
+    }
+  }
+  console.log(`[guard] 已为 ${n} 个处理器挂上异步异常保护`);
+  if (n === 0) console.warn('[guard] 未包装到任何处理器 —— 请检查 Express 版本与 wrapAllHandlers()');
+}
+wrapAllHandlers();
+
 // ===== 启动告警 + 轮询 + 数据库初始化 =====
 // 🔴 启动路径必须「失败也不死」（2026-09-22 事故，P1-14 健壮性）：
 //   原实现在此处写 `(async () => { … })()` 且**结尾没有 .catch()**，加上 initDb 当时没有重试逻辑
@@ -1973,4 +2055,25 @@ async function bootstrap() {
 })().catch((e) => {
   // 兜底：上面的循环已吞掉全部异常，正常不可达；留着是为了「启动路径永不产生 unhandled rejection」
   console.error('[boot] 启动循环出现未预期异常：', e && e.message);
+});
+
+// ===== 进程级异常兜底（P0-2，2026-09-23）=====
+// 🔴 这是对 P1-14（2026-09-22）一个**刻意决定**的修订，说明为什么改：
+//    当时不注册这两个 handler，理由写在启动段注释里 —— 「Node 默认行为会退出，
+//    问题不会被掩盖」。就「不掩盖」而言这个判断是对的，但 2026-09-23 实测暴露了代价：
+//    那台机器 13:00:27 以 exit_code=1 退出，而事后在日志窗口里**找不到对应堆栈**，
+//    根因只能靠排除法反推 —— 也就是说，「响亮失败」实际上没响到该响的地方。
+// 新策略：**保留响亮失败（仍然退出、交由 Fly 重启），但先写下完整堆栈**。
+//    真正要修的是「退出无据可查」，而不是「退出」本身。
+//    ⚠️ 刻意**不**改成「记录后继续运行」：进程可能带着损坏状态继续对外服务，
+//       那才是真正的掩盖（比如半完成的事务、被污染的会话），危害大于一次重启。
+process.on('unhandledRejection', (reason) => {
+  console.error('[fatal] unhandledRejection（未捕获的 Promise 拒绝；进程退出，交由 Fly 重启）::',
+    reason && reason.stack ? reason.stack : reason);
+  process.exit(1);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[fatal] uncaughtException（未捕获异常；进程退出，交由 Fly 重启）::',
+    err && err.stack ? err.stack : err);
+  process.exit(1);
 });

@@ -2,7 +2,7 @@
 
 > 本文档描述后端 Express REST API。登录/注册/验证邮箱/OAuth（`/api/auth/*`）与 `/api/paddle-config`、`/api/creem-config` 无需登录态；其余业务端点由各路由内部校验 Session（未登录返回 401）。
 >
-> **版本**：v2.3（2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
+> **版本**：v2.4（2026-09-23 P0-2：新增「全局异常兜底与 5xx 语义」——`wrap()` + 全局错误中间件 + 进程级兜底三层收口，含 503/500 语义约定；v2.3：2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
 > **最后更新**：2026-09-16（P1-10 安全响应头：关闭 `X-Powered-By`、补 `Permissions-Policy`，见 §7.4；P1-11 `/api` 404 兜底，见「未匹配路由的统一兜底」）
 > **关联代码**：`server.js`（路由，共 80 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）
 >
@@ -80,6 +80,30 @@
 ▸ **注册位置**：全部 API 路由注册之后（`server.js` 的 `/health` 之后），因此不会遮蔽任何真实路由
 ▸ **作用域**：仅 `/api` 前缀；非 `/api` 路径（静态资源、页面路由、对比页等）**行为完全不变**
 ▸ **方法无关**：任意 HTTP 方法（含未实现的 `PATCH` 等）命中都会得到该 JSON，而非 HTML
+
+### 全局异常兜底与 5xx 语义（2026-09-23 P0-2 新增）
+
+此前含 `await` 的路由处理器**默认没有任何异常出口**：Express 4 不接管 async handler 返回的 Promise，
+`await` 抛错会变成 unhandled rejection ⇒ 进程以 `exit_code=1` 退出（2026-09-23 13:00:27 生产实测；
+同期另一台机器则是 `exit_code=137 + oom_killed=true` 的内核 OOM，两者性质不同、治法不通用）。
+现分三层收口：
+
+| 层 | 实现 | 覆盖范围 |
+|---|---|---|
+| 处理器 | `wrap()` 把 Promise rejection 转成 `next(err)` | 启动时由 `wrapAllHandlers()` 遍历 Express router 栈统一包装——**不改路由声明，将来新增的路由自动生效** |
+| 应用 | 全局错误中间件（4 参数签名，注册在所有路由之后） | 记录完整堆栈 + 统一返回 `{ error: "server_error", ep: {} }` |
+| 进程 | `process.on('unhandledRejection' \| 'uncaughtException')` | 先写完整堆栈**再退出**，交由平台重启（保留「响亮失败」，但保证退出有据可查） |
+
+**5xx 状态码语义**（响应体一律 `{ error: "server_error", ep: {} }`，前端解析逻辑无需改动）：
+
+▸ **503** — 上游瞬时故障（连接池等待超时 / 连接被中断 / 认证超时等），**可重试**
+▸ **500** — 代码缺陷或非瞬时错误
+
+判定依据为错误消息中的关键词白名单（`timeout` / `Connection terminated` / `ECONNRESET` / `EPIPE` /
+`ECONNREFUSED` / `EAUTHTIMEOUT` / `ECIRCUITBREAKER`）。**不新增错误码**，故 8 语字典无需扩键、parity 不变。
+
+> 相关：连接池上限与超时（`max` / `connectionTimeoutMillis` / `statement_timeout` / `query_timeout`）
+> 见 `src/db.js` 的 pool 配置注释，其取值依据 Supabase 免费档官方额度（见该文件注释内链接）。
 
 ### 变更原因（2026-09-13）
 

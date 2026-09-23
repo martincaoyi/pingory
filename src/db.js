@@ -12,6 +12,29 @@ import { Pool } from 'pg';
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
+  // ===== 连接池显式上限与超时（P0-1，2026-09-23）=====
+  // 背景：此前这个 Pool 是**零配置**的，全部走默认值，而默认值恰好是致命的：
+  // 读 node_modules/pg-pool/index.js:206-209 源码确认 —— connectionTimeoutMillis 为假值时，
+  // 拿不到空闲连接的请求会直接 _pendingQueue.push() 然后 return，**连超时定时器都不建**。
+  // ⇒ 「池满」的表现不是报错，而是请求**永久挂起**（前端表现为加载不出、前置代理 502）。
+  //   2026-09-23 14:17 访客看到的失败弹窗、以及 API 间歇 502，机制上都能对上这一条。
+  //
+  // Supabase 官方额度（免费档 Nano，2026-09-23 查证官方文档 compute-and-disk / connection-management）：
+  //   · Database Max Connections = 60（此额度**包含** Supabase 自身服务 Auth/Storage/PostgREST/health checker 的连接）
+  //   · Supavisor 客户端连接上限 = 200
+  //   · 官方建议 pool size 不超过 Database Max Connections 的 80%（不使用 PostgREST 时）
+  // ⇒ Fly 双实例 × max=6 = 12 条客户端连接，远低于 200 上限，且无需任何付费项。
+  //
+  // 关键一项是 connectionTimeoutMillis：把「永久挂起」变成「10 秒快速失败」，
+  // 失败会沿 wrap() → 全局错误中间件返回 503，而不是把连接和请求一起拖死。
+  max: Number(process.env.PG_POOL_MAX || 6),
+  connectionTimeoutMillis: Number(process.env.PG_CONN_TIMEOUT_MS || 10000), // 池满 10s 快速失败，不再无限等待
+  idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),      // 默认 10s 偏短：跨境链路下频繁重建连接会推高认证失败率
+  statement_timeout: Number(process.env.PG_STATEMENT_TIMEOUT_MS || 15000), // 服务端：慢查询不许一直占着连接
+  idle_in_transaction_session_timeout: Number(process.env.PG_IDLE_TX_TIMEOUT_MS || 30000), // 服务端：防止事务挂起占锁占连接
+  query_timeout: Number(process.env.PG_QUERY_TIMEOUT_MS || 15000),         // 客户端：同上，兜第二道
+  // 便于在 pg_stat_activity 里认出本服务的连接（官方推荐做法，排查连接占用的第一步）
+  application_name: process.env.PG_APP_NAME || 'pingory',
 });
 
 async function getPool() {
