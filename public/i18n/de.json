@@ -463,7 +463,6 @@
   "onb.sub": "Jeder Schritt dauert unter einer Minute. Sie erhalten nach und nach grüne Häkchen.",
   "onb.title": "Richten Sie Pingory in 3 Schritten ein",
   "op.fail": "Vorgang fehlgeschlagen",
-  "paddle.initFail": "Paddle-Initialisierung fehlgeschlagen. Prüfe /api/paddle-config und .env",
   "plan.free": "Free",
   "plan.info": "Tarif: {plan} · {used} / {limit} Monitore genutzt",
   "plan.pro": "Pro",

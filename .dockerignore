@@ -9,3 +9,8 @@ data
 coverage
 .DS_Store
 .pw-browsers
+.bak-*
+*.bak
+preview
+.workbuddy
+docs

@@ -463,7 +463,6 @@
   "onb.sub": "每步不到一分钟，完成即打绿勾。",
   "onb.title": "3 步完成 Pingory 设置",
   "op.fail": "操作失败",
-  "paddle.initFail": "Paddle 初始化失败，请检查 /api/paddle-config 和 .env",
   "plan.free": "免费版",
   "plan.info": "套餐：{plan} · 已用 {used} / {limit} 个监控",
   "plan.pro": "专业版",

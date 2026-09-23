@@ -463,7 +463,6 @@
   "onb.sub": "각 단계는 1분 미만이면 됩니다. 완료하면 초록 체크가 표시됩니다.",
   "onb.title": "3단계로 Pingory 설정하기",
   "op.fail": "작업에 실패했습니다",
-  "paddle.initFail": "Paddle 초기화 실패. /api/paddle-config 와 .env 를 확인하세요",
   "plan.free": "무료",
   "plan.info": "플랜: {plan} · 사용 중 {used} / {limit} 개 모니터",
   "plan.pro": "Pro",

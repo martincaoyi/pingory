@@ -463,7 +463,6 @@
   "onb.sub": "各ステップは1分以内。完了すると緑のチェックが付きます。",
   "onb.title": "3ステップでPingoryを設定",
   "op.fail": "操作に失敗しました",
-  "paddle.initFail": "Paddle の初期化に失敗しました。/api/paddle-config と .env を確認してください",
   "plan.free": "無料版",
   "plan.info": "プラン：{plan} · 使用中 {used} / {limit} 件の監視",
   "plan.pro": "Pro",

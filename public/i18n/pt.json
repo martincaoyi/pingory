@@ -463,7 +463,6 @@
   "onb.sub": "Cada etapa leva menos de um minuto. Você ganhará uma marca verde conforme avança.",
   "onb.title": "Configure a Pingory em 3 passos",
   "op.fail": "A operação falhou",
-  "paddle.initFail": "Falha ao inicializar Paddle. Verifique /api/paddle-config e .env",
   "plan.free": "Free",
   "plan.info": "Plano: {plan} · {used} / {limit} monitores usados",
   "plan.pro": "Pro",

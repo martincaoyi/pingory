@@ -11,6 +11,22 @@
   <link rel="manifest" href="/site.webmanifest">
   <meta name="description" content="Free for 50 monitors. Upgrade for 1-minute checks, public status pages & incident timelines. No vendor lock-in." />
   <link rel="canonical" href="https://pingory.com/" />
+  <!-- P1′ 社交分享卡片（2026-09-23 补）：文案写死英文，刻意不加 data-i18n —— 抓取器不执行 JS，i18n 替换无效 -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Pingory" />
+  <meta property="og:title" content="Pingory — Catch downtime before your users do." />
+  <meta property="og:description" content="Free for 50 monitors. Upgrade for 1-minute checks, public status pages &amp; incident timelines. No vendor lock-in." />
+  <meta property="og:url" content="https://pingory.com/" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Pingory logo" />
+  <!-- card 用 summary（1:1 方图）；站点暂无 1200×630 横幅，用 summary_large_image 会被裁掉图标上下 -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Pingory — Catch downtime before your users do." />
+  <meta name="twitter:description" content="Free for 50 monitors. Upgrade for 1-minute checks, public status pages &amp; incident timelines. No vendor lock-in." />
+  <meta name="twitter:image" content="https://pingory.com/icon-512.png" />
+  <meta name="twitter:image:alt" content="Pingory logo" />
   <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
   <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
   <style>
@@ -478,7 +494,9 @@ docker compose up -d</code></pre>
     </div>
   </div>
 
-  <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+  <!-- 收款相关（2026-09-23 调整）：生产主通道为 Creem，Paddle 已降为 dormant 备用。
+       此处曾同步加载 cdn.paddle.com/paddle.js —— 第三方脚本进首屏关键路径，网络不可达时
+       整页渲染被阻塞。现改为按需注入（见 loadPaddleScript），仅在 Creem 不可用时才加载。 -->
   <script>
     let cfg = null;
 
@@ -930,18 +948,52 @@ docker compose up -d</code></pre>
     }
 
     let creemActive = false;
-    async function init() {
-      const res = await fetch('/api/paddle-config');
-      cfg = await res.json();
 
+    // ===== 收款通道初始化（2026-09-23 重构）=====
+    // 生产主通道 = Creem；Paddle 为 dormant 备用，仅在 Creem 不可用时按需加载。
+    // 历史缺陷（本次修复）：① 兜底分支把任何异常都弹给访客，文案写死「Paddle init failed…」——
+    //   线上实测：接口偶发 502 / 超时（机器 OOM 重启期间）时，res.json() 抛错走到这里，
+    //   于是把「接口不可用」误报成 Paddle 配置问题，且对访客毫无意义；② 供应商名写死在文案里，
+    //   换收款通道后这句话就变成假话。现在：访客可见的报错一律不弹（只进 console）。
+    function loadPaddleScript() {
+      return new Promise((resolve, reject) => {
+        if (typeof window.Paddle !== 'undefined') { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error('paddle.js load failed'));
+        document.head.appendChild(s);
+      });
+    }
+
+    async function initPaddle() {
+      const res = await fetch('/api/paddle-config');
+      const j = await res.json();
+      if (!j || !j.clientToken) return false;
+      // 🔴 只有 Paddle 处于 live 环境才允许启用为备用通道。
+      // 理由：生产 Paddle 目前是 sandbox（dormant 遗留）。若不加这道闸，Creem 探测偶发失败时
+      // 访客会被回落到 Paddle —— 真实客户点开一个「测试结账页」，比直接提示"暂不可用"更糟。
+      // 将来 Paddle 若切回 live（PADDLE_ENVIRONMENT=live），此闸自动放行。
+      if (j.environment !== 'live') return false;
+      cfg = j;
+      await loadPaddleScript();
+      Paddle.Environment.set(cfg.environment);
+      Paddle.Initialize({ token: cfg.clientToken });
+      return true;
+    }
+
+    async function init() {
+      // 通道探测：Creem 优先；仅当 Creem 不可用时才启用 Paddle 备用
       try {
         const cr = await fetch('/api/creem-config');
         const cj = await cr.json();
         creemActive = !!cj.active;
       } catch (e) { creemActive = false; }
 
-      Paddle.Environment.set(cfg.environment);
-      Paddle.Initialize({ token: cfg.clientToken });
+      if (!creemActive) {
+        try { await initPaddle(); }
+        catch (e) { console.warn('[pay] Paddle fallback unavailable (non-blocking):', e && e.message); }
+      }
 
       document.querySelectorAll('button[data-plan]').forEach((btn) => {
         btn.addEventListener('click', () => {
@@ -953,10 +1005,8 @@ docker compose up -d</code></pre>
       });
     }
 
-    init().catch((e) => {
-      console.error('init failed', e);
-      showAlert(t('paddle.initFail', 'Paddle init failed. Check /api/paddle-config and .env'));
-    });
+    // 初始化未完成只记日志：访客不该看到内部配置错误（付费入口自身有兜底提示）
+    init().catch((e) => { console.warn('[init] landing init incomplete (non-blocking):', e && e.message); });
 
     // ===== FAQ 展开/折叠 =====
     document.querySelectorAll('.faq-q').forEach((q) => {
@@ -1045,6 +1095,7 @@ docker compose up -d</code></pre>
         if (!id) { showGlobal(t('upgrade.nocfg', 'Upgrade is temporarily unavailable, please try again later')); return; }
         const user = ensureAuth();
         if (!user) return;
+        if (typeof Paddle === 'undefined') { showGlobal(t('upgrade.nocfg', 'Upgrade is temporarily unavailable, please try again later')); return; }
         Paddle.Checkout.open({ items: [{ priceId: id, quantity: 1 }], customer: { email: user.email }, customData: { userId: String(user.id) } });
       };
       if (cfg && (cfg.starterPriceId || cfg.starterAnnualPriceId)) run();

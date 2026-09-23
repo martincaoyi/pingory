@@ -463,7 +463,6 @@
   "onb.sub": "Chaque étape prend moins d’une minute. Vous obtiendrez une coche verte au fur et à mesure.",
   "onb.title": "Configurez Pingory en 3 étapes",
   "op.fail": "L'opération a échoué",
-  "paddle.initFail": "Échec de l'initialisation Paddle. Vérifiez /api/paddle-config et .env",
   "plan.free": "Free",
   "plan.info": "Plan : {plan} · {used} / {limit} moniteurs utilisés",
   "plan.pro": "Pro",
