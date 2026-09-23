@@ -19,6 +19,7 @@
 - **拦截段**：`127/10/172.16-31/192.168/0.0.0.0/8`、`169.254.0.0/16`（含云元数据）、`100.64.0.0/10` CGNAT；IPv6 `::1` / `fc00::/7` / `fe80::/10`；主机名 `localhost` / `*.local` / `*.internal` / `*.svc` / `*.cluster`。
 - **文档同步**：`docs/API-REFERENCE.md`（错误码表 +38 → 含 `target_blocked`、i18n 计数 38→39）、`docs/ARCHITECTURE.md`（新增模块节）、8 语字典补 `err.target_blocked`。
 - **已知边界**：DNS 重绑定(TOCTOU)理论窗口未用 undici 自定义 connect 钉死解析 IP；主威胁已覆盖。如需彻底封堵，后续可加 undici `Agent` 自定义 `connect`。
+- **修订（同次上线后热修）**：`assertSafeTarget` 最初对 DNS 解析失败（no-ip / dns-fail）返回 `ok:false`，导致滚动重启瞬间 10 个公网 demo 监控因解析未就绪被误标 `TARGET_BLOCKED:no-ip`。改为「仅确认危险才拦截，DNS 失败一律放行交由实际请求报错」，误标消除。
 
 ## 2026-09-23 · SMS 语义正式关闭（Martin 确认 · 无代码变更）
 

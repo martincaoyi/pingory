@@ -62,6 +62,8 @@ export function isBlockedTarget(raw) {
 }
 
 // 运行时异步校验（含 DNS 解析所有 IP），返回 { ok, reason }
+// 注意：仅对「确认危险」返回 ok:false（blocked-*）；DNS 解析失败（no-ip / dns-fail）一律 ok:true，
+// 交由实际 fetch / connect 自然失败并产出常规错误 —— 避免把瞬时 DNS 抖动误标成「目标被拦截」。
 export async function assertSafeTarget(hostname) {
   const host = hostnameFromUrl(hostname);
   if (isBlockedHostname(host)) return { ok: false, reason: 'blocked-hostname' };
@@ -69,17 +71,17 @@ export async function assertSafeTarget(hostname) {
     if (isBlockedIp(host)) return { ok: false, reason: 'blocked-ip' };
     return { ok: true };
   }
-  // 域名：解析全部 IP，任一危险即拒（覆盖"域名解析到内网"）
+  // 域名：解析全部 IP，任一危险即拒（覆盖"域名解析到内网"）；解析失败则放行交由实际请求报错
   try {
     const { addresses } = await dns.promises.lookup(host, { all: true });
-    if (!addresses || addresses.length === 0) return { ok: false, reason: 'no-ip' };
+    if (!addresses || addresses.length === 0) return { ok: true };
     for (const item of addresses) {
       const ip = typeof item === 'string' ? item : item.address;
       if (isBlockedIp(ip)) return { ok: false, reason: 'blocked-resolved-ip' };
     }
     return { ok: true };
   } catch {
-    return { ok: false, reason: 'dns-fail' };
+    return { ok: true };
   }
 }
 
