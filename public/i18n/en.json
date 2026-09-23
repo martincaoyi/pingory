@@ -285,6 +285,7 @@
   "err.channel_not_configured": "The {channel} channel is not set up yet. Configure it in Account settings.",
   "err.channel_not_supported": "Your {plan} plan does not support the {channel} channel, please upgrade",
   "err.endpoint_not_found": "This API endpoint does not exist",
+  "err.target_blocked": "Target address rejected (monitoring internal / local addresses is not allowed)",
   "fb.btn": "Feedback",
   "fb.cancel": "Cancel",
   "fb.emailph": "Your email (optional, so we can reply)",

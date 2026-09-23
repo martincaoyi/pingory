@@ -285,6 +285,7 @@
   "err.channel_not_configured": "Der Kanal {channel} ist noch nicht eingerichtet. Konfiguriere ihn in den Kontoeinstellungen.",
   "err.channel_not_supported": "Dein {plan}-Tarif unterstützt den Kanal {channel} nicht – bitte upgraden",
   "err.endpoint_not_found": "Dieser API-Endpunkt existiert nicht",
+  "err.target_blocked": "Zieladresse abgelehnt (interne / lokale Adressen dürfen nicht überwacht werden)",
   "fb.btn": "Feedback",
   "fb.cancel": "Abbrechen",
   "fb.emailph": "Deine E-Mail (optional, für Antworten)",

@@ -285,6 +285,7 @@
   "err.channel_not_configured": "Le canal {channel} n'est pas encore configuré. Configurez-le dans les paramètres du compte.",
   "err.channel_not_supported": "Votre offre {plan} ne prend pas en charge le canal {channel} ; veuillez passer à une offre supérieure",
   "err.endpoint_not_found": "Ce point de terminaison de l’API n’existe pas",
+  "err.target_blocked": "Adresse de destination refusée (la surveillance d’adresses internes ou locales n’est pas autorisée)",
   "fb.btn": "Retour",
   "fb.cancel": "Annuler",
   "fb.emailph": "Votre email (optionnel, pour répondre)",

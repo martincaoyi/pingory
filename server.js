@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { createMonitor, listMonitors, getMonitor, deleteMonitor, saveMonitor, getHistory, getStats, getStatusIncidents, getStatusPage, getStatusPageByHost, getStatusPageAuth, getStatusPageOwnerId, listTeamMonitors, startPolling, isPollLeader } from './src/monitors.js';
+import { isBlockedTarget } from './src/ssrf-guard.js';
 import { initAlerts, generateMonthlyReport, sendTestAlert } from './src/alerts.js';
 import { initDb, startKeepAlive, getPool, pool } from './src/db.js';
 import { startRetention } from './src/retention.js';
@@ -57,6 +58,7 @@ const E = {
   CHANNEL_NOT_SUPPORTED:    'channel_not_supported',
   CHANNEL_NOT_CONFIGURED:   'channel_not_configured',
   ENDPOINT_NOT_FOUND:       'endpoint_not_found',
+  TARGET_BLOCKED:          'target_blocked',
 };
 /** 构造 i18n 错误响应 { error: code, ep: params } */
 function apiErr(code, params) { return { error: code, ep: params || {} }; }
@@ -850,17 +852,22 @@ function normalizeTarget(type, rawUrl) {
   if (!s) return { err: apiErr(E.URL_REQUIRED) };
   const httpLike = ['http', 'keyword', 'api', 'heartbeat'];
   const looksUrl = /^[a-z][a-z0-9+.-]*:\/\//i.test(s);
+  let candidate;
   if (httpLike.includes(type)) {
     const u = looksUrl ? s : 'https://' + s;
-    try { return { url: new URL(u).toString() }; }
+    try { candidate = new URL(u).toString(); }
     catch { return { err: apiErr(E.URL_INVALID, { url: s }) }; }
   }
   // 非 HTTP 类（ping/tcp/ssl/domain/dns）：需要主机名；用户粘贴完整 URL 时自动取其 host
-  if (looksUrl) {
-    try { return { url: new URL(s).hostname }; }
+  else if (looksUrl) {
+    try { candidate = new URL(s).hostname; }
     catch { return { err: apiErr(E.URL_INVALID, { url: s }) }; }
+  } else {
+    candidate = s;
   }
-  return { url: s };
+  // SSRF 守卫：拒绝内网 / 链路本地 / 云元数据 / 保留段（创建 + 导入的公共入口）
+  if (isBlockedTarget(candidate)) return { err: apiErr(E.TARGET_BLOCKED, { url: s }) };
+  return { url: candidate };
 }
 
 app.post('/api/monitors', async (req, res) => {

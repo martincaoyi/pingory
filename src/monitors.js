@@ -12,6 +12,7 @@ import { getPool } from './db.js';
 import { getUserById } from './auth.js';
 import { planFeatures } from './plans.js';
 import { MON_ERR } from './monerr.js';
+import { assertSafeTarget, safeFetch } from './ssrf-guard.js';
 
 const execAsync = promisify(exec);
 
@@ -330,9 +331,8 @@ async function checkHttp(url, config) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), HTTP_TIMEOUT_MS);
   try {
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       method: config.method || 'GET',
-      redirect: 'follow',
       signal: controller.signal,
       headers: { 'User-Agent': 'Pingory/1.0' },
     });
@@ -354,7 +354,7 @@ async function checkKeyword(url, config) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), HTTP_TIMEOUT_MS);
   try {
-    const res = await fetch(url, { method: 'GET', redirect: 'follow', signal: controller.signal, headers: { 'User-Agent': 'Pingory/1.0' } });
+    const res = await safeFetch(url, { method: 'GET', signal: controller.signal, headers: { 'User-Agent': 'Pingory/1.0' } });
     clearTimeout(timeout);
     if (!res.ok) return { status: 'down', error: `HTTP ${res.status}` };
     const body = await res.text();
@@ -455,7 +455,7 @@ async function checkApi(url, config) {
   const headers = config.headers || {};
   const body = config.body ? (typeof config.body === 'string' ? config.body : JSON.stringify(config.body)) : undefined;
   try {
-    const res = await fetch(url, { method, headers, body, redirect: 'follow' });
+    const res = await safeFetch(url, { method, headers, body });
     if (!res.ok) return { status: 'down', error: `HTTP ${res.status}` };
     const assertPath = config.assertPath;
     if (assertPath) {
@@ -498,6 +498,11 @@ export async function runLocalCheck(monitor) {
   const c = monitor.config || {};
   const t = monitor.type;
   const target = monitor.url;
+  // SSRF 守卫：HTTP 类由 safeFetch 内部再校验；此处覆盖 tcp/ssl/ping/domain 等非 fetch 类（不发起连接即判 down）
+  if (t === 'ping' || t === 'tcp' || t === 'ssl' || t === 'domain') {
+    const safety = await assertSafeTarget(target);
+    if (!safety.ok) return { status: 'down', error: 'TARGET_BLOCKED:' + safety.reason };
+  }
   switch (t) {
     case 'keyword': return checkKeyword(target, c);
     case 'ping': return checkPing(target);

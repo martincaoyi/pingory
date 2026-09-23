@@ -24,7 +24,7 @@
 ▸ 字典缺键时回退显示原始错误码（便于定位）
 ▸ 内容自由文本（如监控历史时间线的 `error` 字段记录 HTTP 错误原文）不走错误码，保持原样
 
-### 错误码清单（37）
+### 错误码清单（38）
 
 | 错误码 | HTTP | 含义 / 占位符 |
 |---|---|---|
@@ -65,6 +65,7 @@
 | `no_team` | 404 | 团队不存在 |
 | `server_error` | 500 | 服务器内部错误 `{msg}` |
 | `endpoint_not_found` | 404 | 请求的 API 路径不存在（未匹配任何 `/api/*` 路由时的统一兜底，2026-09-16 P1-11 新增） |
+| `target_blocked` | 400 | 监控目标地址被拒绝（SSRF 守卫：内网 / 环回 / 链路本地 / 云元数据 / 保留段，2026-09-23 P0-1 新增） |
 
 ### 未匹配路由的统一兜底（2026-09-16 P1-11 新增）
 
@@ -123,7 +124,7 @@
 
 ### 变更原因（2026-09-13）
 
-此前后端直接返回英文句子（例：`Your pro plan does not support "", please upgrade`），前端 `showAlert(d.error)` 原样弹出 → **中文界面下显示英文**。现改为「错误码 + 8 语字典」：`err.*` 键在 en/zh/es/pt/de/fr/ja/ko 各 38 个（37 个错误码 + 既有 `err.fail`，v1.8 起；`err.endpoint_not_found` 为 2026-09-16 P1-11 新增），全语言 parity 由 `tools/dev_gate.js` 的 `i18n-缺键` / `i18n-未翻译` 门禁守。
+此前后端直接返回英文句子（例：`Your pro plan does not support "", please upgrade`），前端 `showAlert(d.error)` 原样弹出 → **中文界面下显示英文**。现改为「错误码 + 8 语字典」：`err.*` 键在 en/zh/es/pt/de/fr/ja/ko 各 39 个（38 个错误码 + 既有 `err.fail`，v1.8 起；`err.endpoint_not_found` 为 2026-09-16 P1-11 新增，`err.target_blocked` 为 2026-09-23 P0-1 新增），全语言 parity 由 `tools/dev_gate.js` 的 `i18n-缺键` / `i18n-未翻译` 门禁守。
 
 另：`/api/monitors` 的 `url` 字段自 2026-09-13 起支持**只填域名**（如 `baidu.com`），后端自动补全 `https://` 并归一化；非 HTTP 类类型（ping/tcp/ssl/domain/dns）若粘贴完整 URL，自动取 host。
 

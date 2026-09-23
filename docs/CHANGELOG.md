@@ -8,6 +8,18 @@
 
 ---
 
+## 2026-09-23 · P0-1 SSRF 守卫：拦截监控目标指向内网 / 云元数据（安全修复）
+
+> 审计发现的高危漏洞：监控目标由用户提交，服务端 `fetch` / TCP / SSL / ping 直接出网，原先无任何内网过滤。认证用户（含未验证邮箱但在上限内）可把监控指向 `http://169.254.169.254/`（云元数据）、`http://10.x`、`http://localhost:5432`，Keyword/Api 类型还会回读响应体 → 服务端请求伪造。
+
+- **新增 `src/ssrf-guard.js`**（SSRF 守卫，零新依赖）：
+  - `isBlockedTarget(raw)`：创建时同步校验（字面量 IP + 主机名规则），`server.js:normalizeTarget` 调用 → 拦入库，覆盖 `POST /api/monitors` 与 `/api/monitors/import` 两条写入路由，返回新错误码 `target_blocked`（400）。
+  - `assertSafeTarget(hostname)`：运行时异步校验（额外 `dns.promises.lookup` 解析全部 IP，任一危险即拒），`runLocalCheck` 对非 fetch 类（ping/tcp/ssl/domain）调用。
+  - `safeFetch(url, init)`：带守卫的 `fetch`，`redirect:'manual'`，对 3xx 跳转目标**再校验**后最多跟随 1 跳；`checkHttp` / `checkKeyword` / `checkApi` 三处改用它。
+- **拦截段**：`127/10/172.16-31/192.168/0.0.0.0/8`、`169.254.0.0/16`（含云元数据）、`100.64.0.0/10` CGNAT；IPv6 `::1` / `fc00::/7` / `fe80::/10`；主机名 `localhost` / `*.local` / `*.internal` / `*.svc` / `*.cluster`。
+- **文档同步**：`docs/API-REFERENCE.md`（错误码表 +38 → 含 `target_blocked`、i18n 计数 38→39）、`docs/ARCHITECTURE.md`（新增模块节）、8 语字典补 `err.target_blocked`。
+- **已知边界**：DNS 重绑定(TOCTOU)理论窗口未用 undici 自定义 connect 钉死解析 IP；主威胁已覆盖。如需彻底封堵，后续可加 undici `Agent` 自定义 `connect`。
+
 ## 2026-09-23 · SMS 语义正式关闭（Martin 确认 · 无代码变更）
 
 > 承接 2026-09-15「SMS 功能正式取消」，关闭最后一处开放语义问题（该问题此前一直挂在待办里等一句话确认）。

@@ -128,6 +128,14 @@
 - `startRetention(isLeaderFn)`：定时执行（默认每小时，启动后延迟 5 分钟），**只在 poll leader 上跑**；失败只 WARN、下一轮重试
 - 其它表（`page_sessions` / `user_events` / `monitor_events`）按同一模式扩展即可，但需先确定各自允许的保留期
 
+### `src/ssrf-guard.js`（SSRF 守卫，2026-09-23 P0-1 新增）
+- 背景：监控目标由用户提交，服务端 `fetch` / TCP / SSL / ping 直接出网，原先**无任何内网过滤**（`normalizeTarget` 只 `new URL()` 解析、`monitors.js` 三处 `fetch` 带 `redirect:'follow'`）→ 认证用户可探 `169.254.169.254` 云元数据、`10.x`/`localhost` 内网
+- `isBlockedTarget(raw)`：创建时同步校验（字面量 IP + 主机名规则），`normalizeTarget` 调用 → 拦入库（覆盖 `POST /api/monitors` 与 `/import` 两条写入路由）
+- `assertSafeTarget(hostname)`：运行时异步校验（额外 `dns.promises.lookup` 解析全部 IP，任一危险即拒），`runLocalCheck` 对非 fetch 类（ping/tcp/ssl/domain）调用
+- `safeFetch(url, init)`：带守卫的 `fetch` —— `redirect:'manual'`，对 3xx 跳转目标**再校验**后最多跟随 1 跳；HTTP/Keyword/Api 三类检查改用它
+- 拦截段：`127/10/172.16-31/192.168/0.0.0.0/8`、`169.254.0.0/16`（含云元数据）、`100.64.0.0/10` CGNAT；IPv6 `::1` / `fc00::/7` / `fe80::/10`；主机名 `localhost` / `*.local` / `*.internal` / `*.svc` / `*.cluster`
+- 已知边界：DNS 重绑定(TOCTOU)理论窗口未用 undici 自定义 connect 钉死解析 IP；主威胁（认证用户直填内网地址 / 内网域名）已覆盖
+
 ### `src/alerts.js`（告警，~248 行）
 - `initAlerts()` → 注册检查结果 handler
 - 状态机：down / up / escalation（按 escalationIntervalMin 重发）/ warning（慢响应+SSL/域名到期）

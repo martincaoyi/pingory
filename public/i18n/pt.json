@@ -285,6 +285,7 @@
   "err.channel_not_configured": "O canal {channel} ainda não está configurado. Configure-o em Configurações da conta.",
   "err.channel_not_supported": "Seu plano {plan} não oferece suporte ao canal {channel}; faça upgrade",
   "err.endpoint_not_found": "Este endpoint da API não existe",
+  "err.target_blocked": "Endereço de destino rejeitado (não é permitido monitorar endereços internos ou locais)",
   "fb.btn": "Feedback",
   "fb.cancel": "Cancelar",
   "fb.emailph": "Seu email (opcional, para respondermos)",

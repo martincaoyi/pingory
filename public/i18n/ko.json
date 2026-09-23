@@ -285,6 +285,7 @@
   "err.channel_not_configured": "{channel} 채널이 아직 설정되지 않았습니다. 계정 설정에서 구성해 주세요.",
   "err.channel_not_supported": "{plan} 요금제는 {channel} 채널을 지원하지 않습니다. 업그레이드해 주세요",
   "err.endpoint_not_found": "이 API 엔드포인트는 존재하지 않습니다",
+  "err.target_blocked": "대상 주소가 거부되었습니다 (내부/로컬 주소 모니터링은 허용되지 않습니다)",
   "fb.btn": "피드백",
   "fb.cancel": "취소",
   "fb.emailph": "이메일 (선택, 답변용)",
