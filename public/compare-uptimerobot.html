@@ -27,8 +27,16 @@
   <meta property="og:title" content="Pingory vs UptimeRobot (2026): An Honest Comparison" data-i18n-content="cmp.h1" />
   <meta property="og:description" content="Pingory vs UptimeRobot 2026: pricing, monitor limits, alerts and status pages compared — including where UptimeRobot still wins." data-i18n-content="cmp.meta.desc" />
   <meta property="og:url" content="__CMP_CANONICAL__" />
-  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <!-- 社交分享图：1200x630 横版（对比页卡型/图错配修复，2026-09-23）。
+       原先 og:image 指向 icon-512.png（1:1 方图）却声明 twitter:card=summary_large_image（约 1.91:1）
+       ⇒ 平台侧会被裁切或留白，且与首页统一使用的 summary 卡型不一致。
+       图由 tools/og-image.py 生成（改标题/副标题后重跑该脚本即可）；og:image:alt 保持英文（图本身即英文版）。 -->
+  <meta property="og:image" content="https://pingory.com/img/og-uptimerobot.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Pingory vs UptimeRobot — price per monitor, 8 UI languages, honest limits" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://pingory.com/img/og-uptimerobot.png" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="shortcut icon" href="/favicon.ico">
