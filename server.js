@@ -6,9 +6,10 @@ import { Paddle } from '@paddle/paddle-node-sdk';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { createMonitor, listMonitors, getMonitor, deleteMonitor, saveMonitor, getHistory, getStats, getStatusIncidents, getStatusPage, getStatusPageByHost, getStatusPageAuth, getStatusPageOwnerId, listTeamMonitors, startPolling } from './src/monitors.js';
+import { createMonitor, listMonitors, getMonitor, deleteMonitor, saveMonitor, getHistory, getStats, getStatusIncidents, getStatusPage, getStatusPageByHost, getStatusPageAuth, getStatusPageOwnerId, listTeamMonitors, startPolling, isPollLeader } from './src/monitors.js';
 import { initAlerts, generateMonthlyReport, sendTestAlert } from './src/alerts.js';
 import { initDb, startKeepAlive, getPool, pool } from './src/db.js';
+import { startRetention } from './src/retention.js';
 import { recordUserEvent, listUserEvents, getUserEventSummary, getUserActivityRanking, getDormantUsers, parseJSON } from './src/events.js';
 import { registerUser, loginUser, getUserById, getUserByEmail, updatePlan, updateStatusPage, createEmailVerification, verifyEmailToken, seedAdmin, setRole, addSubscriber, listSubscribers, removeSubscriber, createMaintenanceWindow, listMaintenanceWindows, deleteMaintenanceWindow, ensureApiKey, regenerateApiKey, getUserByApiKey, createTeam, inviteTeamMember, listTeam, leaveTeam, verifyPagePassword, recordReferralConversion, createOAuthUser, recordBillingEvent, changePassword, setPassword, updateProfileName, requestEmailChange, confirmEmailChange, requestPasswordReset, resetPassword, getAlertChannels, saveAlertChannels } from './src/auth.js';
 import { sendVerificationEmail, sendFeedbackNotification, sendPasswordResetEmail, sendChangeEmailVerification } from './src/email.js';
@@ -225,21 +226,43 @@ function cmpLocalize(html, dict) {
   out += html.slice(last);
   return out;
 }
+// ===== 对比页渲染缓存（P2-⑨，2026-09-23）=====
+// 旧实现：每个请求都同步读 35KB 模板 + 读盘解析该语言字典 + 两次大字符串 replace（零缓存），
+// 全部发生在事件循环里 ⇒ 阻塞其它请求；而对比页恰恰是爬虫 / 社交机器人的批量抓取目标（并发最集中）。
+// 这里按「语言 + 模板 mtime + 字典 mtime」缓存渲染结果：改了模板或字典，mtime 变化即自动失效，
+// 不需要重启（避免「改了模板线上还是旧内容」这种更糟的失效方式）。
+// 键空间 = 8 语 × 少量文件版本，内存占用可忽略；上限仅作异常保护。
+const cmpCache = new Map();
+const CMP_CACHE_MAX = 64;
+
+function cmpFileMtimeMs(p) {
+  try { return fs.statSync(p).mtimeMs; } catch { return 0; }
+}
+
 function cmpRender(lang) {
+  const dictPath = lang === 'en' ? null : path.join('public', 'i18n', lang + '.json');
+  const cacheKey = `${lang}|${cmpFileMtimeMs(CMP_TEMPLATE)}|${dictPath ? cmpFileMtimeMs(dictPath) : 0}`;
+  const cached = cmpCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
   let html;
   try {
     html = fs.readFileSync(CMP_TEMPLATE, 'utf8');
   } catch (e) {
     console.error('[compare] 模板读取失败:', e.message);
-    return null;
+    return null; // 读失败不写入缓存，下次请求重试
   }
   const dict = lang === 'en' ? null : cmpReadDict(lang);
   if (lang !== 'en') html = cmpLocalize(html, dict);
   const canonical = 'https://pingory.com' + (lang === 'en' ? CMP_PATH : '/' + lang + CMP_PATH);
-  return html
+  const out = html
     .replace(/__CMP_LANG__/g, lang)
     .replace(/__CMP_CANONICAL__/g, () => canonical)
     .replace('<!--CMP_I18N_PRELOAD-->', () => cmpPreloadScript(lang, dict));
+
+  if (cmpCache.size >= CMP_CACHE_MAX) cmpCache.clear();
+  cmpCache.set(cacheKey, out);
+  return out;
 }
 function sendComparePage(lang, res) {
   const html = cmpRender(lang);
@@ -1987,6 +2010,7 @@ const BOOT_RETRY_MS = 15000; // 外层重试间隔：数据库恢复后自动继
 let bootAttempt = 0;
 let httpListening = false;
 let pollingStarted = false;
+let retentionStarted = false;
 let monthlyReportTimer = null;
 
 // 月度报告定时任务（G6）：每月 1 号近似触发（每小时检查一次，避免漏跑）
@@ -2022,6 +2046,10 @@ async function bootstrap() {
   if (!pollingStarted) {
     pollingStarted = true;
     startPolling();
+  }
+  if (!retentionStarted) {
+    retentionStarted = true;
+    startRetention(isPollLeader); // 只让 poll leader 做清理：双机不重复劳动
   }
   startMonthlyReportTimer();
 

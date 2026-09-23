@@ -75,12 +75,13 @@
 
 ## 2. 模块职责
 
-### `server.js`（入口，~1221 行，57 路由）
+### `server.js`（入口，~2107 行，86 路由）
 - Express 应用初始化（静态服务、JSON body、Session(connect-pg-simple 落库)、安全中间件）
 - Paddle SDK 实例化（sandbox/live 切换）+ 手动 HMAC 验签 webhook
 - 路由注册：auth（注册/登录/登出/邮箱验证/OAuth google+github）/ me（信息/状态页/订阅者）/ monitors（CRUD/import/stats/history）/ heartbeat / maintenance-windows / status(公开+解锁+订阅) / team / account-apikey / v1(Bearer) / plan-features / feedback / admin* / paddle-config / paddle-webhook / health
 - 套餐门禁在路由层校验：`PLAN_LIMITS`（配额）、`planHasType`（检查类型）、`planHasChannel`（渠道）、`planHasStatusPage` / `planHasStats`（状态页/趋势图）、`planMinInterval`（最低间隔）
-- 启动：`seedAdmin()`（ADMIN_EMAIL/PASSWORD 建超管）+ `initDb()` + `startKeepAlive()` + `initAlerts()` + `startPolling()` + 月度报告 setInterval
+- 启动：`seedAdmin()`（ADMIN_EMAIL/PASSWORD 建超管）+ `initDb()` + `startKeepAlive()` + `initAlerts()` + `startPolling()` + `startRetention()`（数据保留清理，复用 leader 租约）+ 月度报告 setInterval
+- 异常兜底三层收口（2026-09-23 P0-2）：`wrap()` 包装全部路由 handler + 4 参数全局错误中间件 + 进程级 `unhandledRejection`/`uncaughtException`（记录完整堆栈后退出）；详见 `docs/API-REFERENCE.md` 的 5xx 语义
 - 邮箱未验证账号监控数压至 `EMAIL_VERIFY_MONITOR_CAP=3`（防薅）
 
 ### `src/plans.js`（套餐能力矩阵，~84 行 · 单一源）
@@ -102,16 +103,30 @@
 - 状态页设置：`updateStatusPage`（enabled/slug/customDomain/whiteLabel/password）
 - 团队：建团队/邀请(按邮箱)/退出；admin：ban/delete/quota/role/plan/impersonate
 
-### `src/monitors.js`（监控核心，~613 行）
+### `src/monitors.js`（监控核心，~745 行）
 - `createMonitor`（配额+类型+渠道门禁）/ `listMonitors` / `getMonitor` / `deleteMonitor` / `importMonitors`（uptimerobot/csv/json）
+- `listDueMonitors(nowMs, limit)`：**只取已到期的监控**（`last_checked IS NULL OR last_checked <= now - interval*1000`，走 `idx_monitors_last_checked`）。
+  2026-09-23 P1-④：轮询器此前直接调 `listMonitors()`（无 WHERE / 无 LIMIT）⇒ 5 秒一次全表读 = 17,280 次/天，且随行数增长。现在按索引增量取数，到期判据与原内存判据逐字等价。
+- `isPollLeader()`：对外暴露 leader 状态，供数据保留清理等定时任务复用同一把租约
 - `saveMonitor` / `saveEvent` / `saveCheck`
 - `getHistory` / `getStats`（可用率/平均/P95+时序）/ `getStatusPage` / `getStatusPageByHost`（自定义域名）
 - **9 类检查器**：checkHttp / checkKeyword / checkPing / checkTcp / checkSsl / checkDomain(自建WHOIS) / checkApi(header+JSON断言) / checkDns / checkHeartbeat
 - `runCheck(monitor, plan)`：读 `PROBE_REGIONS` 多区域，多数确认降误报；`consecutive_failures` 支持连续失败计数（Free 连续 2 次才告警）
-- `startPolling()`：每 5 秒扫描 + `inFlight` Set 并发锁 + **DB leader 租约**（`tryAcquireLease`）
+- `startPolling()`：每 5 秒扫描 + `inFlight` Set 并发锁 + `POLL_MAX_CONCURRENT` 总并发上限 + **DB leader 租约**（`tryAcquireLease`）
   ▸ **仅 leader 实例执行扫描与告警派发**。Fly 双实例下若都轮询，会各自派发 ⇒ 每封告警发两份、内存级冷却失效；
     故用 `leader_lease` 表做租约（TTL 30s、每 5s 续租），leader 挂掉后另一实例 ≤30s 接管（P1-12）
+  ▸ **总并发上限（2026-09-23 P1-⑤）**：`inFlight` 只能防「同一监控重复检查」，防不住「总并发过大」——
+    到期监控一多会同时起 N 个检查，各自要写库（UPDATE + INSERT），叠上池容量就绪会让全站 API 排队。
+    现在 `activeChecks` 计数器把同时在跑的检查数限制在 `POLL_MAX_CONCURRENT`（默认 8），超出的留到下一轮
+  ▸ 整个 tick 包在 try/catch 内：轮询回调不是路由，抛出去会变成 unhandled rejection（P0 后进程级兜底会退出进程）
 - `setCheckResultHandler(fn)`（注册 alerts handler）
+
+### `src/retention.js`（数据保留清理，~75 行 · 2026-09-23 P2-⑧ 新增）
+- 背景：此前全仓**没有任何保留策略**，`monitor_checks` 增长最快（Pro 档 30 秒检查 ⇒ 单监控 2880 行/天）
+- `pruneByTs(table, tsColumn, cutoffMs)`：分批删（`DELETE ... WHERE id IN (SELECT id ... LIMIT n)`），单条语句短小，不产生长事务、不易撞 `statement_timeout`
+- `pruneMonitorChecks()`：`monitor_checks` 默认保留 30 天（`RETENTION_CHECKS_DAYS`）
+- `startRetention(isLeaderFn)`：定时执行（默认每小时，启动后延迟 5 分钟），**只在 poll leader 上跑**；失败只 WARN、下一轮重试
+- 其它表（`page_sessions` / `user_events` / `monitor_events`）按同一模式扩展即可，但需先确定各自允许的保留期
 
 ### `src/alerts.js`（告警，~248 行）
 - `initAlerts()` → 注册检查结果 handler
@@ -130,9 +145,15 @@
 - 独立 transporter（复用 SMTP_* 配置），`sendMail(to, subject, text, html)`
 - `sendVerificationEmail` / `sendFeedbackNotification`
 
-### `src/db.js`（数据库，~226 行）
-- `getPool()` → pg Pool 单例（SSL verify-full）
-- `initDb()` → 11 表 CREATE IF NOT EXISTS + ALTER 迁移（幂等、禁 DROP）
+### `src/db.js`（数据库，~472 行）
+- `getPool()` → pg Pool 单例（`ssl:{rejectUnauthorized:false}`，理由见文件内注释）
+- **连接池显式配置（2026-09-23 P0-1）**：`max=6` / `connectionTimeoutMillis=10000` / `idleTimeoutMillis=30000` /
+  `statement_timeout=15000` / `idle_in_transaction_session_timeout=30000` / `query_timeout=15000` / `application_name='pingory'`，全部可 env 覆盖。
+  关键一项是 `connectionTimeoutMillis`：pg-pool 默认**不建超时定时器**，池满时请求会永久挂起（不报错、不超时）——
+  这正是「API 间歇 502」的机制。取值依据 Supabase 免费档官方额度（Nano：直接连接 60 / Supavisor 客户端 200）。
+- `initDb()` → **版本化迁移**（2026-09-23 P1-⑥）：`schema_migrations` 记版本，版本已是最新则**正常启动完全不碰 DDL**；
+  仅版本落后时执行幂等基线 DDL，并用 `pg_advisory_lock` 串行化双机（避免两份全量 DDL 并发打库）
+- 一次性数据迁移：孤儿监控清理（原在每次启动路径上，现只在迁移期执行一次）+ `monitors.user_id` 外键级联补建
 - `startKeepAlive(intervalMs)` → 每 4 分钟 SELECT 1
 
 ### 多区域探针 Worker（`src/worker.js`，~56 行）
@@ -147,12 +168,14 @@
 
 ### 正常轮询（含多区域 + 并发锁 + 连续失败）
 ```
-startPolling() 每 5s 扫 monitors 表
-  → 到下次检查时间(last_checked+interval) 且 !inFlight.has(id)
+startPolling() 每 5s（2026-09-23 P1-④/P1-⑤ 改造后）
+  → 先续租 leader（非 leader 直接返回）
+  → listDueMonitors()：只取「已到期」的监控（按 last_checked 索引，单轮上限 POLL_BATCH_LIMIT=200）
+  → 受 POLL_MAX_CONCURRENT=8 约束派发；超出的留到下一轮（不丢弃）
   → runCheck()：PROBE_REGIONS 多节点探测，多数确认 down 才置 down；
      非付费档单点 + consecutive_failures 连续 2 次才告警
   → UPDATE monitors(last_checked/status/last_response_time/last_error/consecutive_failures)
-  → INSERT monitor_checks（明细）
+  → INSERT monitor_checks（明细；由 startRetention() 默认保留 30 天）
   → status 变化 / warning / escalation → alerts handler
 ```
 
@@ -200,7 +223,7 @@ Paddle POST /api/paddle/webhook
 
 ---
 
-## 4. 数据库 Schema（Supabase Postgres · 13 表 · 2026-09-19 线上实况）
+## 4. 数据库 Schema（Supabase Postgres · 16 表 · 2026-09-23 核对 `src/db.js` 的 CREATE TABLE 计数，含 connect-pg-simple 的 `session` 表与新增的 `schema_migrations`）
 
 ### users
 | 字段 | 类型 | 说明 |
@@ -248,7 +271,13 @@ Paddle POST /api/paddle/webhook
 
 ### monitor_events / monitor_checks
 ▸ monitor_events：id / monitor_id / event_type(down/up/check/warning) / from_status / to_status / response_time / error / detail / created_at；索引 monitor_id + created_at
-▸ monitor_checks：id / monitor_id / ts(BIGINT) / status / response_time / region / error；索引 (monitor_id, ts)
+▸ monitor_checks：id / monitor_id / ts(BIGINT) / status / response_time / region / error；索引 (monitor_id, ts) + 单独 `ts`（供保留清理按时间筛过期行，2026-09-23 P2-⑧ 新增）
+  ▸ **保留策略**：默认保留 30 天，由 `src/retention.js` 分批清理（`RETENTION_CHECKS_DAYS` 可调）。这是全仓第一个数据保留策略
+
+### schema_migrations（迁移版本 · 2026-09-23 P1-⑥ 新增）
+▸ version(主键) / applied_at —— 记录已应用到哪个 schema 版本
+▸ 作用：让 `initDb()` 在版本已是最新时**完全跳过 DDL**（旧行为是每次进程启动都跑约 100 条 CREATE/ALTER，
+  双机同时启动即两份全量 DDL 并发打库）；版本落后时才迁移，并用 `pg_advisory_lock` 串行化
 
 ### feedback（客户反馈）
 id / user_id(可空) / email(选填) / message / page / status(new/seen/done) / created_at

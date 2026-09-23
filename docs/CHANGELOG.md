@@ -8,6 +8,69 @@
 
 ---
 
+## 2026-09-23 · 稳定性系统治理：P0 异常兜底 + P1 放大系数 + P2 容量与慢性病
+
+**背景**：当日两台机器各重启两次，且**性质不同**，必须分开治：
+
+| 机器 | 时间 | 退出码 | OOM 标记 | 性质 |
+|---|---|---|---|---|
+| `286023eb114de8` | 13:00:27 | `exit_code=1` | `false` | 未捕获异常 / 未处理 rejection ⇒ 进程自杀 |
+| `185173db3e2968` | 14:20:25 | `exit_code=137` | **`true`** | **内核 OOM** 杀进程 |
+
+先做了全代码定位（产出 `稳定性审查-代码地图.md`，逐条给「文件:行号 + 现值 + 为什么与稳定性相关」），再分三档实施。
+
+**P0（异常兜底，v126 `da81d87` 已上线）**
+
+- `src/db.js`：连接池从**零配置**改为显式配置。关键项 `connectionTimeoutMillis`——pg-pool 在它为假值时
+  **不建超时定时器**，池满后请求永久挂起（不报错、不超时），这正是「API 间歇 502」的机制。现改为 10 秒快速失败，
+  失败沿 wrap() → 全局错误中间件返回 503。
+- `server.js`：三层异常收口 —— `wrap()` 启动时遍历 router 栈包装**全部 122 个处理器**（不改路由声明、新增路由自动生效）
+  + 4 参数全局错误中间件（瞬时故障 503 / 其余 500，响应体仍 `{error, ep}`）+ 进程级 `unhandledRejection`/`uncaughtException`。
+  进程级兜底选择「**记录完整堆栈后再退出**」而不是「记录后继续跑」：真正的缺陷是「退出无据可查」，不是「退出」本身；
+  带着损坏状态继续服务才是掩盖。
+- `tools/dev_gate.js`：修复**死门禁** —— `changedFiles()` 的三个 git 调用全失败时被 `catch {}` 静默吞掉 ⇒ 返回空集
+  ⇒ 所有 diff 类检查「跳过」⇒ 照样打印「✓ 门禁通过」。现改为：失败重试一次（吸收沙箱偶发 EBUSY），
+  三次全失败则新增 `GIT-不可用` FAIL 并 `exit 1`，**环境异常响亮失败**（该 FAIL 永不参与首次提交降级）。
+
+**P1（拆放大系数）**
+
+- **④ 探针增量取数**（`src/monitors.js` 新增 `listDueMonitors`）：轮询器此前每 5 秒调 `listMonitors()`
+  （`SELECT * FROM monitors ORDER BY created_at DESC`，无 WHERE、无 LIMIT）⇒ **17,280 次/天全表读**，随行数线性放大。
+  现改为按 `last_checked` 索引只取到期监控，到期判据与原内存判据**逐字等价**；新增索引 `idx_monitors_last_checked`。
+- **⑤ 探针总并发上限**：`inFlight` 只能防「同一监控重复检查」，防不住「总并发过大」——到期监控一多会同时起 N 个检查，
+  各自要 UPDATE + INSERT 写库，叠上池容量就让全站 API 排队。现加 `activeChecks` 计数器（`POLL_MAX_CONCURRENT`，默认 8）。
+  同时把整个 tick 包进 try/catch（轮询回调不是路由，抛错会变成 unhandled rejection ⇒ 进程级兜底会退出进程）。
+- **⑥ 启动期 DDL 移出常规路径**：此前每次进程启动都跑约 100 条 CREATE/ALTER，**双机同时启动即两份全量 DDL 并发打库**，
+  而启动往往发生在崩溃重启时（数据库本来就紧张）⇒ 二次冲击、放大故障窗口。现改为 `schema_migrations` 版本闸 +
+  `pg_advisory_lock` 串行化；DDL 里夹着的**孤儿监控清理 DELETE**（`NOT IN (子查询)`，每次启动执行一次）移出启动路径，
+  改为迁移期一次性执行。**本次为该机制的 v1 基线**：首个带此版本的进程会执行一次完整 DDL 并记录 v1。
+
+**P2（容量与慢性病）**
+
+- **⑦ 内存与堆上限**：`fly.toml` `memory_mb` 256 → 512；`Dockerfile` 启动参数新增 `--max-old-space-size=384`。
+  此前不设堆上限 ⇒ V8 触顶时表现是「被内核 OOM kill」（无堆栈可查）而不是可控的 GC 压力。
+  ⚠️ 成本：Fly 按内存计费，512MB 比 256MB 约贵一倍（两台合计约 +$2~4/月）；要退回最低配需同时下调堆上限。
+- **⑧ 数据保留策略**（新增 `src/retention.js`）：此前全仓**没有任何保留策略**，`monitor_checks` 增长最快
+  （Pro 档 30 秒检查 ⇒ 单监控 2880 行/天）。现默认保留 30 天，每小时分批清理（`DELETE ... WHERE id IN (SELECT ... LIMIT n)`，
+  单条语句短小、不产生长事务），**只在 poll leader 上执行**。新增索引 `idx_monitor_checks_ts`。
+- **⑨ 对比页渲染缓存**：`cmpRender()` 此前每个请求都同步读 35KB 模板 + 读盘解析字典 + 两次大字符串 replace（零缓存），
+  全在事件循环里 ⇒ 阻塞其它请求；而对比页正是爬虫/社交机器人的批量抓取目标。现按「语言 + 模板/字典 mtime」缓存，
+  改文件即自动失效（不需要重启）。
+
+**SEO / 社交卡片（对比页 OG 修复）**
+
+- 三个对比页（`compare-uptimerobot` / `compare-pingdom` / `compare-betterstack`）此前 `og:image` 指向 `icon-512.png`（1:1 方图），
+  却声明 `twitter:card=summary_large_image`（约 1.91:1）⇒ 平台侧会被裁切或留白。现改为**真正的 1200×630 横版图**
+  （`public/img/og-*.png`，由 `tools/og-image.py` 生成，代码渲染保证图上文字零错字），补 `og:image:width/height/alt` 与 `twitter:image`。
+  注：对比页是英文首版静态页（`compare-uptimerobot.html` 同时是 8 语模板），故图片为英文版。
+
+**文档校准**：`docs/ARCHITECTURE.md` 的模块行数/表数量/轮询数据流按实际代码校准（此前 `server.js` 写「~1221 行、57 路由」，
+实为 2107 行、86 路由；表数量 13 → 16）；`docs/API-REFERENCE.md` 升级 v2.5（端点与错误码不变，新增「探针与运维行为变更」一节）。
+
+**关联**：`方案资料/uptime-monitor/稳定性审查-代码地图.md`（P0/P1/P2 全文定位索引）。
+
+---
+
 ## 2026-09-22 · 启动健壮性：启动失败不再秒崩（P1-14）
 
 **背景**：Fly 上一台机器出现 `start → exit_code=1(3s) → restart → exit_code=1(4s) → stopped`（`oom_killed=false`、`requested_stop=false` ⇒ 排除 OOM 与人为停机）。逐行核查定位到两个叠加缺陷：`server.js` 的启动块是**没有 `.catch()`** 的立即执行异步函数，而 `src/db.js` 的 `initDb()` **没有任何重试逻辑** ⇒ 启动瞬间数据库稍一抖动就变成 unhandled rejection，进程直接退出；Fly 反复重启仍失败，最终停机，全靠另一台机器单机顶着。

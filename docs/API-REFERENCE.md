@@ -2,8 +2,8 @@
 
 > 本文档描述后端 Express REST API。登录/注册/验证邮箱/OAuth（`/api/auth/*`）与 `/api/paddle-config`、`/api/creem-config` 无需登录态；其余业务端点由各路由内部校验 Session（未登录返回 401）。
 >
-> **版本**：v2.4（2026-09-23 P0-2：新增「全局异常兜底与 5xx 语义」——`wrap()` + 全局错误中间件 + 进程级兜底三层收口，含 503/500 语义约定；v2.3：2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
-> **最后更新**：2026-09-16（P1-10 安全响应头：关闭 `X-Powered-By`、补 `Permissions-Policy`，见 §7.4；P1-11 `/api` 404 兜底，见「未匹配路由的统一兜底」）
+> **版本**：v2.5（2026-09-23 P1/P2 稳定性：探针改增量取数 + 总并发上限、启动期 DDL 改版本化迁移、数据保留清理、对比页渲染缓存；**端点无增删、错误码仍 37 个、8 语字典零改动**——v2.4 为 P0-2「全局异常兜底与 5xx 语义」；v2.3：2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
+> **最后更新**：2026-09-23（P1/P2 稳定性改造；对 API 契约的影响见「探针与运维行为变更」，端点与错误码不变）
 > **关联代码**：`server.js`（路由，共 80 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）
 >
 > **2026-09-19 探针可靠性**：本地检查与多区域 `/probe` 均经 `runLocalCheckRetry` 执行——单次检查遇超时 / 网络抖动类错误会重试一次（间隔 1.5s）后再判定 down，消除东京探针偶发抖动造成的假故障；单点 HTTP/Keyword 超时从硬编码 10s 提至 15s（可经 `CHECK_TIMEOUT_MS` 环境变量调参，无需重新部署）。
@@ -104,6 +104,22 @@
 
 > 相关：连接池上限与超时（`max` / `connectionTimeoutMillis` / `statement_timeout` / `query_timeout`）
 > 见 `src/db.js` 的 pool 配置注释，其取值依据 Supabase 免费档官方额度（见该文件注释内链接）。
+
+### 探针与运维行为变更（2026-09-23 P1/P2，端点与错误码不变）
+
+对**调用方无影响**（没有新增/删除端点，没有新增错误码，响应体结构不变），但会改变运行期行为与排障方式：
+
+| 变更 | 影响的接口/行为 | 说明 |
+|---|---|---|
+| 探针扫描改增量（`listDueMonitors`） | 监控状态刷新时延 | 轮询器不再每 5s 全表扫描，改为「只取已到期的监控」（按 `last_checked` 索引）。到期判据与原内存判据**逐字等价** |
+| 探针总并发上限 | `GET /api/monitors` 等的可用性 | 同一瞬间进行的检查数 ≤ `POLL_MAX_CONCURRENT`（默认 8）。超出的到期监控留到下一轮（5s 后），**不是丢弃** |
+| 启动期 DDL 改版本化迁移 | 冷启动耗时、重启冲击 | 正常启动不再跑 DDL（日志变为 `表结构已是最新（v1），跳过 DDL`）；仅版本升级时执行，且用 `pg_advisory_lock` 串行化 |
+| 数据保留清理 | `GET /api/monitors/:id/stats` / `history` 的历史深度 | `monitor_checks` 默认保留 **30 天**（`RETENTION_CHECKS_DAYS` 可调）。超出保留期的趋势图/历史点会被清理，**不影响监控状态与告警** |
+| 对比页渲染缓存 | `/compare/*` 与 `/{lang}/compare/uptimerobot` | 按「语言 + 模板/字典 mtime」缓存渲染结果，改文件即失效 |
+
+新增/可调环境变量（都有默认值，无需配置即可运行）：
+`POLL_MAX_CONCURRENT`、`POLL_BATCH_LIMIT`、`RETENTION_CHECKS_DAYS`、`RETENTION_BATCH_SIZE`、
+`RETENTION_MAX_BATCHES`、`RETENTION_INTERVAL_MS`、`RETENTION_FIRST_DELAY_MS`。
 
 ### 变更原因（2026-09-13）
 
