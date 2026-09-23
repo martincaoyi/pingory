@@ -25,29 +25,45 @@ const warn = (n, d) => checks.push({ l: 'WARN', n, d });
 const ok = (n, d) => checks.push({ l: 'OK', n, d });
 
 // 变更文件集 = 已暂存 + 未暂存 + 未跟踪。
-// ⚠️ 历史缺陷：此前只用 `git diff --cached`（仅暂存），开发中未 git add 时所有 diff 类检查会静默"跳过"，
-//    导致门禁形同虚设（2026-09-13 发现：index.html 已改动却报"无 public HTML 变更，跳过"）。
+// ⚠️ 历史缺陷①（2026-09-13）：此前只用 `git diff --cached`（仅暂存），开发中未 git add 时所有 diff 类检查会静默"跳过"，
+//    导致门禁形同虚设（index.html 已改动却报"无 public HTML 变更，跳过"）。
+// ⚠️ 历史缺陷②（2026-09-23 固化）：三个 git 调用失败时全被 `catch {}` 静默吞掉 → 返回空集 → 所有 diff 类检查"跳过"
+//    → 照样打印「✓ 门禁通过」（沙箱实测 spawnSync cmd.exe→EBUSY）。现改为：跟踪 git 是否可用，
+//    全不可用时【响亮失败】，绝不静默通过（见下方 GIT-不可用 检查）。
+// git()：吸收 Windows/沙箱偶发 EBUSY（spawnSync cmd.exe 资源忙）——失败重试一次；
+//        仍保留"全部失败才返回 null"的语义，不掩盖真正的 git 不可用。
+function git(cmd) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try { return execSync(cmd, { encoding: 'utf8' }); } catch { /* retry once */ }
+  }
+  return null;
+}
+
 function changedFiles() {
   const set = new Set();
-  try {
-    execSync('git diff HEAD --name-only', { encoding: 'utf8' })
-      .split('\n').map(s => s.trim()).filter(Boolean).forEach(f => set.add(f));
-  } catch {
-    try {
-      execSync('git diff --cached --name-only', { encoding: 'utf8' })
-        .split('\n').map(s => s.trim()).filter(Boolean).forEach(f => set.add(f));
-    } catch { /* ignore */ }
+  let gitOk = false;
+  const head = git('git diff HEAD --name-only');
+  if (head !== null) {
+    gitOk = true;
+    head.split('\n').map(s => s.trim()).filter(Boolean).forEach(f => set.add(f));
+  } else {
+    const cached = git('git diff --cached --name-only');
+    if (cached !== null) {
+      gitOk = true;
+      cached.split('\n').map(s => s.trim()).filter(Boolean).forEach(f => set.add(f));
+    }
   }
-  try {
-    execSync('git status --porcelain', { encoding: 'utf8' }).split('\n').filter(Boolean)
-      .forEach(l => {
-        let p = l.slice(3).trim();
-        if (p.includes(' -> ')) p = p.split(' -> ').pop().trim();
-        p = p.replace(/^"|"$/g, '');
-        if (p) set.add(p);
-      });
-  } catch { /* ignore */ }
-  return [...set];
+  const st = git('git status --porcelain');
+  if (st !== null) {
+    gitOk = true;
+    st.split('\n').filter(Boolean).forEach(l => {
+      let p = l.slice(3).trim();
+      if (p.includes(' -> ')) p = p.split(' -> ').pop().trim();
+      p = p.replace(/^"|"$/g, '');
+      if (p) set.add(p);
+    });
+  }
+  return { files: [...set], gitOk };
 }
 function read(f) {
   try { return fs.readFileSync(path.join(ROOT, f), 'utf8'); } catch { return ''; }
@@ -73,7 +89,7 @@ if (isMsg) {
   }
 } else {
   // ---- pre-commit 模式：检查变更文件（暂存 + 未暂存 + 未跟踪）----
-  const files = changedFiles();
+  const { files, gitOk } = changedFiles();
   const codeFiles = files.filter(f => /\.(js|sql)$/.test(f) && !/node_modules/.test(f));
   const htmlFiles = files.filter(f => /\.html$/.test(f) && /public[\\/]/.test(f));
   const routeFiles = files.filter(f => /(^server\.js$|^src[\\/])/.test(f));
@@ -428,15 +444,26 @@ if (isMsg) {
     ok('i18n-硬编码中文', cjkFiles.length ? 'public/ 无硬编码中文（注释外）' : '无客户端文件变更，跳过');
   }
 
+  // 13) GIT 可用性兜底（2026-09-23 固化）：三个 git 调用全失败 ⇒ 门禁无法枚举变更
+  //     ⇒ 上方所有 diff 类检查（i18n / UI / DB / API 契约 / T5 / PAY 等）一条都没跑 ⇒
+  //     绝不能打印「✓ 门禁通过」。此前被 catch 静默吞掉，等于门禁形同虚设。
+  //     现在：git 全不可用时响亮失败，逼出环境异常（git 未安装 / 仓库损坏 / 沙箱资源忙 EBUSY）。
+  if (!gitOk) {
+    fail('GIT-不可用', '无法获取变更文件清单：git diff / git status 全部调用失败（环境异常——可能 git 未安装、仓库损坏、或沙箱资源忙 EBUSY）。门禁无法验证任何 diff 类检查，禁止静默通过。请修复 git 环境后重试。');
+  }
+
 }
 
 // ---- 汇总 ----
-let bad = checks.filter(c => c.l === 'FAIL');
-if (isInitial && !isMsg && bad.length) {
-  console.log('\n（首次提交：FAIL 降级为 WARN，历史债项请 Martin 后续决策清理）');
-  for (const c of checks) if (c.l === 'FAIL') c.l = 'WARN';
-  bad = [];
+// 首次提交（无 HEAD）：历史债项 FAIL 降级为 WARN；但 GIT-不可用 属环境异常，永不降级，必须响亮失败。
+if (isInitial && !isMsg) {
+  const degraded = checks.filter(c => c.l === 'FAIL' && c.n !== 'GIT-不可用');
+  if (degraded.length) {
+    console.log('\n（首次提交：FAIL 降级为 WARN，历史债项请 Martin 后续决策清理）');
+    for (const c of degraded) c.l = 'WARN';
+  }
 }
+let bad = checks.filter(c => c.l === 'FAIL');
 console.log('\n=== Pingory dev_gate（SOP 机检门禁）===');
 for (const c of checks) console.log(`[${c.l}] ${c.n}: ${c.d || ''}`);
 if (bad.length) {
