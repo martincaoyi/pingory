@@ -156,6 +156,26 @@ export async function listMonitors(userId) {
   return rows.map(rowToMonitor);
 }
 
+// 只取「已到检查时间」的监控（P1-④，2026-09-23）。
+// 旧实现是轮询器直接调 listMonitors()（`SELECT * FROM monitors ORDER BY created_at DESC`，无 WHERE、无 LIMIT）：
+// 5 秒一次 = 12 次/分钟 = 17,280 次/天全表读，而表只会变大 ⇒ 读放大随行数线性增长。
+// 改为按 last_checked 索引做增量取数，到期判据与原内存判据完全等价：
+//   内存判据：!m.lastChecked || now - m.lastChecked >= m.interval * 1000
+//   SQL 判据：last_checked IS NULL OR last_checked <= now - interval * 1000
+// 依赖索引 idx_monitors_last_checked（见 src/db.js 迁移）。limit 兜住单轮规模，剩下的下一轮继续。
+export async function listDueMonitors(nowMs = Date.now(), limit = 200) {
+  const pool = await getPool();
+  const { rows } = await pool.query(
+    `SELECT * FROM monitors
+      WHERE last_checked IS NULL
+         OR last_checked <= $1::bigint - (interval::bigint * 1000)
+      ORDER BY last_checked ASC NULLS FIRST
+      LIMIT $2`,
+    [nowMs, Math.max(1, Number(limit) || 200)]
+  );
+  return rows.map(rowToMonitor);
+}
+
 export async function getMonitor(id) {
   const pool = await getPool();
   const { rows } = await pool.query('SELECT * FROM monitors WHERE id = $1', [id]);
@@ -639,6 +659,18 @@ async function checkMonitor(monitor) {
 // 启动轮询
 const inFlight = new Set(); // 防止同一监控并发检查（检查耗时可能 > 轮询间隔）
 
+// ===== 总并发上限（P1-⑤，2026-09-23）=====
+// 旧实现只防「同一监控重复检查」（inFlight），不防「总并发数」：
+// 到期监控一多，同一瞬间会起 N 个 checkMonitor，而每个检查结尾要 saveMonitor(UPDATE) + saveCheck(INSERT)，
+// 各占一次连接 ⇒ N 超过池容量时池被占满，全站 API 跟着排队（P0 之前是永久挂起，现在会 503）。
+// 这里加一道全局信号量：同时进行的检查数不超过 POLL_MAX_CONCURRENT。
+// 取值说明：池 max=6/实例，而一次检查里「长时间等待」的是 HTTP 请求（不占连接），
+// 只有头尾两次写库短暂占连接 ⇒ 上限 8 仍远低于池容量被长期占满的水平。
+const POLL_MAX_CONCURRENT = Math.max(1, Number(process.env.POLL_MAX_CONCURRENT || 8));
+// 单轮最多取多少条到期监控（P1-④ 的批上限，避免一次把全表拉进内存）
+const POLL_BATCH_LIMIT = Math.max(1, Number(process.env.POLL_BATCH_LIMIT || 200));
+let activeChecks = 0;
+
 // ===== Leader 租约（P1-12）=====
 // 多实例（Fly 双机）下只允许一个实例跑轮询：否则两台机器各自检查、各自派发告警
 // ⇒ 每封告警发两份，且内存级冷却（slowState）在双实例下失效。
@@ -647,6 +679,11 @@ const LEASE_NAME = 'poll';
 const LEASE_TTL_SEC = 30;
 const INSTANCE_ID = `${os.hostname()}-${process.pid}-${crypto.randomBytes(3).toString('hex')}`;
 let isLeader = false;
+
+// 供其它定时任务（如数据保留清理）复用同一把 leader 租约，避免双机重复劳动
+export function isPollLeader() {
+  return isLeader;
+}
 
 // 尝试取得/续租 leader 租约；返回 true = 本实例当前持有租约。
 // holder/name 参数化以便测试模拟多实例竞争（生产用默认值）。
@@ -665,34 +702,44 @@ export async function tryAcquireLease(holder = INSTANCE_ID, name = LEASE_NAME) {
 }
 
 export function startPolling() {
-  setInterval(async () => {
-    // 1) 竞争 / 续租 leader（仅 leader 才继续往下扫描）
+  const timer = setInterval(async () => {
+    // 整个 tick 包在 try/catch 里：轮询回调不是路由，抛出去会变成 unhandled rejection
+    // ⇒ 进程级兜底会记录堆栈后退出（宁可退出也别静默，但这类周期性任务不该拖垮整个服务）。
     try {
-      const won = await tryAcquireLease();
-      if (won && !isLeader) {
-        isLeader = true;
-        console.log(`[poll] 本实例取得 leader 租约，开始轮询 (${INSTANCE_ID})`);
-      } else if (!won && isLeader) {
-        isLeader = false;
-        console.warn(`[poll] leader 租约丢失，转为 standby (${INSTANCE_ID})`);
+      // 1) 竞争 / 续租 leader（仅 leader 才继续往下扫描）
+      try {
+        const won = await tryAcquireLease();
+        if (won && !isLeader) {
+          isLeader = true;
+          console.log(`[poll] 本实例取得 leader 租约，开始轮询 (${INSTANCE_ID})`);
+        } else if (!won && isLeader) {
+          isLeader = false;
+          console.warn(`[poll] leader 租约丢失，转为 standby (${INSTANCE_ID})`);
+        }
+      } catch (e) {
+        // 租约表查询失败时不改变当前角色（避免网络抖动导致频繁切换）
+        console.error('[poll] 租约检查失败:', e.message);
       }
-    } catch (e) {
-      // 租约表查询失败时不改变当前角色（避免网络抖动导致频繁切换）
-      console.error('[poll] 租约检查失败:', e.message);
-    }
-    if (!isLeader) return; // standby：不扫描、不派发告警
+      if (!isLeader) return; // standby：不扫描、不派发告警
 
-    // 2) 扫描到期监控（仅 leader 执行）
-    const now = Date.now();
-    const all = await listMonitors();
-    for (const m of all) {
-      if (inFlight.has(m.id)) continue; // 上一次检查还没完成，跳过
-      if (!m.lastChecked || now - m.lastChecked >= m.interval * 1000) {
+      // 2) 扫描到期监控（仅 leader 执行）—— P1-④：只取到期的那批，不再全表扫
+      const due = await listDueMonitors(Date.now(), POLL_BATCH_LIMIT);
+
+      // 3) 派发检查，受总并发上限约束（P1-⑤）
+      for (const m of due) {
+        if (activeChecks >= POLL_MAX_CONCURRENT) break; // 并发已满：其余留给下一轮（按 last_checked 升序，最久未查的优先）
+        if (inFlight.has(m.id)) continue;               // 上一次检查还没完成，跳过
         inFlight.add(m.id);
+        activeChecks += 1;
         checkMonitor(m)
           .catch((e) => console.error('[poll] 检查失败', m.id, e.message))
-          .finally(() => inFlight.delete(m.id));
+          .finally(() => { inFlight.delete(m.id); activeChecks -= 1; });
       }
+    } catch (e) {
+      console.error('[poll] 轮询周期异常（不中断，下一轮继续）:', e && e.message);
     }
   }, 5000);
+  // 与项目其它定时器保持一致：不阻止进程退出
+  if (timer.unref) timer.unref();
+  return timer;
 }

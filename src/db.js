@@ -64,9 +64,22 @@ export function startKeepAlive(intervalMs = 4 * 60 * 1000) {
 // 现在：内部按指数退避重试若干次；用尽后抛给 server.js 的 bootstrap 循环继续重试（进程不退出）。
 const INIT_RETRY_DELAYS_MS = [2000, 4000, 8000, 16000, 30000]; // 5 次重试，累计等待 60s
 
-async function initDbOnce() {
-  const client = await getPool();
-  await client.query(`
+// ===== 版本化迁移（P1-⑥，2026-09-23）=====
+// 旧行为：每次进程启动都跑下面这一整段（≈100 条 CREATE/ALTER + 1 条 DELETE）。
+//   双机同时启动 = 两份全量 DDL 并发打库，而启动往往发生在崩溃重启时（数据库本来就紧张）
+//   ⇒ 二次冲击，放大故障窗口（2026-09-23 两台机器各崩两次，重启又会再打一遍 DDL）。
+// 新行为：
+//   · schema_migrations 记版本；版本已是最新 ⇒ 直接跳过（正常启动不再碰 DDL）
+//   · 确实需要迁移时先用 pg_advisory_lock 串行化，双机不会同时迁移
+//   · 原夹在 DDL 里的「孤儿监控清理 DELETE」改为迁移期一次性执行，不再出现在每次启动路径上
+//     （且 monitors.user_id 已补 ON DELETE CASCADE 外键，此后新产生的孤儿会随用户删除自动清理）
+// 简化模型：DDL 全部幂等（IF NOT EXISTS / ADD COLUMN IF NOT EXISTS），
+// 因此「迁移」= 重跑一遍幂等基线 + 记录版本号；中途失败后重跑是安全的（不会重复生效）。
+const SCHEMA_VERSION = 1;
+const MIGRATION_LOCK_KEY = 8675309;   // 本应用专用常量，仅用于串行化迁移
+const MIGRATION_LOCK_WAIT_MS = 30000; // 抢不到锁时的最长等待（每 1s 重试一次）
+
+const SCHEMA_DDL = `
     CREATE TABLE IF NOT EXISTS monitors (
       id          TEXT PRIMARY KEY,
       url         TEXT NOT NULL,
@@ -109,8 +122,8 @@ async function initDbOnce() {
     ALTER TABLE monitors ADD COLUMN IF NOT EXISTS user_id TEXT;
     CREATE INDEX IF NOT EXISTS idx_monitors_user_id ON monitors(user_id);
 
-    -- 孤儿监控清理：所有者账号已删除、但监控行残留（历史 user_id 无外键约束 → 管理后台显示为「匿名」）
-    DELETE FROM monitors WHERE user_id IS NOT NULL AND user_id NOT IN (SELECT id FROM users);
+    -- 轮询增量取数所需的索引（P1-④）：last_checked 是「是否到期」的唯一判据列
+    CREATE INDEX IF NOT EXISTS idx_monitors_last_checked ON monitors(last_checked);
 
     -- ===== Phase 1 扩展字段（G1 多检查类型 / G2 告警逻辑 / G4 渠道 / G5 状态页）=====
     ALTER TABLE monitors ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'http';
@@ -269,6 +282,8 @@ async function initDbOnce() {
       error        TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_monitor_checks_monitor_ts ON monitor_checks(monitor_id, ts DESC);
+    -- 数据保留清理（P2-⑧）需要按 ts 单独筛过期行：上面那条索引前导列是 monitor_id，用不上
+    CREATE INDEX IF NOT EXISTS idx_monitor_checks_ts ON monitor_checks(ts);
 
     -- ===== 归一化账单事件账本（方案C：provider-agnostic，不依赖具体收款方）=====
     -- 设计要点：每条支付/订阅事件都归一化写入此表，provider 字段区分 paddle / creem / 未来渠道。
@@ -340,24 +355,101 @@ async function initDbOnce() {
       holder      TEXT,
       expires_at  TIMESTAMPTZ NOT NULL DEFAULT now()
     );
-  `);
+`;
 
-  // monitors.user_id 补外键级联（历史是裸列，删用户后监控会变孤儿 → 后台显示「匿名」）。
-  // 幂等 + 独立 try/catch：约束加不上也不能拖垮启动（启动已先做孤儿清理，因此此处必然可加）。
+// 迁移期一次性数据迁移：孤儿监控清理。
+// 原先这条写在 DDL 里 ⇒ **每次进程启动**都执行一次（`NOT IN (子查询)` 在大表上是 O(n×m)）。
+// 移到迁移路径后只在版本升级时执行一次；此后由 ON DELETE CASCADE 外键保证不再产生孤儿。
+const ORPHAN_MONITORS_SQL =
+  'DELETE FROM monitors WHERE user_id IS NOT NULL AND user_id NOT IN (SELECT id FROM users)';
+
+// monitors.user_id 补外键级联（历史是裸列，删用户后监控会变孤儿 → 后台显示「匿名」）。
+// 幂等 + 独立 try/catch：约束加不上也不能拖垮启动（迁移已先做孤儿清理，因此此处必然可加）。
+const MONITORS_FK_SQL = `
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'monitors_user_id_fkey') THEN
+      ALTER TABLE monitors ADD CONSTRAINT monitors_user_id_fkey
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+    END IF;
+  END $$;
+`;
+
+async function readSchemaVersion(client) {
+  const { rows } = await client.query('SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations');
+  return Number(rows[0] && rows[0].v) || 0;
+}
+
+// 抢迁移锁。用 pg_try_advisory_lock 轮询而不是阻塞式 pg_advisory_lock：
+// 前者每条语句都是瞬时的，不会撞上连接上的 statement_timeout（15s）；
+// 后者在另一实例长时间持锁时会被 statement_timeout 打断成报错。
+// ⚠️ advisory lock 是**会话级**的，因此调用方必须全程使用同一个 client（见 initDbOnce）。
+async function acquireMigrationLock(client) {
+  for (let waited = 0; waited <= MIGRATION_LOCK_WAIT_MS; waited += 1000) {
+    const { rows } = await client.query('SELECT pg_try_advisory_lock($1) AS ok', [MIGRATION_LOCK_KEY]);
+    if (rows[0] && rows[0].ok) return true;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  return false;
+}
+
+async function runMigration(client) {
+  const locked = await acquireMigrationLock(client);
+  if (!locked) throw new Error('等待迁移锁超时（另一实例可能正在迁移）');
+  try {
+    // 拿到锁后再读一次版本：另一台实例可能刚好已经迁移完成
+    if (await readSchemaVersion(client) >= SCHEMA_VERSION) {
+      console.log('[db] 另一实例已完成迁移，本实例跳过 DDL');
+      return;
+    }
+
+    await client.query(SCHEMA_DDL);
+
+    try {
+      const r = await client.query(ORPHAN_MONITORS_SQL);
+      if (r.rowCount) console.log(`[db] 孤儿监控清理：删除 ${r.rowCount} 行`);
+    } catch (e) {
+      console.warn('[db] 孤儿监控清理跳过：', e.message);
+    }
+
+    try {
+      await client.query(MONITORS_FK_SQL);
+    } catch (e) {
+      console.warn('[db] monitors.user_id 外键添加跳过：', e.message);
+    }
+
+    await client.query('INSERT INTO schema_migrations (version) VALUES ($1) ON CONFLICT DO NOTHING', [SCHEMA_VERSION]);
+    console.log(`[db] 迁移完成 → v${SCHEMA_VERSION}`);
+  } finally {
+    // 归还连接前必须解锁，否则这条会话会一直持锁（连接被复用时就危险了）
+    await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]).catch(() => {});
+  }
+}
+
+async function initDbOnce() {
+  // 必须独占一个连接：advisory lock 是会话级的，用 pool.query 可能拿到不同连接
+  // ⚠️ getPool() 是 async 的，这里必须 await 两次（返回的是 Promise<Pool>，漏 await 会得到
+  //    "getPool(...).connect is not a function" ⇒ 启动失败重试整轮 ⇒ 生产表现为启动死循环）
+  const pool = await getPool();
+  const client = await pool.connect();
+  let ok = false;
   try {
     await client.query(`
-      DO $$ BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'monitors_user_id_fkey') THEN
-          ALTER TABLE monitors ADD CONSTRAINT monitors_user_id_fkey
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-        END IF;
-      END $$;
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        version    INTEGER PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
     `);
-  } catch (e) {
-    console.warn('[db] monitors.user_id 外键添加跳过：', e.message);
+    const current = await readSchemaVersion(client);
+    if (current >= SCHEMA_VERSION) {
+      console.log(`[db] 表结构已是最新（v${current}），跳过 DDL`);
+    } else {
+      await runMigration(client);
+    }
+    ok = true;
+  } finally {
+    client.release();
+    if (ok) console.log('[db] 表结构就绪'); // 这条日志被排障/监控依赖，成功时必须出现
   }
-
-  console.log('[db] 表结构就绪');
 }
 
 // 带退避重试的初始化入口（唯一对外导出的那个）。签名与行为对外不变：
