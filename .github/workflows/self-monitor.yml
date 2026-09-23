@@ -1,0 +1,41 @@
+# P1-2 自我监控死门开关（2026-09-23）
+#
+# 为什么需要：监控产品自身的可用性不能靠产品内监控 —— 应用整体宕机时，
+# 内部探针同样不会跑，用户既收不到告警、也对产品失去信任。
+# 本工作流用 GitHub Actions 做「独立第三方观察者」：每 5 分钟从 GitHub
+# 侧探测 https://pingory.com/health，非 200 即失败。
+#
+# 告警方式：定时工作流失败时，GitHub 默认向仓库所有者发送邮件通知
+# （Settings → Notifications → Actions，默认开启，无需额外配置）。
+#
+# 成本：公共仓库 Actions 免费，*/5 频率（288 次/天）远低于配额。
+name: self-monitor
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: none
+
+concurrency:
+  group: self-monitor
+  cancel-in-progress: false
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Probe https://pingory.com/health
+        run: |
+          set -u
+          code="$(curl -sS -o /tmp/health.txt -w '%{http_code}' --max-time 20 https://pingory.com/health 2>/dev/null || true)"
+          echo "HTTP ${code:-none}"
+          if [ "${code:-}" != "200" ]; then
+            echo "--- response body (first 20 lines) ---"
+            head -20 /tmp/health.txt 2>/dev/null || true
+            echo "::error::pingory.com/health 期望 200，实际 ${code:-无响应}（连续失败请检查 Fly 机器状态：fly status -a uptime-monitor-martin）"
+            exit 1
+          fi

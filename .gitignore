@@ -25,3 +25,6 @@ tools/cloudflared.exe
 
 # 本地预览/对比页（一次性产物，不入库）
 preview/
+
+# P2-4 逻辑备份输出（含用户数据，绝不进仓库）
+backups/

@@ -154,6 +154,7 @@ function makeRateLimiter(max = 10, windowMs = 15 * 60 * 1000) {
 const authLimiter = makeRateLimiter(15, 15 * 60 * 1000);   // 登录/注册：15 次/15 分钟
 const feedbackLimiter = makeRateLimiter(10, 60 * 60 * 1000); // 反馈：10 条/小时
 const pwLimiter = makeRateLimiter(5, 60 * 60 * 1000);       // 忘记密码/重置：5 次/小时/IP（防邮件轰炸/令牌爆破）
+const monitorLimiter = makeRateLimiter(60, 60 * 60 * 1000); // 监控创建/导入：60 次/小时/IP（防认证后批量造监控放大 SSRF/薅资源；正常用户用不到这个量级）
 
 // ===== Session 中间件（登录态）=====
 // ===== 自定义域名根路径返回状态页（G7）：需在静态中间件前拦截 =====
@@ -867,10 +868,15 @@ function normalizeTarget(type, rawUrl) {
   }
   // SSRF 守卫：拒绝内网 / 链路本地 / 云元数据 / 保留段（创建 + 导入的公共入口）
   if (isBlockedTarget(candidate)) return { err: apiErr(E.TARGET_BLOCKED, { url: s }) };
+  // P2-3 凭据型 URL：user:pass@ 会随 fetch 自动发送 Basic Auth，明文落库是接受的功能取舍；
+  // 全代码库确认无任何路径把 monitor.url 打进日志，这里仅打无内容告警供运维感知存量。
+  if (/^[a-z][a-z0-9+.-]*:\/\/[^/@\s]+@/i.test(candidate)) {
+    console.warn('[security] 收到内嵌凭据的监控 URL（user:pass@），按原样入库；凭据内容绝不写入日志');
+  }
   return { url: candidate };
 }
 
-app.post('/api/monitors', async (req, res) => {
+app.post('/api/monitors', monitorLimiter, async (req, res) => {
   const userId = req.session.userId;
   if (!userId) return res.status(401).json(apiErr(E.AUTH_REQUIRED));
   const user = await getUserById(userId);
@@ -995,7 +1001,7 @@ function parseImportMonitors(format, raw) {
   return [];
 }
 
-app.post('/api/monitors/import', async (req, res) => {
+app.post('/api/monitors/import', monitorLimiter, async (req, res) => {
   const userId = req.session.userId;
   if (!userId) return res.status(401).json(apiErr(E.AUTH_REQUIRED));
   const user = await getUserById(userId);

@@ -8,6 +8,19 @@
 
 ---
 
+## 2026-09-23 · 安全审计 P1/P2 收尾：限流 + 自我监控 + 备份 + 隐私披露 + SEO 结构化数据
+
+> 承接同日安全审计（SSRF 为 P0 已修）。本条落地审计清单的 P1 全部与 P2 可代码化项。
+
+- **P1-1 监控创建/导入限流**：`POST /api/monitors` 与 `POST /api/monitors/import` 挂 `monitorLimiter`（60 次/小时/IP，复用 auth 同款限流器），封住「认证后批量造监控放大 SSRF / 薅资源」。超限返回既有 `rate_limited`（429），API 契约不变。
+- **P1-2 自我监控死门开关**：新增 `.github/workflows/self-monitor.yml`——GitHub Actions 每 5 分钟从外部探测 `https://pingory.com/health`，非 200 即失败并触发 GitHub 默认邮件通知。应用整体宕机时产品内探针同样不会跑，必须用独立第三方观察者；公共仓库 Actions 免费。
+- **P2-3 凭据型 URL**：核实全代码库无任何路径把 monitor.url 写入日志（poll 日志只打 id + 错误消息）；创建时若检测到 `user:pass@` 打无内容告警；`privacy.html` §7 提醒勿复用个人密码。
+- **P2-4 逻辑备份**：新增 `tools/backup.mjs`——导出 users/monitors/monitor_events/monitor_checks(近35天)/feedback/status_subscribers/maintenance_windows/teams/referrals/billing_events 为 gzip JSON（`backups/backup-<ts>.json.gz`），兜底 Supabase 免费档无 PITR + 保留清理的数据损失风险。手动或 cron 调度。
+- **P2-5 隐私披露**：核实 analytics 为第一方无 cookie（sessionStorage 一次性 id + cf-ipcountry）+ Cloudflare Web Analytics（无 cookie、无指纹）⇒ **无需 GDPR 同意横幅**；`privacy.html` §1/§4 补披露、更新日期。
+- **P2-6 SEO**：`index.html` 加 JSON-LD `SoftwareApplication`（价格与真值表一致，无真实评分故不写 aggregateRating）；hreflang 经核实**不适用**——i18n 为同 URL 客户端字典切换（`data-i18n`），无独立语言 URL，等「首页语言变体」立项后再加。
+
+---
+
 ## 2026-09-23 · P0-1 SSRF 守卫：拦截监控目标指向内网 / 云元数据（安全修复）
 
 > 审计发现的高危漏洞：监控目标由用户提交，服务端 `fetch` / TCP / SSL / ping 直接出网，原先无任何内网过滤。认证用户（含未验证邮箱但在上限内）可把监控指向 `http://169.254.169.254/`（云元数据）、`http://10.x`、`http://localhost:5432`，Keyword/Api 类型还会回读响应体 → 服务端请求伪造。

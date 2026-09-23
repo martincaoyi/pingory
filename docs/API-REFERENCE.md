@@ -117,6 +117,7 @@
 | 启动期 DDL 改版本化迁移 | 冷启动耗时、重启冲击 | 正常启动不再跑 DDL（日志变为 `表结构已是最新（v1），跳过 DDL`）；仅版本升级时执行，且用 `pg_advisory_lock` 串行化 |
 | 数据保留清理 | `GET /api/monitors/:id/stats` / `history` 的历史深度 | `monitor_checks` 默认保留 **30 天**（`RETENTION_CHECKS_DAYS` 可调）。超出保留期的趋势图/历史点会被清理，**不影响监控状态与告警** |
 | 对比页渲染缓存 | `/compare/*` 与 `/{lang}/compare/uptimerobot` | 按「语言 + 模板/字典 mtime」缓存渲染结果，改文件即失效 |
+| 监控创建/导入限流（2026-09-23 安全审计 P1） | `POST /api/monitors`、`POST /api/monitors/import` | 60 次/小时/IP（复用 auth 端点同款限流器；双实例部署时每实例各计一份，总量 ≤120/小时）。超限返回既有 `rate_limited`（429），**错误码不变** |
 
 新增/可调环境变量（都有默认值，无需配置即可运行）：
 `POLL_MAX_CONCURRENT`、`POLL_BATCH_LIMIT`、`RETENTION_CHECKS_DAYS`、`RETENTION_BATCH_SIZE`、

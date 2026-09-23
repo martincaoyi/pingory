@@ -11,6 +11,24 @@
   <link rel="manifest" href="/site.webmanifest">
   <meta name="description" content="Free for 50 monitors. Upgrade for 1-minute checks, public status pages & incident timelines. No vendor lock-in." />
   <link rel="canonical" href="https://pingory.com/" />
+  <!-- P2-6 SEO 结构化数据（SoftwareApplication）：价格与 PRODUCT.md 真值表一致；不写 aggregateRating（无真实评分，绝不编造） -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Pingory",
+    "url": "https://pingory.com/",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "description": "Uptime monitoring with 30-second checks, keyword/API assertions, public status pages and incident timelines. Free for 50 monitors.",
+    "author": { "@type": "Organization", "name": "Pingory" },
+    "offers": [
+      { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "50 monitors, 5-minute checks" },
+      { "@type": "Offer", "name": "Starter", "price": "4", "priceCurrency": "USD", "description": "100 monitors, 1-minute checks" },
+      { "@type": "Offer", "name": "Pro", "price": "6", "priceCurrency": "USD", "description": "Unlimited monitors, 30-second checks" }
+    ]
+  }
+  </script>
   <!-- P1′ 社交分享卡片（2026-09-23 补）：文案写死英文，刻意不加 data-i18n —— 抓取器不执行 JS，i18n 替换无效 -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Pingory" />
