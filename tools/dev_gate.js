@@ -30,11 +30,14 @@ const ok = (n, d) => checks.push({ l: 'OK', n, d });
 // ⚠️ 历史缺陷②（2026-09-23 固化）：三个 git 调用失败时全被 `catch {}` 静默吞掉 → 返回空集 → 所有 diff 类检查"跳过"
 //    → 照样打印「✓ 门禁通过」（沙箱实测 spawnSync cmd.exe→EBUSY）。现改为：跟踪 git 是否可用，
 //    全不可用时【响亮失败】，绝不静默通过（见下方 GIT-不可用 检查）。
-// git()：吸收 Windows/沙箱偶发 EBUSY（spawnSync cmd.exe 资源忙）——失败重试一次；
+// git()：吸收 Windows/沙箱下 spawnSync 的 EBUSY（真因见下方函数内注释，非「资源忙」泛化）——失败重试一次；
 //        仍保留"全部失败才返回 null"的语义，不掩盖真正的 git 不可用。
 function git(cmd) {
+  // 🔴 stdin:'ignore' 是必需项，不是可选优化：execSync 默认给子进程建 stdin 管道（stdio:'pipe'），
+  //    当父进程的 stdin 句柄异常时 spawnSync 会直接抛 EBUSY（实测连 cmd.exe / git.exe / node 自身都起不来，
+  //    与「git 未安装」「仓库损坏」无关）。git 查询命令不读 stdin，故显式忽略；失败仍重试一次。
   for (let attempt = 0; attempt < 2; attempt++) {
-    try { return execSync(cmd, { encoding: 'utf8' }); } catch { /* retry once */ }
+    try { return execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); } catch { /* retry once */ }
   }
   return null;
 }
