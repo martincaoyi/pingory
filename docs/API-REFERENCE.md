@@ -647,14 +647,18 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 | GET | `/{lang}/compare/uptimerobot` | `lang ∈ zh,es,pt,de,fr,ja,ko`；非白名单语言 `next()` 落到 404 |
 | GET | `/vs/uptimerobot` | **301** → `/compare/uptimerobot`（用户给出的候选 URL 别名） |
 | GET | `/compare-uptimerobot.html` | **301** → `/compare/uptimerobot`（防止模板被直出造成重复内容） |
-| GET | `/compare/betterstack` | 英文首版静态页（`express` 显式路由 sendFile；canonical 固定英文规范 URL） |
+| GET | `/compare/betterstack` | 英文（规范地址）；2026-09-24 起与 uptimerobot 同款「模板 + 服务端按语种注入」机制（cmpbs.* 键） |
+| GET | `/{lang}/compare/betterstack` | `lang ∈ zh,es,pt,de,fr,ja,ko`；非白名单语言 `next()` 落到 404 |
 | GET | `/vs/betterstack` | **301** → `/compare/betterstack` |
 | GET | `/compare-betterstack.html` | **301** → `/compare/betterstack` |
-| GET | `/compare/pingdom` | 英文首版静态页（同上） |
+| GET | `/compare/pingdom` | 英文（规范地址）；2026-09-24 起同款多语机制（cmppd.* 键） |
+| GET | `/{lang}/compare/pingdom` | `lang ∈ zh,es,pt,de,fr,ja,ko`；非白名单语言 `next()` 落到 404 |
 | GET | `/vs/pingdom` | **301** → `/compare/pingdom` |
 | GET | `/compare-pingdom.html` | **301** → `/compare/pingdom` |
 
-▸ **robots.txt / sitemap.xml**（2026-09-15 新增，`public/` 静态直出）：robots 禁 `/admin.html`、`/api/`、`/signin.html` 并声明 sitemap；sitemap 列出首页 + 3 个对比页（uptimerobot 含 7 语变体，共 11 URL）。
+▸ **robots.txt / sitemap.xml**（2026-09-15 新增，`public/` 静态直出）：robots 禁 `/admin.html`、`/api/`、`/signin.html` 并声明 sitemap；sitemap 列出首页 + 3 个对比页（三页各含 7 语变体，2026-09-24 起共 25 URL）。
+
+▸ **对比页多语回归验证**：`node tools/verify-cmp-i18n.cjs` —— 渲染占位泄漏 / html lang / canonical / preload / JSON-LD、静态英文 vs en 字典漂移对账、8 语键集一致、sitemap 变体齐全，四项全检。
 
 实现要点：
 

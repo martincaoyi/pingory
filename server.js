@@ -167,15 +167,20 @@ app.get('/', async (req, res, next) => {
   next();
 });
 
-// ===== SEO 对比页：/compare/uptimerobot（英文）+ /{lang}/compare/uptimerobot（7 语）=====
+// ===== SEO 对比页：三张页共用「模板 + 服务端注入」机制（uptimerobot / betterstack / pingdom）=====
 // 单文件模板 + 服务端注入 → <html lang> / canonical / hreflang / **正文文案** 全部为静态内容，
 // 不依赖 JS 就能被搜索引擎（含不执行 JS 的爬虫）按正确语言抓取——多语言 SEO 的关键。
 // data-i18n / data-i18n-content 属性保留，前端切语仍走整页跳转。
+// P2 多语补全（2026-09-24）：betterstack / pingdom 从英文静态直出升级为与 uptimerobot 同款机制。
 const CMP_LANGS = new Set(['zh', 'es', 'pt', 'de', 'fr', 'ja', 'ko']);
-const CMP_PATH = '/compare/uptimerobot';
-const CMP_TEMPLATE = path.join('public', 'compare-uptimerobot.html');
-// 只预载本页用到的键，避免整包 35KB 拖慢首屏
-const CMP_I18N_KEY = /^(cmp\.|nav\.|footer\.|landing\.ctaFree$)/;
+const CMP_PAGES = {
+  uptimerobot: { path: '/compare/uptimerobot', template: path.join('public', 'compare-uptimerobot.html') },
+  betterstack: { path: '/compare/betterstack', template: path.join('public', 'compare-betterstack.html') },
+  pingdom:     { path: '/compare/pingdom',     template: path.join('public', 'compare-pingdom.html') },
+};
+const CMP_PATH = CMP_PAGES.uptimerobot.path; // 兼容旧引用（uptimerobot 规范路径）
+// 只预载本页用到的键，避免整包 35KB 拖慢首屏（cmpbs./cmppd. = betterstack / pingdom 页专属键）
+const CMP_I18N_KEY = /^(cmp\.|cmpbs\.|cmppd\.|nav\.|footer\.|landing\.ctaFree$)/;
 // 裸 & 转义为 &amp;（已是实体的不重复转义）；字典值允许内置 <strong> 等标签，按 innerHTML 语义注入
 function cmpEscText(v) {
   return String(v).replace(/&(?!(?:amp|lt|gt|quot|#\d+|#x[0-9a-fA-F]+|nbsp);)/g, '&amp;');
@@ -242,22 +247,23 @@ function cmpFileMtimeMs(p) {
   try { return fs.statSync(p).mtimeMs; } catch { return 0; }
 }
 
-function cmpRender(lang) {
+function cmpRender(slug, lang) {
+  const page = CMP_PAGES[slug];
   const dictPath = lang === 'en' ? null : path.join('public', 'i18n', lang + '.json');
-  const cacheKey = `${lang}|${cmpFileMtimeMs(CMP_TEMPLATE)}|${dictPath ? cmpFileMtimeMs(dictPath) : 0}`;
+  const cacheKey = `${slug}|${lang}|${cmpFileMtimeMs(page.template)}|${dictPath ? cmpFileMtimeMs(dictPath) : 0}`;
   const cached = cmpCache.get(cacheKey);
   if (cached !== undefined) return cached;
 
   let html;
   try {
-    html = fs.readFileSync(CMP_TEMPLATE, 'utf8');
+    html = fs.readFileSync(page.template, 'utf8');
   } catch (e) {
-    console.error('[compare] 模板读取失败:', e.message);
+    console.error('[compare] 模板读取失败:', slug, e.message);
     return null; // 读失败不写入缓存，下次请求重试
   }
   const dict = lang === 'en' ? null : cmpReadDict(lang);
   if (lang !== 'en') html = cmpLocalize(html, dict);
-  const canonical = 'https://pingory.com' + (lang === 'en' ? CMP_PATH : '/' + lang + CMP_PATH);
+  const canonical = 'https://pingory.com' + (lang === 'en' ? page.path : '/' + lang + page.path);
   const out = html
     .replace(/__CMP_LANG__/g, lang)
     .replace(/__CMP_CANONICAL__/g, () => canonical)
@@ -267,29 +273,22 @@ function cmpRender(lang) {
   cmpCache.set(cacheKey, out);
   return out;
 }
-function sendComparePage(lang, res) {
-  const html = cmpRender(lang);
+function sendComparePage(slug, lang, res) {
+  const html = cmpRender(slug, lang);
   if (html == null) return res.status(500).type('text').send('template error');
   res.type('html').send(html);
 }
-app.get(CMP_PATH, (_req, res) => sendComparePage('en', res));
-app.get('/:lang/compare/uptimerobot', (req, res, next) => {
-  const lang = String(req.params.lang || '').toLowerCase();
-  if (!CMP_LANGS.has(lang)) return next();
-  sendComparePage(lang, res);
-});
-// 别名/直链 301 到规范地址，避免重复内容（SEO）
-app.get('/vs/uptimerobot', (_req, res) => res.redirect(301, CMP_PATH));
-app.get('/compare-uptimerobot.html', (_req, res) => res.redirect(301, CMP_PATH));
-
-// ===== SEO 对比页（英文首版静态页）：/compare/betterstack · /compare/pingdom =====
-// 起量后再补 7 语变体与 hreflang；当前 canonical 固定英文规范 URL。
-app.get('/compare/betterstack', (_req, res) => res.sendFile('compare-betterstack.html', { root: 'public' }));
-app.get('/compare/pingdom', (_req, res) => res.sendFile('compare-pingdom.html', { root: 'public' }));
-app.get('/vs/betterstack', (_req, res) => res.redirect(301, '/compare/betterstack'));
-app.get('/compare-betterstack.html', (_req, res) => res.redirect(301, '/compare/betterstack'));
-app.get('/vs/pingdom', (_req, res) => res.redirect(301, '/compare/pingdom'));
-app.get('/compare-pingdom.html', (_req, res) => res.redirect(301, '/compare/pingdom'));
+// 三张对比页统一注册：英文规范路由 + /{lang} 变体 + 别名 301（避免重复内容，SEO）
+for (const [slug, cfg] of Object.entries(CMP_PAGES)) {
+  app.get(cfg.path, (_req, res) => sendComparePage(slug, 'en', res));
+  app.get('/:lang' + cfg.path, (req, res, next) => {
+    const lang = String(req.params.lang || '').toLowerCase();
+    if (!CMP_LANGS.has(lang)) return next();
+    sendComparePage(slug, lang, res);
+  });
+  app.get('/vs/' + slug, (_req, res) => res.redirect(301, cfg.path));
+  app.get('/compare-' + slug + '.html', (_req, res) => res.redirect(301, cfg.path));
+}
 
 // Fly.io 等平台在前面终止 TLS，再以 HTTP 转发给本应用，
 // 导致应用内 req.secure 为 false；而 session cookie 设了 secure:true 时，

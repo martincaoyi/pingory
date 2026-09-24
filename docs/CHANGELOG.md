@@ -8,6 +8,20 @@
 
 ---
 
+## 2026-09-24 · P2 对比页多语补全：betterstack / pingdom 升级为 8 语模板注入（SEO）
+
+> 承接「P2 betterstack/pingdom 多语重写」待办：两页从英文静态直出升级为与 uptimerobot 同款「模板 + 服务端按语种注入」机制。上线后 `/{lang}/compare/{betterstack,pingdom}`（7 语）直接被爬虫按正确语言抓取。
+
+- **`server.js` 泛化**：单页硬编码（`CMP_TEMPLATE`/`CMP_PATH`）→ `CMP_PAGES` 三页配置；`cmpRender(slug, lang)` + 缓存键加 slug；`CMP_I18N_KEY` 预载白名单加 `cmpbs.` / `cmppd.`；三页统一注册「英文规范路由 + `/{lang}` 变体 + `/vs/*` 与 `.html` 301 别名」。
+- **模板重写**：`compare-betterstack.html` / `compare-pingdom.html` 加 `__CMP_LANG__` / `__CMP_CANONICAL__` 占位符、hreflang ×8 + x-default、`<!--CMP_I18N_PRELOAD-->`、全量 `data-i18n` / `data-i18n-content`（新页 og:description 用独立键 `cmpbs.ogdesc` / `cmppd.ogdesc`，修复 uptimerobot 旧模板 og/meta 共用一键的漂移源）、语言切换脚本（整页 URL 切换 + 偏好重定向）。JSON-LD 保持英文（与 uptimerobot 同策略）。
+- **字典**：8 语新增 109 键（cmpbs.* 56 + cmppd.* 53，含共用 `footer.compareUr`），872 条新翻译；表格价格/限额数字保持原文仅译标签。顺带修正两页「More comparisons」中 UptimeRobot「2M-user」过时数字 → 3M+（09-20 一手核实口径）。
+- **既有漂移修复（验证脚本发现）**：en 字典 `cmp.iv.p` / `cmp.uw.1` 补 `<strong>` 与静态对齐（否则 en 用户 JS 渲染后加粗消失）；uptimerobot og:desc 静态文案对齐字典 `cmp.meta.desc`。
+- **sitemap**：两页各补 7 语变体（11 → 25 URL）。
+- **回归验证**：新增 `tools/verify-cmp-i18n.cjs`（渲染泄漏 / lang / canonical / preload / JSON-LD、静态英文 vs en 字典漂移对账 282 键、8 语键集一致 838 键、sitemap 变体）——四项全绿后方可部署。合并脚本 `tools/i18n-merge-cmpbs.cjs` / `tools/i18n-merge-cmppd.cjs` 与一次性漂移补丁 `tools/patch-cmp-drift-20260924.cjs` 留档。
+- **文档**：`docs/API-REFERENCE.md` §8.1 路由表更新。
+
+---
+
 ## 2026-09-23 · 安全审计 P1/P2 收尾：限流 + 自我监控 + 备份 + 隐私披露 + SEO 结构化数据
 
 > 承接同日安全审计（SSRF 为 P0 已修）。本条落地审计清单的 P1 全部与 P2 可代码化项。

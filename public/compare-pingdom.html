@@ -1,27 +1,37 @@
 <!DOCTYPE html>
 <!--
-  Pingory vs Pingdom 对比页（SEO 独立内容页，英文优先）
-  路由：/compare/pingdom；别名 /vs/pingdom 与 .html 直链 301 到规范 URL。
-  英文首版；若页面起量再补翻译与 hreflang。
+  Pingory vs Pingdom 对比页（SEO 独立内容页）
+  路由：/compare/pingdom（英文）· /{zh|es|pt|de|fr|ja|ko}/compare/pingdom（各语言）
+        服务端注入 <html lang> 与 canonical；/vs/pingdom 与 .html 直链 301 到规范 URL。
+  i18n：全部文案走 public/i18n/*.json 的 cmppd.* 键（8 语齐全，通用键复用 cmp.*），本页用
+        data-i18n 静态渲染，Google 可直接抓取；语言切换走整页 URL（保证 URL 与内容语言一致）。
   事实核对：Pingdom（SolarWinds 旗下）无免费版、Starter 约 $10-11/月仅 10 监控、
   Professional 约 $25/月 50 监控 + RUM —— 2026-09 经 stackscored/toolvs（2026-04 核价）交叉核实。
   谨慎表述：Pingdom 价格在不同渠道有 $10 与 $11 两种口径，正文用 "$10–11" 区间并提示以官网为准。
 -->
-<html lang="en">
+<html lang="__CMP_LANG__">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pingory vs Pingdom 2026: Price, Free Tier &amp; Honest Verdict</title>
-  <meta name="description" content="Pingory vs Pingdom 2026: an honest Pingdom alternative comparison — free plan vs no free plan, price per monitor, status pages, RUM features, and where Pingdom still wins." />
+  <title data-i18n="cmppd.meta.title">Pingory vs Pingdom 2026: Price, Free Tier &amp; Honest Verdict</title>
+  <meta name="description" content="Pingory vs Pingdom 2026: an honest Pingdom alternative comparison — free plan vs no free plan, price per monitor, status pages, RUM features, and where Pingdom still wins." data-i18n-content="cmppd.meta.desc" />
   <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
-  <link rel="canonical" href="https://pingory.com/compare/pingdom" />
+  <link rel="canonical" href="__CMP_CANONICAL__" />
+  <link rel="alternate" hreflang="en" href="https://pingory.com/compare/pingdom" />
+  <link rel="alternate" hreflang="zh" href="https://pingory.com/zh/compare/pingdom" />
+  <link rel="alternate" hreflang="es" href="https://pingory.com/es/compare/pingdom" />
+  <link rel="alternate" hreflang="pt" href="https://pingory.com/pt/compare/pingdom" />
+  <link rel="alternate" hreflang="de" href="https://pingory.com/de/compare/pingdom" />
+  <link rel="alternate" hreflang="fr" href="https://pingory.com/fr/compare/pingdom" />
+  <link rel="alternate" hreflang="ja" href="https://pingory.com/ja/compare/pingdom" />
+  <link rel="alternate" hreflang="ko" href="https://pingory.com/ko/compare/pingdom" />
+  <link rel="alternate" hreflang="x-default" href="https://pingory.com/compare/pingdom" />
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="Pingory vs Pingdom (2026): An Honest Comparison" />
-  <meta property="og:description" content="Pingory vs Pingdom 2026: free tier, price per monitor, status pages and real user monitoring compared — including where Pingdom still wins." />
-  <meta property="og:url" content="https://pingory.com/compare/pingdom" />
+  <meta property="og:title" content="Pingory vs Pingdom (2026): An Honest Comparison" data-i18n-content="cmppd.h1" />
+  <meta property="og:description" content="Pingory vs Pingdom 2026: free tier, price per monitor, status pages and real user monitoring compared — including where Pingdom still wins." data-i18n-content="cmppd.ogdesc" />
+  <meta property="og:url" content="__CMP_CANONICAL__" />
   <!-- 社交分享图：1200x630 横版（对比页卡型/图错配修复，2026-09-23）。
-       原先指向 icon-512.png（1:1）却声明 summary_large_image（约 1.91:1）⇒ 平台侧会被裁切。
-       图由 tools/og-image.py 生成。 -->
+       图由 tools/og-image.py 生成；og:image:alt 保持英文（图本身即英文版）。 -->
   <meta property="og:image" content="https://pingory.com/img/og-pingdom.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -34,6 +44,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <!--CMP_I18N_PRELOAD-->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -72,6 +83,7 @@
     .spacer { margin-left:auto; }
     .btn { border:1px solid var(--border); border-radius:7px; padding:7px 14px; font-size:.88rem; color:var(--text); white-space:nowrap; }
     .btn-primary { border-color:var(--accent); color:var(--accent); font-weight:600; }
+    select { padding:6px 8px; border-radius:7px; border:1px solid var(--border); background:var(--bg-2); color:var(--text); font-size:.85rem; }
     #themeToggle { border:1px solid var(--border); background:transparent; color:var(--text); cursor:pointer;
                    font-size:1rem; border-radius:7px; padding:5px 9px; }
     .doc { max-width:920px; margin:0 auto; padding:38px 20px 72px; }
@@ -114,164 +126,237 @@
 <nav class="topnav">
   <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
   <span class="spacer"></span>
+  <select id="langSel" aria-label="Language"></select>
   <button id="themeToggle" type="button" title="Toggle dark mode">🌙</button>
-  <a class="btn" href="/signin.html">Sign In</a>
-  <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+  <a class="btn" href="/signin.html" data-i18n="nav.signin">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html" data-i18n="nav.signup">Sign Up</a>
 </nav>
 
 <main class="doc">
-  <a class="back" href="/">← Back to Pingory</a>
-  <h1>Pingory vs Pingdom (2026): An Honest Comparison</h1>
-  <p class="verified">Last verified: September 2026. Prices are in USD.</p>
-  <p class="lead">If you are looking for a <strong>Pingdom alternative</strong>, you are probably weighing Pingdom's reputation — 15+ years in the business, real user monitoring, detailed page-speed reports — against a bill that starts before you have monitored anything. This page compares Pingory and Pingdom (a SolarWinds company) on the numbers that show up on an invoice — <strong>free tier, price per monitor, check intervals, and status pages</strong> — and says plainly where Pingdom still wins.</p>
+  <a class="back" href="/" data-i18n="cmp.back">← Back to Pingory</a>
+  <h1 data-i18n="cmppd.h1">Pingory vs Pingdom (2026): An Honest Comparison</h1>
+  <p class="verified" data-i18n="cmp.verified">Last verified: September 2026. Prices are in USD.</p>
+  <p class="lead" data-i18n="cmppd.lead">If you are looking for a <strong>Pingdom alternative</strong>, you are probably weighing Pingdom's reputation — 15+ years in the business, real user monitoring, detailed page-speed reports — against a bill that starts before you have monitored anything. This page compares Pingory and Pingdom (a SolarWinds company) on the numbers that show up on an invoice — <strong>free tier, price per monitor, check intervals, and status pages</strong> — and says plainly where Pingdom still wins.</p>
 
-  <h2>The short version</h2>
+  <h2 data-i18n="cmp.short.h">The short version</h2>
   <ul class="short">
-    <li>Pingdom has <strong>no free plan</strong>. Pingory's free tier: <strong>50 monitors at 5-minute checks</strong>, no credit card required.</li>
-    <li>Pingory's paid plans start at <strong>$4/month for 100 monitors with 60-second checks</strong>. Pingdom's Starter plan is around <strong>$10–11/month for just 10 monitors</strong>.</li>
-    <li>At <strong>$6/month</strong>, Pingory gives you <strong>unlimited monitors and 30-second checks</strong>. Pingdom's mid tier is around $25/month for 50 monitors.</li>
-    <li>Pingdom wins on <strong>real user monitoring (RUM), page-speed waterfall reports, and 15+ years of brand trust</strong>.</li>
-    <li>Pingory wins on <strong>free tier, price per monitor, a public status page included from $4/month, and open source code (AGPL-3.0)</strong>.</li>
+    <li data-i18n="cmppd.short.1">Pingdom has <strong>no free plan</strong>. Pingory's free tier: <strong>50 monitors at 5-minute checks</strong>, no credit card required.</li>
+    <li data-i18n="cmppd.short.2">Pingory's paid plans start at <strong>$4/month for 100 monitors with 60-second checks</strong>. Pingdom's Starter plan is around <strong>$10–11/month for just 10 monitors</strong>.</li>
+    <li data-i18n="cmppd.short.3">At <strong>$6/month</strong>, Pingory gives you <strong>unlimited monitors and 30-second checks</strong>. Pingdom's mid tier is around $25/month for 50 monitors.</li>
+    <li data-i18n="cmppd.short.4">Pingdom wins on <strong>real user monitoring (RUM), page-speed waterfall reports, and 15+ years of brand trust</strong>.</li>
+    <li data-i18n="cmppd.short.5">Pingory wins on <strong>free tier, price per monitor, a public status page included from $4/month, and open source code (AGPL-3.0)</strong>.</li>
   </ul>
 
-  <h2>Pricing at a glance</h2>
-  <p class="note">Prices below are as published in September 2026; Pingdom's published price varies slightly by billing source ($10 vs $11 for Starter), so we show the range. Verify current figures on each vendor's site before you buy.</p>
+  <h2 data-i18n="cmp.price.h">Pricing at a glance</h2>
+  <p class="note" data-i18n="cmppd.price.note">Prices below are as published in September 2026; Pingdom's published price varies slightly by billing source ($10 vs $11 for Starter), so we show the range. Verify current figures on each vendor's site before you buy.</p>
   <div class="tablewrap">
     <table>
-      <caption>Pricing at a glance</caption>
+      <caption data-i18n="cmp.price.h">Pricing at a glance</caption>
       <thead>
         <tr>
-          <th scope="col">Feature</th>
+          <th scope="col" data-i18n="cmp.tbl.feature">Feature</th>
           <th scope="col">Pingory</th>
           <th scope="col">Pingdom</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <th scope="row">Free plan</th>
-          <td class="win">$0 — 50 monitors, 5-minute checks</td>
-          <td>None</td>
+          <th scope="row" data-i18n="cmp.tbl.r1">Free plan</th>
+          <td class="win" data-i18n="cmp.v.r1.p">$0 — 50 monitors, 5-minute checks</td>
+          <td data-i18n="cmppd.v.r1.u">None</td>
         </tr>
         <tr>
-          <th scope="row">Cheapest paid plan</th>
-          <td class="win">Starter — $4/mo ($40/yr)</td>
-          <td>Starter — ~$10–11/mo, 10 monitors</td>
+          <th scope="row" data-i18n="cmp.tbl.r4">Cheapest paid plan</th>
+          <td class="win" data-i18n="cmp.v.r4.p">Starter — $4/mo ($40/yr)</td>
+          <td data-i18n="cmppd.v.r2.u">Starter — ~$10–11/mo, 10 monitors</td>
         </tr>
         <tr>
-          <th scope="row">Monitors on that plan</th>
-          <td class="win">100 monitors, 60-second checks</td>
-          <td>10 uptime checks, 1-minute interval</td>
+          <th scope="row" data-i18n="cmp.tbl.r5">Monitors on that plan</th>
+          <td class="win" data-i18n="cmppd.v.r3.p">100 monitors, 60-second checks</td>
+          <td data-i18n="cmppd.v.r3.u">10 uptime checks, 1-minute interval</td>
         </tr>
         <tr>
-          <th scope="row">Mid tier</th>
-          <td class="win">Pro — $6/mo, unlimited monitors, 30-second checks</td>
-          <td>Professional — ~$25/mo, 50 monitors + page speed &amp; RUM</td>
+          <th scope="row" data-i18n="cmppd.r4.h">Mid tier</th>
+          <td class="win" data-i18n="cmppd.v.r4.p">Pro — $6/mo, unlimited monitors, 30-second checks</td>
+          <td data-i18n="cmppd.v.r4.u">Professional — ~$25/mo, 50 monitors + page speed &amp; RUM</td>
         </tr>
         <tr>
-          <th scope="row">Fastest check interval</th>
-          <td class="win">30 seconds at $6/mo</td>
-          <td>1 minute (30-second options on higher tiers)</td>
+          <th scope="row" data-i18n="cmppd.r5.h">Fastest check interval</th>
+          <td class="win" data-i18n="cmppd.v.r5.p">30 seconds at $6/mo</td>
+          <td data-i18n="cmppd.v.r5.u">1 minute (30-second options on higher tiers)</td>
         </tr>
         <tr>
-          <th scope="row">Public status page</th>
-          <td class="win">Included from $4/mo; custom domain, white-label and password protection at $6/mo</td>
-          <td>Not part of Pingdom's core monitoring plans</td>
+          <th scope="row" data-i18n="cmppd.r6.h">Public status page</th>
+          <td class="win" data-i18n="cmppd.v.r6.p">Included from $4/mo; custom domain, white-label and password protection at $6/mo</td>
+          <td data-i18n="cmppd.v.r6.u">Not part of Pingdom's core monitoring plans</td>
         </tr>
         <tr>
-          <th scope="row">Real user monitoring (RUM)</th>
-          <td>Not offered</td>
-          <td class="win">Built in, with visitor geography data</td>
+          <th scope="row" data-i18n="cmppd.r7.h">Real user monitoring (RUM)</th>
+          <td data-i18n="cmppd.v.r7.p">Not offered</td>
+          <td class="win" data-i18n="cmppd.v.r7.u">Built in, with visitor geography data</td>
         </tr>
         <tr>
-          <th scope="row">Page-speed analysis</th>
-          <td>Not offered</td>
-          <td class="win">Detailed waterfall reports</td>
+          <th scope="row" data-i18n="cmppd.r8.h">Page-speed analysis</th>
+          <td data-i18n="cmppd.v.r8.p">Not offered</td>
+          <td class="win" data-i18n="cmppd.v.r8.u">Detailed waterfall reports</td>
         </tr>
         <tr>
-          <th scope="row">Alert channels</th>
-          <td>Email, Slack, Telegram, Discord, MS Teams, webhook, PagerDuty</td>
-          <td>Email, SMS, Slack, PagerDuty-style integrations</td>
+          <th scope="row" data-i18n="cmp.tbl.r12">Alert channels</th>
+          <td data-i18n="cmppd.v.r9.p">Email, Slack, Telegram, Discord, MS Teams, webhook, PagerDuty</td>
+          <td data-i18n="cmppd.v.r9.u">Email, SMS, Slack, PagerDuty-style integrations</td>
         </tr>
         <tr>
-          <th scope="row">Self-hosting</th>
-          <td class="win">Open source (AGPL-3.0) — self-host free</td>
-          <td>Closed SaaS (SolarWinds)</td>
+          <th scope="row" data-i18n="cmppd.r10.h">Self-hosting</th>
+          <td class="win" data-i18n="cmppd.v.r10.p">Open source (AGPL-3.0) — self-host free</td>
+          <td data-i18n="cmppd.v.r10.u">Closed SaaS (SolarWinds)</td>
         </tr>
       </tbody>
     </table>
   </div>
-  <p class="note">Pingdom's price per monitor is the highest of the mainstream tools — roughly $1 per monitor per month on Starter. Pingory's Starter works out to about 4 cents.</p>
+  <p class="note" data-i18n="cmppd.tbl.note">Pingdom's price per monitor is the highest of the mainstream tools — roughly $1 per monitor per month on Starter. Pingory's Starter works out to about 4 cents.</p>
 
-  <h2>Where Pingdom still wins</h2>
-  <p>Pingdom is not trying to be a cheap uptime checker, and it shows. Its <strong>real user monitoring</strong> tracks how actual visitors experience your site, with geographic breakdowns, and its <strong>page-speed waterfall reports</strong> remain among the best in the industry. If your job is performance optimization of a high-traffic site — not just knowing when it is down — Pingdom's data is genuinely better, and Pingory does not offer an equivalent. It is also a 15-year-old brand with the enterprise procurement history to match.</p>
+  <h2 data-i18n="cmppd.bsw.h">Where Pingdom still wins</h2>
+  <p data-i18n="cmppd.bsw.p">Pingdom is not trying to be a cheap uptime checker, and it shows. Its <strong>real user monitoring</strong> tracks how actual visitors experience your site, with geographic breakdowns, and its <strong>page-speed waterfall reports</strong> remain among the best in the industry. If your job is performance optimization of a high-traffic site — not just knowing when it is down — Pingdom's data is genuinely better, and Pingory does not offer an equivalent. It is also a 15-year-old brand with the enterprise procurement history to match.</p>
 
-  <h2>Where Pingory wins</h2>
-  <p>If what you need is <strong>uptime monitoring with alerts and a status page</strong>, Pingdom's entry price is hard to justify: around <strong>$10–11/month for 10 monitors</strong>, with no free plan to evaluate the product first. Pingory gives you <strong>50 monitors free forever</strong>, and <strong>$4/month gets you 100 monitors at 60-second checks with a public status page included</strong> — a capability Pingdom's core plans do not bundle. At $6 the monitor cap disappears and checks drop to 30 seconds. Pingory is also <strong>open source under AGPL-3.0</strong>, so you can self-host or inspect exactly what runs.</p>
+  <h2 data-i18n="cmppd.pw.h">Where Pingory wins</h2>
+  <p data-i18n="cmppd.pw.p">If what you need is <strong>uptime monitoring with alerts and a status page</strong>, Pingdom's entry price is hard to justify: around <strong>$10–11/month for 10 monitors</strong>, with no free plan to evaluate the product first. Pingory gives you <strong>50 monitors free forever</strong>, and <strong>$4/month gets you 100 monitors at 60-second checks with a public status page included</strong> — a capability Pingdom's core plans do not bundle. At $6 the monitor cap disappears and checks drop to 30 seconds. Pingory is also <strong>open source under AGPL-3.0</strong>, so you can self-host or inspect exactly what runs.</p>
 
-  <h2>Monitor types</h2>
-  <p>Both cover HTTP/HTTPS status checks, keyword content checks, TCP port checks, SSL certificate expiry, DNS records, and heartbeat/cron monitoring. Pingory adds ping (ICMP) and JSON/API assertions on every plan. Pingdom goes further at the high end with browser-based transaction checks — multi-step user journeys — and the RUM and page-speed products described above.</p>
+  <h2 data-i18n="cmppd.types.h">Monitor types</h2>
+  <p data-i18n="cmppd.types.p">Both cover HTTP/HTTPS status checks, keyword content checks, TCP port checks, SSL certificate expiry, DNS records, and heartbeat/cron monitoring. Pingory adds ping (ICMP) and JSON/API assertions on every plan. Pingdom goes further at the high end with browser-based transaction checks — multi-step user journeys — and the RUM and page-speed products described above.</p>
 
-  <h2>Frequently asked questions</h2>
+  <h2 data-i18n="cmp.faq.h">Frequently asked questions</h2>
   <details class="faq-item">
-    <summary>Is there a free Pingdom alternative?</summary>
-    <p>Yes. Pingory's free plan includes <strong>50 monitors with 5-minute checks</strong> and no credit card. Pingdom offers a trial but no permanent free plan.</p>
+    <summary data-i18n="cmppd.faq.q1">Is there a free Pingdom alternative?</summary>
+    <p data-i18n="cmppd.faq.a1">Yes. Pingory's free plan includes <strong>50 monitors with 5-minute checks</strong> and no credit card. Pingdom offers a trial but no permanent free plan.</p>
   </details>
   <details class="faq-item">
-    <summary>Is Pingory cheaper than Pingdom?</summary>
-    <p>Yes, by a wide margin. Pingory's paid plans start at <strong>$4/month for 100 monitors</strong>; Pingdom's Starter is around <strong>$10–11/month for 10 monitors</strong>. Ten times the monitors, at less than half the price.</p>
+    <summary data-i18n="cmppd.faq.q2">Is Pingory cheaper than Pingdom?</summary>
+    <p data-i18n="cmppd.faq.a2">Yes, by a wide margin. Pingory's paid plans start at <strong>$4/month for 100 monitors</strong>; Pingdom's Starter is around <strong>$10–11/month for 10 monitors</strong>. Ten times the monitors, at less than half the price.</p>
   </details>
   <details class="faq-item">
-    <summary>Does Pingory include a status page?</summary>
-    <p>Yes — a public one from <strong>$4/month</strong>, with custom domain, white-label and password protection at <strong>$6/month</strong>. A comparable public status page is not part of Pingdom's core monitoring plans.</p>
+    <summary data-i18n="cmp.faq.q3">Does Pingory include a status page?</summary>
+    <p data-i18n="cmppd.faq.a3">Yes — a public one from <strong>$4/month</strong>, with custom domain, white-label and password protection at <strong>$6/month</strong>. A comparable public status page is not part of Pingdom's core monitoring plans.</p>
   </details>
   <details class="faq-item">
-    <summary>Does Pingory offer real user monitoring?</summary>
-    <p>No — and this is where <strong>Pingdom wins</strong>. Pingory focuses on uptime, SSL, DNS, keyword, API and heartbeat monitoring. If you need RUM and page-speed waterfalls, Pingdom is the right tool and we will not pretend otherwise.</p>
+    <summary data-i18n="cmppd.faq.q4">Does Pingory offer real user monitoring?</summary>
+    <p data-i18n="cmppd.faq.a4">No — and this is where <strong>Pingdom wins</strong>. Pingory focuses on uptime, SSL, DNS, keyword, API and heartbeat monitoring. If you need RUM and page-speed waterfalls, Pingdom is the right tool and we will not pretend otherwise.</p>
   </details>
 
-  <p class="src">Sources: Pingory limits and prices come from the product itself (plans as published at pingory.com). Pingdom figures are from its official site and pricing trackers, checked in September 2026. Third-party pricing and limits change; verify current details on each vendor's site before you buy.</p>
+  <p class="src" data-i18n="cmppd.src">Sources: Pingory limits and prices come from the product itself (plans as published at pingory.com). Pingdom figures are from its official site and pricing trackers, checked in September 2026. Third-party pricing and limits change; verify current details on each vendor's site before you buy.</p>
 
-  <h2>More comparisons</h2>
+  <h2 data-i18n="cmppd.more.h">More comparisons</h2>
   <ul>
-    <li><a href="/compare/uptimerobot">Pingory vs UptimeRobot</a> — the 2M-user default against a $4 flat plan.</li>
-    <li><a href="/compare/betterstack">Pingory vs Better Stack</a> — when you do not need on-call and log management.</li>
+    <li data-i18n="cmppd.more.1"><a href="/compare/uptimerobot">Pingory vs UptimeRobot</a> — the 3M+-user default against a $4 flat plan.</li>
+    <li data-i18n="cmppd.more.2"><a href="/compare/betterstack">Pingory vs Better Stack</a> — when you do not need on-call and log management.</li>
   </ul>
 
   <div class="cta">
-    <h2>Looking for a cheaper uptime monitor?</h2>
-    <p>Create a free account and monitor 50 endpoints in about 30 seconds. No credit card required.</p>
-    <a class="btn btn-primary" href="/signup.html">Sign Up Free</a>
+    <h2 data-i18n="cmp.cta.h">Looking for a cheaper uptime monitor?</h2>
+    <p data-i18n="cmp.cta.p">Create a free account and monitor 50 endpoints in about 30 seconds. No credit card required.</p>
+    <a class="btn btn-primary" href="/signup.html" data-i18n="landing.ctaFree">Sign Up Free</a>
   </div>
 </main>
 
 <footer class="site-footer">
   <nav>
-    <a href="/compare/uptimerobot">vs UptimeRobot</a>
-    <a href="/compare/betterstack">vs Better Stack</a>
-    <a href="/compare/pingdom">vs Pingdom</a>
-    <a href="/terms.html">Terms</a>
-    <a href="/privacy.html">Privacy</a>
-    <a href="/refund.html">Refund</a>
-    <a href="/#plans">Pricing</a>
-    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+    <a href="/compare/uptimerobot" data-i18n="footer.compareUr">vs UptimeRobot</a>
+    <a href="/compare/betterstack" data-i18n="footer.compareBs">vs Better Stack</a>
+    <a href="/compare/pingdom" data-i18n="footer.compare">Compare</a>
+    <a href="/terms.html" data-i18n="footer.terms">Terms</a>
+    <a href="/privacy.html" data-i18n="footer.privacy">Privacy</a>
+    <a href="/refund.html" data-i18n="footer.refund">Refund</a>
+    <a href="/#plans" data-i18n="footer.pricing">Pricing</a>
+    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener" data-i18n="footer.source">Source code (AGPL-3.0)</a>
   </nav>
-  <p style="margin:0 0 8px;">Contact: <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
-  <p style="margin:0;">© 2026 Pingory. All rights reserved.</p>
+  <p style="margin:0 0 8px;"><span data-i18n="footer.contact">Contact:</span> <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p style="margin:0;" data-i18n="footer.rights">© 2026 Pingory. All rights reserved.</p>
 </footer>
 
 <script>
-// 主题切换（无 i18n：本页为英文首版）
-(function () {
-  const tt = document.getElementById('themeToggle');
-  function sync() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
-  if (tt) tt.addEventListener('click', () => {
-    const dark = document.documentElement.dataset.theme === 'dark';
-    if (dark) document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = 'dark';
-    try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch {}
-    sync();
+// ===== i18n（必须在调用 t() 之前定义；本页用 data-i18n 静态渲染，Google 可直接抓取）=====
+const I18N_LANGS = [['en','English'],['zh','中文'],['es','Español'],['pt','Português'],['de','Deutsch'],['fr','Français'],['ja','日本語'],['ko','한국어']];
+let I18N = {};
+function t(key, def, vars) {
+  let s = (I18N && I18N[key]) || def;
+  if (vars) { for (const k in vars) s = s.split('{' + k + '}').join(vars[k]); }
+  return s;
+}
+function applyI18n() {
+  // 文案含 <strong> 等行内标记，故用 innerHTML 渲染（字典为本站自有静态文件）
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const v = I18N[el.getAttribute('data-i18n')];
+    if (v) el.innerHTML = v;
   });
-  sync();
+  document.querySelectorAll('[data-i18n-content]').forEach((el) => {
+    const v = I18N[el.getAttribute('data-i18n-content')];
+    if (v) el.setAttribute('content', v);
+  });
+  document.documentElement.lang = CUR_LANG;
+  const sel = document.getElementById('langSel');
+  if (sel) sel.value = CUR_LANG;
+  window.__langSeq = (window.__langSeq || 0) + 1;   // 完成标记（供回归测试等待）
+}
+async function loadI18n(lang) {
+  // 服务端已按 URL 语言内联注入本页所用字典 → 首屏即本地化，无「闪一下英文」，也不依赖 fetch 成功。
+  // 注意：必须比对「预载字典所属语言」，不能只比 CUR_LANG —— 否则法语偏好用户打开英文规范页时会拿到英文。
+  if (window.__I18N_PRELOAD__ && window.__I18N_LANG__ === lang) {
+    I18N = window.__I18N_PRELOAD__;
+  } else {
+    try { const r = await fetch('/i18n/' + lang + '.json'); I18N = await r.json(); } catch { I18N = {}; }
+  }
+  CUR_LANG = lang;
+  try { localStorage.setItem('pingory_lang', lang); } catch {}
+  applyI18n();
+}
+// 语言切换 = 整页 URL 切换（保证 URL 与内容语言一致，利于各语言收录）
+function switchLang(lang) {
+  const base = '/compare/pingdom';
+  const target = lang === 'en' ? base : '/' + lang + base;
+  if (target !== location.pathname) { try { localStorage.setItem('pingory_lang', lang); } catch {} location.href = target; return; }
+  loadI18n(lang);
+}
+function langSwitcher() {
+  const sel = document.getElementById('langSel');
+  sel.innerHTML = I18N_LANGS.map(([c, n]) => `<option value="${c}">${n}</option>`).join('');
+  sel.value = CUR_LANG;
+  sel.onchange = () => switchLang(sel.value);
+}
+
+// 首屏语言：带语言前缀的 URL 优先（SEO/分享用），否则沿用用户偏好
+let CUR_LANG = (function () {
+  const fromUrl = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+  if (fromUrl && fromUrl !== 'en') return fromUrl;
+  try { return localStorage.getItem('pingory_lang') || 'en'; } catch { return 'en'; }
 })();
+
+// 规范英文路径必须始终呈现英文（canonical 与内容语言一致，不对搜索引擎呈现"语言漂移"）；
+// 若该访客已存非英语偏好，则跳到对应语言路径 —— 用户体验不变，SEO 语义保持确定。
+function cmpRedirectTarget() {
+  if (document.documentElement.getAttribute('lang') !== 'en') return '';
+  if (location.pathname !== '/compare/pingdom') return '';
+  let pref = 'en';
+  try { pref = localStorage.getItem('pingory_lang') || 'en'; } catch { /* 隐私模式 */ }
+  return (pref !== 'en' && I18N_LANGS.some(([c]) => c === pref)) ? '/' + pref + '/compare/pingdom' : '';
+}
+const CMP_REDIRECT = cmpRedirectTarget();
+
+if (CMP_REDIRECT) {
+  location.replace(CMP_REDIRECT);
+} else {
+  (async () => {
+    const tt = document.getElementById('themeToggle');
+    function syncThemeIcon() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+    if (tt) tt.addEventListener('click', () => {
+      const dark = document.documentElement.dataset.theme === 'dark';
+      if (dark) document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = 'dark';
+      try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch {}
+      syncThemeIcon();
+    });
+    syncThemeIcon();
+    await loadI18n(CUR_LANG);
+    langSwitcher();
+  })();
+}
 </script>
 <script src="/analytics.js"></script>
 </body>
