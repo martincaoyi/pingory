@@ -1,0 +1,38 @@
+# Pingory
+
+> Pingory is an open-source uptime monitoring service: watch websites, APIs and servers 24/7 and get alerted the moment something breaks. Use the hosted service from $4/month, or self-host it free (AGPL-3.0).
+
+Pingory monitors URLs, ports, SSL certificates, domains, DNS records and cron jobs, and sends alerts via email, Slack, Telegram, Discord, Microsoft Teams, PagerDuty and webhooks. It is designed to be simple and affordable: the paid tiers cost roughly half of mainstream commercial uptime tools, and the entire codebase is open source for teams who prefer to run it on their own infrastructure.
+
+## Product pages
+- [Home](https://pingory.com/): Product overview, feature list and signup.
+- [Pricing](https://pingory.com/#pricing): Plans, quotas and billing options (monthly / annual toggle on page).
+- [Public status page](https://pingory.com/status.html): Current service status.
+- [Refund policy](https://pingory.com/refund.html): Refund terms.
+- [Privacy policy](https://pingory.com/privacy.html): Data handling, cookie-less first-party analytics.
+- [Terms of service](https://pingory.com/terms.html): Legal terms.
+
+## Comparisons (independently useful, honestly states where competitors win)
+- [Pingory vs UptimeRobot](https://pingory.com/compare/uptimerobot): Detailed 2026 comparison of pricing per monitor, check types and limits. Also available in [zh](https://pingory.com/zh/compare/uptimerobot), [es](https://pingory.com/es/compare/uptimerobot), [pt](https://pingory.com/pt/compare/uptimerobot), [de](https://pingory.com/de/compare/uptimerobot), [fr](https://pingory.com/fr/compare/uptimerobot), [ja](https://pingory.com/ja/compare/uptimerobot), [ko](https://pingory.com/ko/compare/uptimerobot).
+- [Pingory vs Better Stack](https://pingory.com/compare/betterstack): Pricing, status pages, on-call and log management compared. Also available in [zh](https://pingory.com/zh/compare/betterstack), [es](https://pingory.com/es/compare/betterstack), [pt](https://pingory.com/pt/compare/betterstack), [de](https://pingory.com/de/compare/betterstack), [fr](https://pingory.com/fr/compare/betterstack), [ja](https://pingory.com/ja/compare/betterstack), [ko](https://pingory.com/ko/compare/betterstack).
+- [Pingory vs Pingdom](https://pingory.com/compare/pingdom): Pricing and capabilities compared for 2026. Also available in [zh](https://pingory.com/zh/compare/pingdom), [es](https://pingory.com/es/compare/pingdom), [pt](https://pingory.com/pt/compare/pingdom), [de](https://pingory.com/de/compare/pingdom), [fr](https://pingory.com/fr/compare/pingdom), [ja](https://pingory.com/ja/compare/pingdom), [ko](https://pingory.com/ko/compare/pingdom).
+
+## Pricing & plans (last verified: September 2026)
+- **Free** — $0 forever: 50 monitors, 5-minute check interval, HTTP and keyword checks, email alerts. No credit card required.
+- **Starter** — $4/month (or $40/year, equal to $3.33/month): 100 monitors, 1-minute checks, all 9 check types, email + Slack / webhook / Telegram alerts, status pages and uptime statistics.
+- **Pro** — $6/month (or $60/year, equal to $5/month): unlimited monitors, 30-second checks, all check types, all 7 alert channels, status pages and statistics.
+- Unverified-email accounts are capped at 3 monitors until the address is verified.
+- Annual billing saves 2 months on every paid plan.
+
+## Key facts
+- Monitor types (paid plans): HTTP/HTTPS status code, keyword content check, ping (ICMP), TCP port, SSL certificate, domain expiry (WHOIS), API monitor with header + JSON assertions, DNS record, heartbeat / cron dead-man switch. Free plan supports HTTP and keyword checks.
+- Alert channels: email, Slack, webhook, Telegram (Starter); Discord, Microsoft Teams, PagerDuty (Pro).
+- An HTTP monitor counts as "up" only for status codes 200-399; redirects are followed.
+- Hosted service runs checks from a single region; self-hosted deployments can run multiple probe instances for multi-region coverage.
+- Open source under AGPL-3.0: [GitHub repository](https://github.com/martincaoyi/pingory). Self-host with Docker; point it at your own PostgreSQL database.
+- No credit card required for the Free plan.
+- Industry: website and infrastructure monitoring (SaaS + self-hosted).
+
+## Contact
+- [Sign up](https://pingory.com/signup.html): Create an account.
+- [GitHub issues](https://github.com/martincaoyi/pingory/issues): Bug reports and feature requests.
