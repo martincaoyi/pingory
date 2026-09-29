@@ -75,7 +75,7 @@ const INIT_RETRY_DELAYS_MS = [2000, 4000, 8000, 16000, 30000]; // 5 次重试，
 //     （且 monitors.user_id 已补 ON DELETE CASCADE 外键，此后新产生的孤儿会随用户删除自动清理）
 // 简化模型：DDL 全部幂等（IF NOT EXISTS / ADD COLUMN IF NOT EXISTS），
 // 因此「迁移」= 重跑一遍幂等基线 + 记录版本号；中途失败后重跑是安全的（不会重复生效）。
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const MIGRATION_LOCK_KEY = 8675309;   // 本应用专用常量，仅用于串行化迁移
 const MIGRATION_LOCK_WAIT_MS = 30000; // 抢不到锁时的最长等待（每 1s 重试一次）
 
@@ -355,6 +355,27 @@ const SCHEMA_DDL = `
       holder      TEXT,
       expires_at  TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+
+    -- ===== 邮件订阅名单（v2 / 2026-09-29）=====
+    -- 用途：SEO / 社媒 / X 带来的散流量沉淀成可复用资产（Product Hunt launch 前的 waitlist 是
+    -- 2026 年 PH 算法里最强的成功预测指标：400+ 订阅 ⇒ top5 概率 3–5 倍；且 60%+ 的 launch
+    -- 日流量来自预建 waitlist）。
+    -- 采用**双重选择加入（double opt-in）**：只存 confirmed_at 非空才算有效订阅。
+    --   ① 保护发信方信誉（不往陷阱地址/大小写混淆地址发信，避免进黑名单）
+    --   ② PH 的 400+ 门槛要的是「真会来看」的地址，未确认地址发出去也是浪费
+    -- unsubscribe_token：每条订阅独立随机令牌，用于「一键退订」与链接防伪（不必暴露邮箱本身）
+    -- ⚠️ 邮箱不进日志（P2-3：全库核查过无 URL / 凭据落日志）
+    CREATE TABLE IF NOT EXISTS waitlist (
+      id               TEXT PRIMARY KEY,
+      email            TEXT NOT NULL,
+      lang             TEXT NOT NULL DEFAULT 'en',
+      source           TEXT NOT NULL DEFAULT 'homepage',
+      unsubscribe_token TEXT NOT NULL,
+      confirmed_at     TIMESTAMPTZ,
+      created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (email)
+    );
+    CREATE INDEX IF NOT EXISTS idx_waitlist_confirmed ON waitlist(confirmed_at) WHERE confirmed_at IS NOT NULL;
 `;
 
 // 迁移期一次性数据迁移：孤儿监控清理。

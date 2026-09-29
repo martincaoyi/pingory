@@ -836,5 +836,17 @@
   "cmppd.src": "출처: Pingory의 한도와 가격은 제품 자체(pingory.com에 공개된 플랜)에서 가져왔습니다. Pingdom 수치는 공식 사이트와 가격 트래커에서 2026년 9월 확인했습니다. 제3자 가격과 한도는 변동됩니다. 구매 전 각 업체 사이트에서 최신 정보를 확인하세요.",
   "cmppd.more.h": "더 많은 비교",
   "cmppd.more.1": "<a href=\"/compare/uptimerobot\">Pingory vs UptimeRobot</a> — 300만+ 사용자의 기본 선택 vs $4 정액 플랜.",
-  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs Better Stack</a> — 온콜과 로그 관리가 필요 없을 때."
+  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs Better Stack</a> — 온콜과 로그 관리가 필요 없을 때.",
+  "err.waitlist_email_invalid": "올바른 이메일 주소를 입력해 주세요",
+  "err.waitlist_token_invalid": "이 링크는 유효하지 않거나 만료되었습니다",
+  "wl.ph": "you@example.com",
+  "wl.btn": "알림 받기",
+  "wl.note": "Pingory 출시 시 이메일 1통. 언제든 구독 취소 가능.",
+  "wl.need": "이메일 주소를 입력해 주세요",
+  "wl.ok": "받은편지함을 확인하고 확인 링크를 눌러 주세요.",
+  "wl.err": "문제가 발생했습니다. 잠시 후에 다시 시도해 주세요.",
+  "wl.net": "네트워크 오류가 발생했습니다. 다시 시도해 주세요.",
+  "wl.confirmed": "구독 완료: 이메일 확인해 주셔서 감사합니다.",
+  "wl.bad": "이 확인 링크는 유효하지 않거나 만료되었습니다.",
+  "wl.unsubscribed": "구독이 취소되었습니다. 더 이상 출시 소식을 받지 않습니다."
 }

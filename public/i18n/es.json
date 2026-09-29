@@ -836,5 +836,17 @@
   "cmppd.src": "Fuentes: los límites y precios de Pingory provienen del propio producto (planes publicados en pingory.com). Las cifras de Pingdom provienen de su sitio oficial y de rastreadores de precios, verificados en septiembre de 2026. Los precios y límites de terceros cambian; verifica los detalles actuales en el sitio de cada proveedor antes de comprar.",
   "cmppd.more.h": "Más comparaciones",
   "cmppd.more.1": "<a href=\"/compare/uptimerobot\">Pingory vs UptimeRobot</a> — el clásico de 3M+ usuarios frente a un plan plano de $4.",
-  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs Better Stack</a> — cuando no necesitas guardias ni gestión de registros."
+  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs Better Stack</a> — cuando no necesitas guardias ni gestión de registros.",
+  "err.waitlist_email_invalid": "Introduce un correo electrónico válido",
+  "err.waitlist_token_invalid": "Este enlace no es válido o ha caducado",
+  "wl.ph": "tu@ejemplo.com",
+  "wl.btn": "Avísame",
+  "wl.note": "Un correo cuando Pingory salga. Puedes darte de baja cuando quieras.",
+  "wl.need": "Introduce tu correo electrónico",
+  "wl.ok": "Revisa tu correo: haz clic en el enlace para confirmar.",
+  "wl.err": "Algo salió mal. Inténtalo de nuevo en unos momentos.",
+  "wl.net": "Error de red. Inténtalo de nuevo.",
+  "wl.confirmed": "Suscrito: gracias por confirmar tu correo.",
+  "wl.bad": "Ese enlace de confirmación no es válido o ha caducado.",
+  "wl.unsubscribed": "Dado de baja. No recibirás más avisos de lanzamientos."
 }

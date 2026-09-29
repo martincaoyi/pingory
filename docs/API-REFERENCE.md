@@ -2,9 +2,9 @@
 
 > 本文档描述后端 Express REST API。登录/注册/验证邮箱/OAuth（`/api/auth/*`）与 `/api/paddle-config`、`/api/creem-config` 无需登录态；其余业务端点由各路由内部校验 Session（未登录返回 401）。
 >
-> **版本**：v2.5（2026-09-23 P1/P2 稳定性：探针改增量取数 + 总并发上限、启动期 DDL 改版本化迁移、数据保留清理、对比页渲染缓存；**端点无增删、错误码仍 37 个、8 语字典零改动**——v2.4 为 P0-2「全局异常兜底与 5xx 语义」；v2.3：2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
-> **最后更新**：2026-09-23（P1/P2 稳定性改造；对 API 契约的影响见「探针与运维行为变更」，端点与错误码不变）
-> **关联代码**：`server.js`（路由，共 80 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）
+> **版本**：v2.6（2026-09-29 出海获客前置：新增邮件订阅列表 waitlist 4 端点 + 2 错误码 + 8 语 wl.* 字典键——v2.5：2026-09-23 P1/P2 稳定性：探针改增量取数 + 总并发上限、启动期 DDL 改版本化迁移、数据保留清理、对比页渲染缓存；**端点无增删、错误码仍 37 个、8 语字典零改动**——v2.4 为 P0-2「全局异常兜底与 5xx 语义」；v2.3：2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
+> **最后更新**：2026-09-29（出海获客前置：email 订阅入口上线，新增 4 端点 + 2 错误码 + 8 语 wl.* 字典键）
+> **关联代码**：`server.js`（路由，共 84 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）
 >
 > **2026-09-19 探针可靠性**：本地检查与多区域 `/probe` 均经 `runLocalCheckRetry` 执行——单次检查遇超时 / 网络抖动类错误会重试一次（间隔 1.5s）后再判定 down，消除东京探针偶发抖动造成的假故障；单点 HTTP/Keyword 超时从硬编码 10s 提至 15s（可经 `CHECK_TIMEOUT_MS` 环境变量调参，无需重新部署）。
 
@@ -24,7 +24,7 @@
 ▸ 字典缺键时回退显示原始错误码（便于定位）
 ▸ 内容自由文本（如监控历史时间线的 `error` 字段记录 HTTP 错误原文）不走错误码，保持原样
 
-### 错误码清单（38）
+### 错误码清单（40）
 
 | 错误码 | HTTP | 含义 / 占位符 |
 |---|---|---|
@@ -66,6 +66,8 @@
 | `server_error` | 500 | 服务器内部错误 `{msg}` |
 | `endpoint_not_found` | 404 | 请求的 API 路径不存在（未匹配任何 `/api/*` 路由时的统一兜底，2026-09-16 P1-11 新增） |
 | `target_blocked` | 400 | 监控目标地址被拒绝（SSRF 守卫：内网 / 环回 / 链路本地 / 云元数据 / 保留段，2026-09-23 P0-1 新增） |
+| `waitlist_email_invalid` | 400 | 订阅邮箱格式不合法或超长（2026-09-29 新增） |
+| `waitlist_token_invalid` | 400 | 订阅确认 / 退订令牌缺失或无效（2026-09-29 新增） |
 
 ### 未匹配路由的统一兜底（2026-09-16 P1-11 新增）
 
@@ -212,6 +214,31 @@ Creem 订阅事件通知。签名用 `creem-signature` 头，HMAC-SHA256 原始 
 **响应** `{ "ok": true }`
 
 ---
+
+## 1.7 邮件订阅列表（waitlist，无需登录）
+
+出海获客前置：首页首屏提供 8 语订阅框，访客提交邮箱后进入**双重选择加入（double opt-in）**——收到确认信、点开链接才算有效订阅（`confirmed_at` 落库）。这是 PH 上线前的受众沉淀资产，也是唯一可跨项目复用的订阅列表。
+
+### POST /api/waitlist
+公开端点（无需登录）。`waitlistLimiter` 限流 **5 次/小时/IP**。蜜罐字段 `hz` 被填充则假装成功、不写库不发信（防机器人）。
+
+**Request Body** `{ "email": "you@example.com", "lang": "en", "source": "homepage", "hz": "" }`
+
+- 邮箱格式不合法或超 254 字符 → `400` `waitlist_email_invalid`
+- 触发限流 → `429` `rate_limited`
+- 成功（含重复订阅：24h 内未确认的重发确认信、不泄露邮箱是否已存在）→ `201` `{ "ok": true }`
+
+### GET /api/waitlist/confirm
+公开端点。邮件确认链接落地首页 `?wl=TOKEN` 后由前端调用，或邮件直链 `?token=`。令牌在 7 天内且未确认才有效。
+
+- 令牌缺失/无效/过期 → `400` `waitlist_token_invalid`
+- 响应 `{ "ok": true | false }`（不存在/已用统一返回 `false`，不泄露令牌有效性）
+
+### GET /api/waitlist/unsubscribe
+公开端点。邮件底部一键退订（删除行＝行使 GDPR 删除权，同时释放 `UNIQUE(email)` 允许再次订阅）。
+
+- 令牌缺失/无效 → `400` `waitlist_token_invalid`
+- 响应恒为 `{ "ok": true }`（无论令牌真假，防枚举探测哪些令牌真实存在）
 
 ## 2. 认证
 
@@ -589,6 +616,7 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 - **GET /api/admin/user-events**：用户行为事件列表（可选 `?userId=&eventType=&limit=&offset=`）
 - **GET /api/admin/user-events/summary**：近 N 天事件汇总（`?days=1`，默认 1 天，最大 90），返回 `{since, counts:[{event_type,c}], activeUsers}`
 - **GET /api/admin/user-events/ranking**：按用户分组活跃度排行（`?days=30`，默认 30 天，最大 365；`?limit=20`，最大 100）。返回 `{ active:[{user_id,user_email,event_count,action_types,last_active}], dormant:[{user_id,email,created_at,total_events,last_active}] }`——`active` 为高频用户（按事件数降序），`dormant` 为注册后无动作或长时间未活跃用户（用于召回）。
+- **GET /api/admin/waitlist**：订阅列表规模与导出。`{ "total": N, "confirmed": M }`；带 `?export=1` 额外返回 `emails: [...]`（仅已确认邮箱，按确认时间排序；导出留痕 `waitlist_export` 事件）。
 - 页面入口：`/admin.html`（内置用户表 / 监控表 / 反馈 / 系统监控摘要 / 用户活动流，可一键「以此身份测试」跳回官网）
 
 ### 7.4 安全加固

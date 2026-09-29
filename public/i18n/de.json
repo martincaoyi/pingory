@@ -836,5 +836,17 @@
   "cmppd.src": "Quellen: Pingory-Limits und -Preise stammen vom Produkt selbst (veröffentlichte Pläne auf pingory.com). Pingdom-Zahlen stammen von der offiziellen Website und Preis-Trackern, geprüft im September 2026. Preise und Limits Dritter ändern sich; prüfe die aktuellen Details vor dem Kauf auf der jeweiligen Anbieterseite.",
   "cmppd.more.h": "Weitere Vergleiche",
   "cmppd.more.1": "<a href=\"/compare/uptimerobot\">Pingory vs. UptimeRobot</a> — der Klassiker mit 3M+ Nutzern gegen einen Flatrate-Plan für 4 $.",
-  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs. Better Stack</a> — wenn du kein On-Call und kein Log-Management brauchst."
+  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs. Better Stack</a> — wenn du kein On-Call und kein Log-Management brauchst.",
+  "err.waitlist_email_invalid": "Bitte gib eine gültige E-Mail-Adresse ein",
+  "err.waitlist_token_invalid": "Dieser Link ist ungültig oder abgelaufen",
+  "wl.ph": "du@beispiel.de",
+  "wl.btn": "Benachrichtigen",
+  "wl.note": "Eine E-Mail, wenn Pingory startet. Jederzeit abbestellbar.",
+  "wl.need": "Gib deine E-Mail-Adresse ein",
+  "wl.ok": "Schau in dein Postfach: Klick den Link zur Bestätigung.",
+  "wl.err": "Etwas ist schiefgelaufen. Bitte kurz erneut versuchen.",
+  "wl.net": "Netzwerkfehler. Bitte erneut versuchen.",
+  "wl.confirmed": "Aboniert: Danke für die Bestätigung deiner E-Mail.",
+  "wl.bad": "Dieser Bestätigungslink ist ungültig oder abgelaufen.",
+  "wl.unsubscribed": "Abbestellt. Du erhältst keine Launch-Informationen mehr."
 }

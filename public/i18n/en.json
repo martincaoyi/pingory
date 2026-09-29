@@ -836,5 +836,17 @@
   "cmppd.src": "Sources: Pingory limits and prices come from the product itself (plans as published at pingory.com). Pingdom figures are from its official site and pricing trackers, checked in September 2026. Third-party pricing and limits change; verify current details on each vendor's site before you buy.",
   "cmppd.more.h": "More comparisons",
   "cmppd.more.1": "<a href=\"/compare/uptimerobot\">Pingory vs UptimeRobot</a> — the 3M+-user default against a $4 flat plan.",
-  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs Better Stack</a> — when you do not need on-call and log management."
+  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs Better Stack</a> — when you do not need on-call and log management.",
+  "err.waitlist_email_invalid": "Please enter a valid email address",
+  "err.waitlist_token_invalid": "This link is invalid or expired",
+  "wl.ph": "you@example.com",
+  "wl.btn": "Notify me",
+  "wl.note": "One email when Pingory ships. Unsubscribe anytime.",
+  "wl.need": "Enter your email address",
+  "wl.ok": "Check your inbox — click the confirm link to finish subscribing.",
+  "wl.err": "Something went wrong. Please try again shortly.",
+  "wl.net": "Network error. Please try again.",
+  "wl.confirmed": "Subscribed — thanks for confirming your email.",
+  "wl.bad": "That confirmation link is invalid or expired.",
+  "wl.unsubscribed": "Unsubscribed. You will not hear from us about launches again."
 }

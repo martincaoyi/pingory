@@ -836,5 +836,17 @@
   "cmppd.src": "Fontes: os limites e preços da Pingory vêm do próprio produto (planos publicados em pingory.com). Os números do Pingdom vêm do site oficial e de rastreadores de preços, verificados em setembro de 2026. Preços e limites de terceiros mudam; verifique os detalhes atuais no site de cada fornecedor antes de comprar.",
   "cmppd.more.h": "Mais comparações",
   "cmppd.more.1": "<a href=\"/compare/uptimerobot\">Pingory vs UptimeRobot</a> — o clássico com 3M+ usuários contra um plano fixo de $4.",
-  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs Better Stack</a> — quando você não precisa de plantão nem de gestão de logs."
+  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs Better Stack</a> — quando você não precisa de plantão nem de gestão de logs.",
+  "err.waitlist_email_invalid": "Digite um e-mail válido",
+  "err.waitlist_token_invalid": "Este link é inválido ou expirou",
+  "wl.ph": "seu@exemplo.com",
+  "wl.btn": "Avise-me",
+  "wl.note": "Um e-mail quando o Pingory lançar. Você pode cancelar quando quiser.",
+  "wl.need": "Digite seu e-mail",
+  "wl.ok": "Confira sua caixa de entrada: clique no link para confirmar.",
+  "wl.err": "Algo deu errado. Tente novamente em instantes.",
+  "wl.net": "Erro de rede. Tente novamente.",
+  "wl.confirmed": "Inscrito: obrigado por confirmar seu e-mail.",
+  "wl.bad": "Este link de confirmação é inválido ou expirou.",
+  "wl.unsubscribed": "Cancelada. Você não receberá mais avisos de lançamento."
 }

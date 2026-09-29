@@ -13,7 +13,7 @@ import { initDb, startKeepAlive, getPool, pool } from './src/db.js';
 import { startRetention } from './src/retention.js';
 import { recordUserEvent, listUserEvents, getUserEventSummary, getUserActivityRanking, getDormantUsers, parseJSON } from './src/events.js';
 import { registerUser, loginUser, getUserById, getUserByEmail, updatePlan, updateStatusPage, createEmailVerification, verifyEmailToken, seedAdmin, setRole, addSubscriber, listSubscribers, removeSubscriber, createMaintenanceWindow, listMaintenanceWindows, deleteMaintenanceWindow, ensureApiKey, regenerateApiKey, getUserByApiKey, createTeam, inviteTeamMember, listTeam, leaveTeam, verifyPagePassword, recordReferralConversion, createOAuthUser, recordBillingEvent, changePassword, setPassword, updateProfileName, requestEmailChange, confirmEmailChange, requestPasswordReset, resetPassword, getAlertChannels, saveAlertChannels } from './src/auth.js';
-import { sendVerificationEmail, sendFeedbackNotification, sendPasswordResetEmail, sendChangeEmailVerification } from './src/email.js';
+import { sendVerificationEmail, sendFeedbackNotification, sendPasswordResetEmail, sendChangeEmailVerification, sendWaitlistConfirmEmail, sendWaitlistAnnounce } from './src/email.js';
 import { PLAN_LIMITS, planHasType, planHasChannel, planHasStatusPage, planHasStats, planFeatures, planMinInterval, TYPE_LABELS, CHANNEL_LABELS, EMAIL_VERIFY_MONITOR_CAP } from './src/plans.js';
 
 const app = express();
@@ -39,6 +39,8 @@ const E = {
   WRONG_PASSWORD:           'wrong_password',
   FEEDBACK_EMPTY:           'feedback_empty',
   FEEDBACK_TOO_LONG:        'feedback_too_long',
+  WAITLIST_EMAIL_INVALID:   'waitlist_email_invalid',
+  WAITLIST_TOKEN_INVALID:   'waitlist_token_invalid',
   ADMIN_REQUIRED:           'admin_required',
   SERVER_ERROR:             'server_error',
   IMPORT_UNSUPPORTED:       'import_unsupported_format',
@@ -155,6 +157,7 @@ const authLimiter = makeRateLimiter(15, 15 * 60 * 1000);   // 登录/注册：15
 const feedbackLimiter = makeRateLimiter(10, 60 * 60 * 1000); // 反馈：10 条/小时
 const pwLimiter = makeRateLimiter(5, 60 * 60 * 1000);       // 忘记密码/重置：5 次/小时/IP（防邮件轰炸/令牌爆破）
 const monitorLimiter = makeRateLimiter(60, 60 * 60 * 1000); // 监控创建/导入：60 次/小时/IP（防认证后批量造监控放大 SSRF/薅资源；正常用户用不到这个量级）
+const waitlistLimiter = makeRateLimiter(5, 60 * 60 * 1000); // 邮件订阅：5 次/小时/IP（双重选择加入会发确认信，防刷信 + 防拖垮 SMTP 每日额度）
 
 // ===== Session 中间件（登录态）=====
 // ===== 自定义域名根路径返回状态页（G7）：需在静态中间件前拦截 =====
@@ -1350,6 +1353,130 @@ app.post('/api/feedback', feedbackLimiter, async (req, res) => {
     await sendFeedbackNotification({ email: normEmail, message: String(message).trim(), page: refPage });
     recordUserEvent({ userId, eventType: 'feedback_submit', metadata: { email: normEmail, page: refPage }, req });
     res.status(201).json({ ok: true });
+  } catch (err) {
+    res.status(500).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
+  }
+});
+
+// ===== 邮件订阅名单（v2 / 2026-09-29）=====
+// 定位：把 SEO / 社媒 / X 带来的散流量沉淀成**可跨项目复用**的资产。
+// 为什么值得做：2026 年 Product Hunt 的最强成功预测指标就是 launch 前的受众规模——
+// 60%+ 的 launch 日流量来自预建 waitlist，400+ 订阅 ⇒ 进 top5 的概率翻 3–5 倍。
+//   未 Featured 的 launch 通常只有不到 100 个访客，所以今天没有名单就别硬上 PH（见 PH 上线材料包 §〇）。
+// 安全：双重选择加入（只认 confirmed_at 非空）＋ 独立退订令牌 ＋ 限流 ＋ 蜜罐字段 ＋ 邮箱不落日志。
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
+  try {
+    const { email, lang, source, hz } = req.body || {};
+    // 蜜罐：正常用户看不到这个字段，填了就是机器人 ⇒ 假装成功，不写库不发信
+    if (hz) return res.status(201).json({ ok: true });
+    if (!email || !EMAIL_RE.test(String(email).trim()) || String(email).trim().length > 254) {
+      return res.status(400).json(apiErr(E.WAITLIST_EMAIL_INVALID));
+    }
+    const normEmail = String(email).trim().toLowerCase();
+    const normLang = (lang && /^[a-z]{2}$/.test(String(lang)) ? String(lang) : 'en').toLowerCase();
+    const normSource = (source ? String(source).replace(/[^a-z0-9_-]/gi, '').slice(0, 32) : 'homepage') || 'homepage';
+    const token = crypto.randomBytes(18).toString('base64url');
+    const db = await getPool();
+
+    const inserted = await db.query(
+      `INSERT INTO waitlist (id, email, lang, source, unsubscribe_token)
+       VALUES ($1,$2,$3,$4,$5) ON CONFLICT (email) DO NOTHING RETURNING id`,
+      [crypto.randomUUID(), normEmail, normLang, normSource, token]
+    );
+
+    if (inserted.rowCount === 0) {
+      // 已订阅过：不泄露「这个邮箱在不在」（防枚举），但 24h 内可重发确认信
+      // —— 用户重填表单多半是没收到信，静默跳过会让确认率白白流失
+      const { rows } = await db.query(
+        `SELECT unsubscribe_token FROM waitlist
+         WHERE email = $1 AND confirmed_at IS NULL AND created_at > now() - interval '24 hours'`,
+        [normEmail]
+      );
+      if (rows[0]) await sendWaitlistConfirmEmail(normEmail, rows[0].unsubscribe_token);
+      return res.status(201).json({ ok: true });
+    }
+
+    await sendWaitlistConfirmEmail(normEmail, token);
+    // ⚠️ 不打印邮箱（P2-3：全库核查过无 URL / 凭据落日志，此处保持同一标准）
+    recordUserEvent({ userId: null, eventType: 'waitlist_signup', metadata: { source: normSource, lang: normLang }, req });
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    res.status(500).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
+  }
+});
+
+// 确认订阅（邮件链接落在首页 ?wl=TOKEN，由首页按访客语言提示）
+app.get('/api/waitlist/confirm', async (req, res) => {
+  try {
+    const token = String(req.query.token || '');
+    if (!token) return res.status(400).json(apiErr(E.WAITLIST_TOKEN_INVALID));
+    const db = await getPool();
+    const { rowCount } = await db.query(
+      `UPDATE waitlist SET confirmed_at = now()
+       WHERE unsubscribe_token = $1 AND confirmed_at IS NULL AND created_at > now() - interval '7 days'`,
+      [token]
+    );
+    res.json({ ok: rowCount > 0 });
+  } catch (err) {
+    res.status(500).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
+  }
+});
+
+// 一键退订（删除行＝GDPR 删除权；同时让 UNIQUE(email) 允许再次订阅）
+app.get('/api/waitlist/unsubscribe', async (req, res) => {
+  try {
+    const token = String(req.query.token || '');
+    if (!token) return res.status(400).json(apiErr(E.WAITLIST_TOKEN_INVALID));
+    const db = await getPool();
+    await db.query('DELETE FROM waitlist WHERE unsubscribe_token = $1', [token]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
+  }
+});
+
+// 管理员：名单规模 + 导出（导出留痕）
+app.get('/api/admin/waitlist', requireAdmin, async (req, res) => {
+  try {
+    const db = await getPool();
+    const { rows } = await db.query(
+      `SELECT COUNT(*)::int AS total,
+              COUNT(confirmed_at)::int AS confirmed
+       FROM waitlist`
+    );
+    const wantExport = String(req.query.export || '') === '1';
+    const out = { total: rows[0].total, confirmed: rows[0].confirmed };
+    if (wantExport) {
+      const { rows: list } = await db.query(
+        `SELECT email FROM waitlist WHERE confirmed_at IS NOT NULL ORDER BY confirmed_at`
+      );
+      out.emails = list.map((r) => r.email);
+      recordUserEvent({ userId: req.session.userId, eventType: 'waitlist_export', req });
+    }
+    res.json(out);
+  } catch (err) {
+    res.status(500).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
+  }
+});
+
+// 管理员：向已确认订阅者发一次公告（launch 通知）
+app.post('/api/admin/waitlist/announce', requireAdmin, async (req, res) => {
+  try {
+    const { subject, body } = req.body || {};
+    if (!subject || !body) return res.status(400).json(apiErr(E.FEEDBACK_EMPTY));
+    const db = await getPool();
+    const { rows } = await db.query(
+      `SELECT email, unsubscribe_token FROM waitlist WHERE confirmed_at IS NOT NULL ORDER BY confirmed_at`
+    );
+    let sent = 0, failed = 0;
+    for (const r of rows) {
+      const ok = await sendWaitlistAnnounce(r.email, r.unsubscribe_token, String(subject).slice(0, 200), String(body).slice(0, 5000));
+      if (ok) sent++; else failed++;
+    }
+    recordUserEvent({ userId: req.session.userId, eventType: 'waitlist_announce', metadata: { sent, failed }, req });
+    res.json({ ok: true, recipients: rows.length, sent, failed });
   } catch (err) {
     res.status(500).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
   }

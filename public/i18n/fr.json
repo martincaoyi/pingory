@@ -836,5 +836,17 @@
   "cmppd.src": "Sources : les limites et prix de Pingory proviennent du produit lui-même (offres publiées sur pingory.com). Les chiffres de Pingdom proviennent de son site officiel et de suiveurs de prix, vérifiés en septembre 2026. Les prix et limites de tiers évoluent ; vérifiez les détails actuels sur le site de chaque fournisseur avant d'acheter.",
   "cmppd.more.h": "Plus de comparaisons",
   "cmppd.more.1": "<a href=\"/compare/uptimerobot\">Pingory vs UptimeRobot</a> — la valeur par défaut avec 3M+ utilisateurs face à une offre fixe à 4 $.",
-  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs Better Stack</a> — quand vous n'avez pas besoin d'astreinte ni de gestion de logs."
+  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs Better Stack</a> — quand vous n'avez pas besoin d'astreinte ni de gestion de logs.",
+  "err.waitlist_email_invalid": "Saisissez une adresse e-mail valide",
+  "err.waitlist_token_invalid": "Ce lien est invalide ou a expiré",
+  "wl.ph": "vous@exemple.com",
+  "wl.btn": "Me prévenir",
+  "wl.note": "Un e-mail quand Pingory sort. Désinscription en un clic.",
+  "wl.need": "Saisissez votre adresse e-mail",
+  "wl.ok": "Consultez votre boîte de réception : cliquez sur le lien pour confirmer.",
+  "wl.err": "Une erreur est survenue. Réessayez dans un instant.",
+  "wl.net": "Erreur réseau. Réessayez.",
+  "wl.confirmed": "Abonné : merci d'avoir confirmé votre e-mail.",
+  "wl.bad": "Ce lien de confirmation est invalide ou a expiré.",
+  "wl.unsubscribed": "Désabonné. Vous ne recevrez plus d'annonces."
 }

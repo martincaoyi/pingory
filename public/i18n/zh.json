@@ -836,5 +836,17 @@
   "cmppd.src": "资料来源：Pingory 的配额与价格来自产品本身（pingory.com 公布的档位）。Pingdom 数据来自其官网与价格追踪站，2026 年 9 月核对。第三方价格与配额会变动；购买前请以各家官网现况为准。",
   "cmppd.more.h": "更多对比",
   "cmppd.more.1": "<a href=\"/compare/uptimerobot\">Pingory 与 UptimeRobot 对比</a>——300 万+ 用户的老牌默认选择对阵 $4 统一价。",
-  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory 与 Better Stack 对比</a>——当你不需要值班与日志管理时。"
+  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory 与 Better Stack 对比</a>——当你不需要值班与日志管理时。",
+  "err.waitlist_email_invalid": "请输入有效的邮箱地址",
+  "err.waitlist_token_invalid": "该链接无效或已过期",
+  "wl.ph": "you@example.com",
+  "wl.btn": "有更新通知我",
+  "wl.note": "Pingory 上线时只发一封邮件。随时可退订。",
+  "wl.need": "请输入邮箱地址",
+  "wl.ok": "请查收邮箱，点击确认链接完成订阅。",
+  "wl.err": "出了点问题，请稍后重试。",
+  "wl.net": "网络错误，请重试。",
+  "wl.confirmed": "订阅成功，感谢确认邮箱。",
+  "wl.bad": "该确认链接无效或已过期。",
+  "wl.unsubscribed": "已退订，不会再收到上线通知。"
 }

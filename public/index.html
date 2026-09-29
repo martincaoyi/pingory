@@ -331,6 +331,32 @@
       <a class="btn-ghost" href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener" data-i18n="landing.ctaGithub">View on GitHub</a>
     </div>
 
+    <!-- 邮件订阅（v2 / 2026-09-29）：把 SEO / 社媒 / X 带来的散流量沉淀成**可跨项目复用**的资产 -->
+    <!-- 背景：2026 年 Product Hunt 的最强成功预测指标是 launch 前的受众规模——60%+ 的 launch
+         日流量来自预建 waitlist，400+ 订阅 ⇒ 进 top5 概率 3–5 倍。所以「先攒名单再 launch」。
+         ⚠️ 文案必须诚实：产品已可试用，这里只承诺「launch / 更新通知」，不承诺「内测资格」等不存在的东西。
+         ⚠️ 双重选择加入：只认点过确认链接的地址，避免往陷阱地址发信把发件信誉搞坏。
+         hz = 蜜罐字段（对真实用户不可见且隐藏），填了就是机器人 → 服务端假装成功，不写库不发信。 -->
+    <style>
+      .wl-form{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin:18px auto 0;max-width:520px}
+      .wl-form input[type=email]{flex:1 1 240px;min-width:0;padding:10px 13px;border-radius:9px;border:1px solid var(--border,#1f2630);background:var(--bg-2,#0f141b);color:var(--text,#e6eaf0);font-size:.92rem}
+      .wl-form button{flex:0 0 auto;padding:10px 18px;border:0;border-radius:9px;background:var(--accent,#1faa6b);color:#fff;font-size:.9rem;font-weight:600;cursor:pointer}
+      .wl-form button:disabled{opacity:.6;cursor:default}
+      .wl-note{position:static;flex:1 0 100%;margin:2px 0 0;text-align:center;font-size:.78rem;color:var(--muted,#9aa3b2)}
+      .wl-msg{flex:1 0 100%;margin:6px 0 0;text-align:center;font-size:.84rem;color:var(--muted,#9aa3b2)}
+      .wl-msg.ok{color:var(--accent,#1faa6b)}
+      .wl-msg.bad{color:#f87171}
+    </style>
+    <form class="wl-form" id="wlForm" novalidate>
+      <!-- 注意：input 上挂 data-i18n 无效（applyI18n 写的是 textContent，输入框不渲染）⇒ 占位符走 applyI18n 里的 ph() 辅助 -->
+      <input type="email" id="wlEmail" autocomplete="email" required
+             aria-label="Email address" placeholder="you@example.com">
+      <button type="submit" id="wlSubmit" data-i18n="wl.btn">Notify me</button>
+      <p class="wl-note" id="wlNote" data-i18n="wl.note">One email when Pingory ships. Unsubscribe anytime.</p>
+      <p class="wl-msg" id="wlMsg" hidden></p>
+      <input type="text" name="hz" id="wlHz" tabindex="-1" autocomplete="off" aria-hidden="true" hidden>
+    </form>
+
     <!-- 实物证据①：真实产品截图（本地实例连生产数据、无头浏览器实拍，已做 PII 扫描） -->
     <figure class="hero-shot">
       <img src="/img/pingory-dashboard.webp" width="1856" height="1964" loading="eager" decoding="async" fetchpriority="high"
@@ -558,6 +584,9 @@ docker compose up -d</code></pre>
       ph('nameInput', 'add.name', 'name (optional)');
       ph('authEmail', 'auth.email', 'you@example.com');
       ph('authPassword', 'auth.pass', 'password (min 8 chars)');
+      ph('wlEmail', 'wl.ph', 'you@example.com');
+      const wb = document.getElementById('wlSubmit'); if (wb) wb.textContent = t('wl.btn', 'Notify me');
+      const wn = document.getElementById('wlNote'); if (wn) wn.textContent = t('wl.note', 'One email when Pingory ships. Unsubscribe anytime.');
       ph('authName', 'auth.name', 'Full name (optional)');
       // 语言切换时刷新叙事式升级卡片文案（free→Starter 与 starter→Pro 两种）
       if (currentPlan === 'free' && upgradeNudge && !upgradeNudge.classList.contains('hidden')) showUpgradeNudge();
@@ -759,6 +788,79 @@ docker compose up -d</code></pre>
       const d = await r.json();
       showGlobal(d.ok ? t('verify.ok', 'Email verified — welcome to Pingory!') : (errMsg(d) || t('verify.fail', 'Verification failed')));
       history.replaceState(null, '', location.pathname);
+    }
+
+    // ===== 邮件订阅（v2 / 2026-09-29）=====
+    // 两条落地路径都走「静默替换 URL 参数 + 就地提示」，不打断访客、不留 ?wl= 残留在地址栏。
+    function wlMsg(el, text, kind){
+      if (!el || !text) return;
+      el.textContent = text; el.hidden = false;
+      el.classList.remove('ok','bad'); if (kind) el.classList.add(kind);
+    }
+
+    function initWaitlist(){
+      const form = document.getElementById('wlForm');
+      const input = document.getElementById('wlEmail');
+      const btn = document.getElementById('wlSubmit');
+      const msg = document.getElementById('wlMsg');
+      if (form) {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          if (!input || !btn) return;
+          const v = input.value.trim();
+          // 蜜罐：手写 JSON 不会带上被 hidden 的 input，必须显式读一次
+          const hz = (document.getElementById('wlHz') || {}).value || '';
+          if (!v) { wlMsg(msg, t('wl.need', 'Enter your email address'), 'bad'); input.focus(); return; }
+          btn.disabled = true;
+          try {
+            const r = await fetch('/api/waitlist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: v, lang: (document.documentElement.lang || 'en'), source: 'homepage', hz })
+            });
+            const d = await r.json().catch(() => ({}));
+            if (r.ok && d.ok) {
+              form.reset();
+              // 双重选择加入：服务端只记下地址，必须点开确认信才算有效订阅
+              wlMsg(msg, t('wl.ok', 'Check your inbox — click the confirm link to finish subscribing.'), 'ok');
+            } else {
+              wlMsg(msg, errMsg(d) || t('wl.err', 'Something went wrong. Please try again shortly.'), 'bad');
+            }
+          } catch {
+            wlMsg(msg, t('wl.net', 'Network error. Please try again.'), 'bad');
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      }
+
+      // 确认订阅落地（邮件链接 ?wl=TOKEN）
+      const wlToken = new URLSearchParams(location.search).get('wl');
+      if (wlToken) {
+        history.replaceState(null, '', location.pathname);
+        fetch('/api/waitlist/confirm?token=' + encodeURIComponent(wlToken))
+          .then((r) => r.json().catch(() => ({})))
+          .then((d) => {
+            if (d && d.ok) {
+              showGlobal(t('wl.confirmed', 'Subscribed — thanks for confirming your email.'));
+            } else {
+              wlMsg(msg, t('wl.bad', 'That confirmation link is invalid or expired.'), 'bad');
+            }
+          })
+          .catch(() => wlMsg(msg, t('wl.err', 'Something went wrong. Please try again shortly.'), 'bad'));
+      }
+
+      // 一键退订落地（公告邮件底部链接 ?wlu=TOKEN）
+      const wlUnsub = new URLSearchParams(location.search).get('wlu');
+      if (wlUnsub) {
+        history.replaceState(null, '', location.pathname);
+        fetch('/api/waitlist/unsubscribe?token=' + encodeURIComponent(wlUnsub))
+          .then((r) => r.json().catch(() => ({})))
+          .then((d) => showGlobal((d && d.ok)
+            ? t('wl.unsubscribed', 'Unsubscribed. You will not hear from us about launches again.')
+            : (t('wl.bad', 'That unsubscribe link is invalid or expired.'))))
+          .catch(() => showGlobal(t('wl.bad', 'That unsubscribe link is invalid or expired.')));
+      }
     }
 
     // 账户设置弹窗（P0-3）：改昵称 / 改密码 / 改邮箱；OAuth 用户显示"设置密码"
@@ -1878,6 +1980,7 @@ docker compose up -d</code></pre>
       mountFeedbackWidget();
       handleVerifyParam();
       handleConfirmEmail();
+      initWaitlist();
       await checkAuth();
     }
     startApp();

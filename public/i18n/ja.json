@@ -836,5 +836,17 @@
   "cmppd.src": "出典：Pingory の上限と価格は製品そのもの（pingory.com 公表のプラン）から。Pingdom の数値は公式サイトと価格トラッカーから 2026 年 9 月に確認しました。第三者の価格・上限は変動します。購入前に各社サイトで最新情報をご確認ください。",
   "cmppd.more.h": "その他の比較",
   "cmppd.more.1": "<a href=\"/compare/uptimerobot\">Pingory vs UptimeRobot</a>——ユーザー 300 万+ の定番対、一律 $4 プラン。",
-  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs Better Stack</a>——オンコールとログ管理が不要な場合に。"
+  "cmppd.more.2": "<a href=\"/compare/betterstack\">Pingory vs Better Stack</a>——オンコールとログ管理が不要な場合に。",
+  "err.waitlist_email_invalid": "有効なメールアドレスを入力してください",
+  "err.waitlist_token_invalid": "このリンクは無効または期限切れです",
+  "wl.ph": "you@example.com",
+  "wl.btn": "通知する",
+  "wl.note": "Pingory が公開されたら 1 通だけ。いつでも解除できます。",
+  "wl.need": "メールアドレスを入力してください",
+  "wl.ok": "メールボックスを確認し、確認リンクをクリックしてください。",
+  "wl.err": "問題が発生しました。しばらくしてからお試しください。",
+  "wl.net": "ネットワークエラーです。もう一度お試しください。",
+  "wl.confirmed": "登録完了：メールアドレスの確認ありがとうございます。",
+  "wl.bad": "この確認リンクは無効または期限切れです。",
+  "wl.unsubscribed": "退登録しました。今後リリースのご案内は送信されません。"
 }
