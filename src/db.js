@@ -58,6 +58,10 @@ export function configurePool({ connectionString, max } = {}) {
   pool = new Pool({
     connectionString,
     max: Number(max ?? (process.env.PG_POOL_MAX || 5)),
+    // maxUses:1 —— Worker 模式专属：每条连接只用一次即退役（等效官方推荐的"每请求新 Client"）。
+    // 背景：Hyperdrive/Pooler 会掐闲置连接，而 pg 池复用前不验活，复用到死连接 = 查询挂起到 query_timeout。
+    // Fly 路径不调用本函数，池行为零变化。
+    maxUses: 1,
     connectionTimeoutMillis: Number(process.env.PG_CONN_TIMEOUT_MS || 10000),
     idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),
     statement_timeout: Number(process.env.PG_STATEMENT_TIMEOUT_MS || 15000),

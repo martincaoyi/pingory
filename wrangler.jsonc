@@ -11,16 +11,26 @@
   "assets": {
     "directory": "public",
     "binding": "ASSETS",
-    "run_worker_first": ["/", "/api/*", "/status/*", "/compare/*", "/vs/*", "/health", "/compare-uptimerobot.html", "/compare-betterstack.html", "/compare-pingdom.html"]
+    // none：与 Fly 行为一致——/privacy.html 直出 200（默认 auto-trailing-slash 会把 .html 307 到干净 URL，
+    // 且该重定向发生在边缘静态层、先于 run_worker_first，导致隐私页多一跳 307）。
+    // 已实证：ASSETS 绑定 fetch 不吃此重定向（/status.html 经绑定 200 直出），Worker 路径行为不变。
+    "html_handling": "none",
+    "run_worker_first": ["/", "/index.html", "/privacy.html", "/api/*", "/status/*", "/compare/*", "/vs/*", "/health", "/compare-uptimerobot.html", "/compare-betterstack.html", "/compare-pingdom.html"]
   },
-  // Hyperdrive：部署前须先创建并回填 id：
-  //   npx wrangler hyperdrive create pingory-db --connection-string="<Supabase Session Pooler 串(5432)>"
+  // Hyperdrive：id 已回填（pingory-db，创建于 Cloudflare 预览部署阶段）
   "hyperdrive": [
-    { "binding": "HYPERDRIVE", "id": "TODO_CREATE_THEN_FILL" }
+    { "binding": "HYPERDRIVE", "id": "745e30181c6949b88d0d7fbac443f8d5" }
   ],
   // 每分钟主检查循环；月报在 scheduled 内按日期判断（对应 server.js 两个 setInterval）
   "triggers": {
     "crons": ["* * * * *"]
+  },
+  // Worker 专属 vars：放宽 DB 超时以容忍 Hyperdrive 免费档冷启动（闲置后首查询可能 >15s）。
+  // Fly 路径的 .env 不含这些键，行为零变化。
+  "vars": {
+    "PG_CONN_TIMEOUT_MS": "20000",
+    "PG_QUERY_TIMEOUT_MS": "30000",
+    "PG_STATEMENT_TIMEOUT_MS": "30000"
   },
   "observability": {
     "enabled": true

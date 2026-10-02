@@ -119,6 +119,11 @@ export function registerPageRoutes(app) {
       const page = await getStatusPageByHost(host);
       if (page) return c.env.ASSETS.fetch(new URL('/status.html', c.req.url));
     } catch { /* 忽略，走默认首页 */ }
+    // html_handling:"none" 下 ASSETS 不再做 "/"→index.html 解析，必须显式取文件（Worker 模式专属路径，
+    // Fly 的 express.static 自带 index 解析不受影响）
+    if (new URL(c.req.url).pathname === '/') {
+      return c.env.ASSETS.fetch(new URL('/index.html', c.req.url));
+    }
     return c.env.ASSETS.fetch(c.req.raw);
   });
 

@@ -28,3 +28,6 @@ preview/
 
 # P2-4 逻辑备份输出（含用户数据，绝不进仓库）
 backups/
+
+# Cloudflare wrangler 本地状态
+.wrangler/
