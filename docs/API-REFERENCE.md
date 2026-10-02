@@ -2,6 +2,8 @@
 
 > 本文档描述后端 Express REST API。登录/注册/验证邮箱/OAuth（`/api/auth/*`）与 `/api/paddle-config`、`/api/creem-config` 无需登录态；其余业务端点由各路由内部校验 Session（未登录返回 401）。
 >
+> **迁移期说明（2026-10-02，ADR-0001）**：`src/cf-worker/*`（Hono Worker 入口）正在把本文档描述的全部端点逐条迁移为 Cloudflare Worker 形态。迁移期间：① 端点路径 / 方法 / 请求响应形状 / 错误码与本文档**完全一致**，不新增不删除端点；② 每端点的迁移对账（源 server.js 行号 / 状态 / 验证方式）见 `src/cf-worker/PORT-CHECKLIST.md`；③ Worker 专属差异仅限实现层（自研 DB-backed 会话中间件、邮件走 Resend HTTP、cron 每 tick 限量），不影响本契约；④ 迁移期 `/health` 与 `/api/*` 由 Fly 版与 Worker 版并行提供，Worker 版全部端点迁移完成并验证前不接生产流量。
+>
 > **版本**：v2.6（2026-09-29 出海获客前置：新增邮件订阅列表 waitlist 4 端点 + 2 错误码 + 8 语 wl.* 字典键——v2.5：2026-09-23 P1/P2 稳定性：探针改增量取数 + 总并发上限、启动期 DDL 改版本化迁移、数据保留清理、对比页渲染缓存；**端点无增删、错误码仍 37 个、8 语字典零改动**——v2.4 为 P0-2「全局异常兜底与 5xx 语义」；v2.3：2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
 > **最后更新**：2026-09-29（出海获客前置：email 订阅入口上线，新增 4 端点 + 2 错误码 + 8 语 wl.* 字典键）
 > **关联代码**：`server.js`（路由，共 84 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）；**Cloudflare 迁移新增 `src/cf-worker/index.js`（Worker 入口，ADR-0001）——迁移期 `/health` 与 `/api/*` 将由 Fly 版与 Worker 版并行提供，端点契约与本文档一致，全部端点迁移完成前 Worker 版仅做预览验证，不接生产流量**

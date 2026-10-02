@@ -2,11 +2,8 @@
 // Phase 1 扩展：多检查类型(G1) / 区域探针(G3) / 检查明细(G6)
 
 import crypto from 'crypto';
-import dns from 'node:dns';
 import net from 'node:net';
-import tls from 'node:tls';
 import os from 'node:os';
-import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { getPool } from './db.js';
 import { getUserById } from './auth.js';
@@ -14,7 +11,32 @@ import { planFeatures } from './plans.js';
 import { MON_ERR } from './monerr.js';
 import { assertSafeTarget, safeFetch } from './ssrf-guard.js';
 
-const execAsync = promisify(exec);
+// node:dns / node:tls / node:child_process 改为**懒加载**（Worker 兼容，ADR-0001）：
+// Cloudflare Workers(nodejs_compat) 不保证提供这三类能力（child_process 必无；dns/tls 视版本），
+// 顶层静态 import 若模块缺失会让整个 Worker 启动失败。懒加载后：
+//   · Fly：动态 import 解析结果与静态 import 完全一致，行为零变化；
+//   · Worker：ping/ssl/domain/dns 四类非 HTTP 检查在能力缺失时按 down + 错误码落库（HTTP 类不受影响）。
+// node:net / node:os / node:util 保留静态 import（pg 驱动经 Hyperdrive 依赖 net，必然可用）。
+let _dnsMod = null;   // null=未加载, false=不可用
+let _tlsMod = null;
+let _execAsync = null;
+async function getDns() {
+  if (_dnsMod === null) { try { _dnsMod = await import('node:dns'); } catch { _dnsMod = false; } }
+  return _dnsMod || null;
+}
+async function getTls() {
+  if (_tlsMod === null) { try { _tlsMod = await import('node:tls'); } catch { _tlsMod = false; } }
+  return _tlsMod || null;
+}
+async function getExecAsync() {
+  if (_execAsync === null) {
+    try {
+      const cp = await import('node:child_process');
+      _execAsync = promisify(cp.exec || (cp.default && cp.default.exec));
+    } catch { _execAsync = false; }
+  }
+  return _execAsync || null;
+}
 
 // 单点 HTTP/Keyword 检查超时（ms）。东京探针探远端偶发抖动，10s 偏紧易误判 down；
 // 提到 15s，并允许经环境变量 CHECK_TIMEOUT_MS 调参，无需重新部署即可微调。
@@ -371,6 +393,8 @@ async function checkKeyword(url, config) {
 }
 
 async function checkPing(host) {
+  const execAsync = await getExecAsync();
+  if (!execAsync) return { status: 'down', error: MON_ERR.PING_FAILED }; // Worker：无 child_process
   const flag = os.platform() === 'win32' ? '-n 1' : '-c 1';
   try {
     const { stdout } = await execAsync(`ping ${flag} ${host}`, { timeout: 8000 });
@@ -393,7 +417,9 @@ function checkTcp(host, port) {
   });
 }
 
-function checkSsl(host, port = 443, warnDays = 30) {
+async function checkSsl(host, port = 443, warnDays = 30) {
+  const tls = await getTls();
+  if (!tls) return { status: 'down', error: MON_ERR.SSL_HANDSHAKE + '|tls_unavailable' }; // Worker
   return new Promise((resolve) => {
     const sock = tls.connect(Number(port), host, { servername: host, timeout: 8000 }, () => {
       const cert = sock.getPeerCertificate();
@@ -472,7 +498,9 @@ async function checkApi(url, config) {
   }
 }
 
-function checkDns(host, recordType = 'A', expected = []) {
+async function checkDns(host, recordType = 'A', expected = []) {
+  const dns = await getDns();
+  if (!dns || !dns.resolve) return { status: 'down', error: 'DNS 检查能力不可用' }; // Worker
   return new Promise((resolve) => {
     dns.resolve(host, recordType, (err, records) => {
       if (err) return resolve({ status: 'down', error: `DNS 解析失败: ${err.code || err.message}` });
@@ -600,7 +628,8 @@ async function runCheck(monitor, plan) {
 // ============================================================
 // 检查调度
 // ============================================================
-async function checkMonitor(monitor) {
+// 导出供 scheduled()（Worker cron）复用同一套检查 + 告警状态机（增量导出，Fly 路径不受影响）
+export async function checkMonitor(monitor) {
   const plan = await getPlan(monitor.userId);
   const start = Date.now();
   const result = await runCheck(monitor, plan);

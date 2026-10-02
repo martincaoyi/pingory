@@ -6,9 +6,12 @@
   // pg 驱动（node-postgres）必需
   "compatibility_flags": ["nodejs_compat"],
   // 静态资源：public/ 全量（含 8 语 i18n、privacy、状态页静态部分）
+  // run_worker_first：这些动态路径必须先进 Worker——"/" 和 compare-*.html 在 public/ 有同名静态文件，
+  // 不加的话静态层会抢先（根路径自定义域名状态页、compare 301 别名会被截走）。
   "assets": {
     "directory": "public",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    "run_worker_first": ["/", "/api/*", "/status/*", "/compare/*", "/vs/*", "/health", "/compare-uptimerobot.html", "/compare-betterstack.html", "/compare-pingdom.html"]
   },
   // Hyperdrive：部署前须先创建并回填 id：
   //   npx wrangler hyperdrive create pingory-db --connection-string="<Supabase Session Pooler 串(5432)>"

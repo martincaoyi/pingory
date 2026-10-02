@@ -3,7 +3,6 @@
 
 import { setCheckResultHandler, saveEvent, saveMonitor, listMonitors, getStats } from './monitors.js';
 import { getUserById, isMonitorInMaintenance, getSubscriberEmails, getAlertChannels } from './auth.js';
-import nodemailer from 'nodemailer';
 import { planHasChannel, planHasStats } from './plans.js';
 import { monErrText } from './monerr.js';
 import { getPool } from './db.js';
@@ -11,11 +10,15 @@ import { getPool } from './db.js';
 // 邮件告警的收件人 = 监控归属账号的注册邮箱（多租户各归各）。
 // ⚠️ 不再使用全局 ALERT_TO_EMAIL 作为告警收件人（该变量仅剩「客户反馈通知」用途，见 src/email.js）。
 
-// ===== 邮件 transporter =====
+// ===== 邮件 transporter（Worker 自适应：与 src/email.js 同款机制，见该文件注释）=====
 let transporter = null;
-function getTransporter() {
+let nodemailerMod = null;
+async function getTransporter() {
+  if (globalThis.__USE_RESEND_HTTP__) return null; // Worker：走 Resend HTTP，不加载 nodemailer
   if (!process.env.SMTP_HOST) return null;
   if (transporter) return transporter;
+  if (!nodemailerMod) nodemailerMod = await import('nodemailer');
+  const nodemailer = nodemailerMod.default || nodemailerMod;
   transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 465),
@@ -23,6 +26,35 @@ function getTransporter() {
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   });
   return transporter;
+}
+
+// Resend HTTP 通道（Worker 专用，ADR-0001 迁移规则 #4）。返回值语义与 nodemailer 路径一致。
+async function sendViaResend(to, subject, text) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    console.error('[alert] RESEND_API_KEY 未配置，跳过发送');
+    return false;
+  }
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: [to],
+        subject,
+        text,
+      }),
+    });
+    if (!r.ok) {
+      console.error('[alert] Resend 发送失败:', r.status, await r.text().catch(() => ''));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[alert] 邮件发送失败:', err.message);
+    return false;
+  }
 }
 
 // ===== 邮件发送配额（P1-12）=====
@@ -61,8 +93,14 @@ export async function consumeEmailBudget(scope, ceiling) {
 // 发送一封告警邮件：先过配额（全局 + 账号），再发。priority='critical' | 'warning'
 async function sendAlertEmail(to, subject, text, { priority = 'critical', accountId = null } = {}) {
   if (!to) return false;
-  const t = getTransporter();
-  if (!t) return false; // 未配置 SMTP：直接返回，不消耗配额
+  // 通道可用性预检（未配置 SMTP / RESEND_API_KEY：直接返回，不消耗配额）
+  let t = null;
+  if (globalThis.__USE_RESEND_HTTP__) {
+    if (!process.env.RESEND_API_KEY) return false;
+  } else {
+    t = await getTransporter();
+    if (!t) return false;
+  }
   const isWarn = priority === 'warning';
   const globalCeiling = isWarn ? Math.max(1, Math.floor(EMAIL_DAILY_CAP * EMAIL_WARN_SHARE)) : EMAIL_DAILY_CAP;
   if (!(await consumeEmailBudget('global', globalCeiling))) {
@@ -77,12 +115,17 @@ async function sendAlertEmail(to, subject, text, { priority = 'critical', accoun
     }
   }
   try {
-    await t.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to,
-      subject,
-      text,
-    });
+    if (globalThis.__USE_RESEND_HTTP__) {
+      const ok = await sendViaResend(to, subject, text);
+      if (!ok) return false;
+    } else {
+      await t.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to,
+        subject,
+        text,
+      });
+    }
     console.log('[alert] 邮件已发送 ->', to);
     return true;
   } catch (err) {

@@ -9,7 +9,10 @@ import { Pool } from 'pg';
 // 背景：pg v8 把连接串里的 sslmode=require 当作 verify-full，而 Supabase 池化器
 // 证书链的 CA 不在 Node 默认信任库内，会报 self-signed certificate in certificate chain。
 // 这是 Supabase 官方 Node 示例采用的通用做法，仅关闭 CA 校验、加密不受影响。
-export const pool = new Pool({
+// ⚠️ pool 用 let 而非 const：Worker（Cloudflare）路径需在首个请求前经 configurePool()
+// 注入 Hyperdrive 连接串后整体替换连接池。Fly 路径 configurePool 永不被调用，
+// pool 保持下面模块加载时创建的实例，行为零变化（live binding：外部 import { pool } 不受影响）。
+export let pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
   // ===== 连接池显式上限与超时（P0-1，2026-09-23）=====
@@ -38,6 +41,30 @@ export const pool = new Pool({
 });
 
 async function getPool() {
+  return pool;
+}
+
+// ===== Worker（Cloudflare Workers + Hyperdrive）运行时自适应（ADR-0001）=====
+// 仅由 src/cf-worker 入口在首个请求 / scheduled 前调用；Fly 路径永不触达。
+// 语义：用传入连接串整体替换模块级 pool，此后所有经 getPool() 的业务查询
+// （auth.js / monitors.js / events.js / alerts.js ...）自动走 Hyperdrive，SQL 零改动。
+// 连接串已由 Hyperdrive 本地代理封装 TLS（到源库的加密在代理侧完成），
+// 故这里不像 Fly 版那样显式传 ssl.rejectUnauthorized=false。
+// 同一连接串重复调用直接返回（每请求都会走到这里，必须幂等、不得重建池）。
+let _configuredCS = null;
+export function configurePool({ connectionString, max } = {}) {
+  if (!connectionString || connectionString === _configuredCS) return pool;
+  _configuredCS = connectionString;
+  pool = new Pool({
+    connectionString,
+    max: Number(max ?? (process.env.PG_POOL_MAX || 5)),
+    connectionTimeoutMillis: Number(process.env.PG_CONN_TIMEOUT_MS || 10000),
+    idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),
+    statement_timeout: Number(process.env.PG_STATEMENT_TIMEOUT_MS || 15000),
+    idle_in_transaction_session_timeout: Number(process.env.PG_IDLE_TX_TIMEOUT_MS || 30000),
+    query_timeout: Number(process.env.PG_QUERY_TIMEOUT_MS || 15000),
+    application_name: process.env.PG_APP_NAME || 'pingory',
+  });
   return pool;
 }
 

@@ -5,6 +5,15 @@
 import dns from 'node:dns';
 import net from 'node:net';
 
+// Worker 兼容（ADR-0001）：node:dns 在部分 Workers 版本不可用 → 懒加载；
+// 缺失时 assertSafeTarget 对域名目标按「解析失败」语义放行（ok:true，交由实际请求报错），
+// 与下方 catch 分支的既有设计一致。Fly 路径：动态 import 结果与静态 import 一致，行为零变化。
+let _dnsMod = null;
+async function getDns() {
+  if (_dnsMod === null) { try { _dnsMod = await import('node:dns'); } catch { _dnsMod = false; } }
+  return _dnsMod || null;
+}
+
 // 危险主机名（无需解析即可判定）
 function isBlockedHostname(host) {
   const h = String(host == null ? '' : host).toLowerCase().trim();
@@ -73,6 +82,8 @@ export async function assertSafeTarget(hostname) {
   }
   // 域名：解析全部 IP，任一危险即拒（覆盖"域名解析到内网"）；解析失败则放行交由实际请求报错
   try {
+    const dns = await getDns();
+    if (!dns || !dns.promises || !dns.promises.lookup) return { ok: true }; // Worker：无 DNS 能力
     const { addresses } = await dns.promises.lookup(host, { all: true });
     if (!addresses || addresses.length === 0) return { ok: true };
     for (const item of addresses) {
