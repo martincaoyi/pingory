@@ -21,6 +21,7 @@
 import { Hono } from 'hono';
 import { setupDb } from './env.js';
 import { sessionMiddleware } from './session.js';
+import { jsonBodyParser } from './util.js';
 import { registerApiRoutes } from './api.js';
 import { registerPageRoutes } from './pages.js';
 import { runCron } from './cron.js';
@@ -46,6 +47,10 @@ registerPageRoutes(app);
 // 会话中间件仅挂 /api/*（express-session 全局挂载，但静态请求经 Assets 兜底后本就不进 Worker；
 // 仅挂 /api/* 还省掉了静态路径上的无谓会话查询）
 app.use('/api/*', sessionMiddleware());
+
+// JSON body 解析（对应 server.js 的 express.json()）：所有 POST/PATCH/PUT/DELETE 的
+// c.get('body') / c.get('rawBody')（webhook 验签用）都由它提供。漏挂 = 带 body 的端点全空。
+app.use('/api/*', jsonBodyParser);
 
 // 全部 API 端点 + /health + /api 404 兜底
 registerApiRoutes(app);

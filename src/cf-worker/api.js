@@ -3,6 +3,7 @@
 // 原则：JSON 响应形状、错误码（apiErr 体系）、401/403/404 语义与 Express 版逐字节一致。
 
 import crypto from 'crypto';
+import { setCookie } from 'hono/cookie';
 import { getPool } from '../db.js';
 import { createMonitor, listMonitors, getMonitor, deleteMonitor, saveMonitor, getHistory, getStats, getStatusIncidents, getStatusPage, getStatusPageByHost, getStatusPageAuth, getStatusPageOwnerId, listTeamMonitors } from '../monitors.js';
 import { generateMonthlyReport, sendTestAlert } from '../alerts.js';
@@ -780,7 +781,7 @@ export function registerApiRoutes(app) {
       const { password } = c.get('body') || {};
       const ok = await verifyPagePassword(password || '', auth.passwordHash);
       if (!ok) return c.json(apiErr(E.WRONG_PASSWORD), 401);
-      c.cookie('pingory_sp', `${slug}|${statusPageToken(slug)}`, { httpOnly: true, sameSite: 'Lax', maxAge: 7 * 86400 });
+      setCookie(c, 'pingory_sp', `${slug}|${statusPageToken(slug)}`, { httpOnly: true, sameSite: 'Lax', maxAge: 7 * 86400 });
       return c.json({ ok: true });
     } catch (err) {
       return c.json(apiErr(E.SERVER_ERROR, { msg: err.message }), 500);
@@ -796,7 +797,7 @@ export function registerApiRoutes(app) {
       const { password } = c.get('body') || {};
       const ok = await verifyPagePassword(password || '', auth.passwordHash);
       if (!ok) return c.json(apiErr(E.WRONG_PASSWORD), 401);
-      c.cookie('pingory_sp', `${host}|${statusPageToken(host)}`, { httpOnly: true, sameSite: 'Lax', maxAge: 7 * 86400 });
+      setCookie(c, 'pingory_sp', `${host}|${statusPageToken(host)}`, { httpOnly: true, sameSite: 'Lax', maxAge: 7 * 86400 });
       return c.json({ ok: true });
     } catch (err) {
       return c.json(apiErr(E.SERVER_ERROR, { msg: err.message }), 500);

@@ -18,6 +18,7 @@
 // 与 express-session store 出错经全局错误中间件返回 500 的行为一致。
 
 import crypto from 'crypto';
+import { setCookie } from 'hono/cookie';
 import { getPool } from '../db.js';
 
 const COOKIE_NAME = 'connect.sid';
@@ -88,7 +89,7 @@ export function sessionMiddleware() {
            ON CONFLICT (sid) DO UPDATE SET sess = EXCLUDED.sess, expire = EXCLUDED.expire`,
           [currentSid, JSON.stringify(data), expire]
         );
-        c.cookie(COOKIE_NAME, `s:${currentSid}.${signSid(currentSid)}`, {
+        setCookie(c, COOKIE_NAME, `s:${currentSid}.${signSid(currentSid)}`, {
           path: '/',
           httpOnly: true,
           sameSite: 'Lax',
@@ -104,7 +105,7 @@ export function sessionMiddleware() {
         destroyed = true;
         data = {};
         currentSid = null;
-        c.cookie(COOKIE_NAME, '', { path: '/', httpOnly: true, sameSite: 'Lax', maxAge: 0 });
+        setCookie(c, COOKIE_NAME, '', { path: '/', httpOnly: true, sameSite: 'Lax', maxAge: 0 });
       },
     };
 
