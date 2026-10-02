@@ -1,0 +1,25 @@
+{
+  // Cloudflare Worker 配置 —— Pingory 迁移（Fly → Workers，方案见 方案资料/uptime-monitor/迁移-Fly到永久免费主机-方案.md）
+  "name": "pingory",
+  "main": "src/cf-worker/index.js",
+  "compatibility_date": "2026-10-01",
+  // pg 驱动（node-postgres）必需
+  "compatibility_flags": ["nodejs_compat"],
+  // 静态资源：public/ 全量（含 8 语 i18n、privacy、状态页静态部分）
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS"
+  },
+  // Hyperdrive：部署前须先创建并回填 id：
+  //   npx wrangler hyperdrive create pingory-db --connection-string="<Supabase Session Pooler 串(5432)>"
+  "hyperdrive": [
+    { "binding": "HYPERDRIVE", "id": "TODO_CREATE_THEN_FILL" }
+  ],
+  // 每分钟主检查循环；月报在 scheduled 内按日期判断（对应 server.js 两个 setInterval）
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}

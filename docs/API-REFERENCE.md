@@ -4,7 +4,7 @@
 >
 > **版本**：v2.6（2026-09-29 出海获客前置：新增邮件订阅列表 waitlist 4 端点 + 2 错误码 + 8 语 wl.* 字典键——v2.5：2026-09-23 P1/P2 稳定性：探针改增量取数 + 总并发上限、启动期 DDL 改版本化迁移、数据保留清理、对比页渲染缓存；**端点无增删、错误码仍 37 个、8 语字典零改动**——v2.4 为 P0-2「全局异常兜底与 5xx 语义」；v2.3：2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
 > **最后更新**：2026-09-29（出海获客前置：email 订阅入口上线，新增 4 端点 + 2 错误码 + 8 语 wl.* 字典键）
-> **关联代码**：`server.js`（路由，共 84 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）
+> **关联代码**：`server.js`（路由，共 84 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）；**Cloudflare 迁移新增 `src/cf-worker/index.js`（Worker 入口，ADR-0001）——迁移期 `/health` 与 `/api/*` 将由 Fly 版与 Worker 版并行提供，端点契约与本文档一致，全部端点迁移完成前 Worker 版仅做预览验证，不接生产流量**
 >
 > **2026-09-19 探针可靠性**：本地检查与多区域 `/probe` 均经 `runLocalCheckRetry` 执行——单次检查遇超时 / 网络抖动类错误会重试一次（间隔 1.5s）后再判定 down，消除东京探针偶发抖动造成的假故障；单点 HTTP/Keyword 超时从硬编码 10s 提至 15s（可经 `CHECK_TIMEOUT_MS` 环境变量调参，无需重新部署）。
 
