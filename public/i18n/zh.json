@@ -848,5 +848,6 @@
   "wl.net": "网络错误，请重试。",
   "wl.confirmed": "订阅成功，感谢确认邮箱。",
   "wl.bad": "该确认链接无效或已过期。",
-  "wl.unsubscribed": "已退订，不会再收到上线通知。"
+  "wl.unsubscribed": "已退订，不会再收到上线通知。",
+  "common.loading": "加载中…"
 }

@@ -848,5 +848,6 @@
   "wl.net": "Netzwerkfehler. Bitte erneut versuchen.",
   "wl.confirmed": "Aboniert: Danke für die Bestätigung deiner E-Mail.",
   "wl.bad": "Dieser Bestätigungslink ist ungültig oder abgelaufen.",
-  "wl.unsubscribed": "Abbestellt. Du erhältst keine Launch-Informationen mehr."
+  "wl.unsubscribed": "Abbestellt. Du erhältst keine Launch-Informationen mehr.",
+  "common.loading": "Wird geladen…"
 }

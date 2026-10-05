@@ -848,5 +848,6 @@
   "wl.net": "Erreur réseau. Réessayez.",
   "wl.confirmed": "Abonné : merci d'avoir confirmé votre e-mail.",
   "wl.bad": "Ce lien de confirmation est invalide ou a expiré.",
-  "wl.unsubscribed": "Désabonné. Vous ne recevrez plus d'annonces."
+  "wl.unsubscribed": "Désabonné. Vous ne recevrez plus d'annonces.",
+  "common.loading": "Chargement…"
 }

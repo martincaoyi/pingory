@@ -848,5 +848,6 @@
   "wl.net": "Error de red. Inténtalo de nuevo.",
   "wl.confirmed": "Suscrito: gracias por confirmar tu correo.",
   "wl.bad": "Ese enlace de confirmación no es válido o ha caducado.",
-  "wl.unsubscribed": "Dado de baja. No recibirás más avisos de lanzamientos."
+  "wl.unsubscribed": "Dado de baja. No recibirás más avisos de lanzamientos.",
+  "common.loading": "Cargando…"
 }

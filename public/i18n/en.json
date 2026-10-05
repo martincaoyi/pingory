@@ -848,5 +848,6 @@
   "wl.net": "Network error. Please try again.",
   "wl.confirmed": "Subscribed — thanks for confirming your email.",
   "wl.bad": "That confirmation link is invalid or expired.",
-  "wl.unsubscribed": "Unsubscribed. You will not hear from us about launches again."
+  "wl.unsubscribed": "Unsubscribed. You will not hear from us about launches again.",
+  "common.loading": "Loading…"
 }

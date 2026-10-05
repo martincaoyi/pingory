@@ -1631,6 +1631,8 @@ docker compose up -d</code></pre>
     const addForm = document.getElementById('addForm');
     // 语言切换重绘缓冲：缓存已展开区域的数据，切换语言时原样重建（否则动态区停留旧语言）
     const OPEN_HIST = {}, OPEN_STATS = {};
+    // 乐观展开的请求序号：防止旧请求慢返回覆盖新的展开/收起（与删除同源于迁移后连接池建连慢）
+    const OPEN_TOKENS = {};
 
     function fmtTime(ts) {
       if (!ts) return t('never','never');
@@ -1698,37 +1700,62 @@ docker compose up -d</code></pre>
       });
       monList.querySelectorAll('button.hist').forEach((b) => {
         b.addEventListener('click', async () => {
-          const box = document.getElementById('hist-' + b.dataset.id);
-          if (!box.classList.contains('hidden')) { box.classList.add('hidden'); box.innerHTML = ''; delete OPEN_HIST[b.dataset.id]; return; }
-          const res = await fetch('/api/monitors/' + b.dataset.id + '/history');
-          const evs = await res.json();
-          OPEN_HIST[b.dataset.id] = evs;
-          box.innerHTML = histHtml(evs);
+          const id = b.dataset.id;
+          const box = document.getElementById('hist-' + id);
+          if (!box.classList.contains('hidden')) { box.classList.add('hidden'); box.innerHTML = ''; delete OPEN_HIST[id]; return; }
+          // 乐观展开：点击即显示 Loading，后端取数在后台进行，避免迁移后 Worker 连接池建连(~1s)导致的干等
+          box.innerHTML = '<div class="evt">' + t('common.loading','Loading…') + '</div>';
           box.classList.remove('hidden');
+          const token = ++(OPEN_TOKENS['h' + id] || (OPEN_TOKENS['h' + id] = 0));
+          try {
+            const res = await fetch('/api/monitors/' + id + '/history');
+            const evs = await res.json();
+            if (OPEN_TOKENS['h' + id] !== token) return; // 已被再次点击取代，丢弃旧响应
+            OPEN_HIST[id] = evs;
+            box.innerHTML = histHtml(evs);
+          } catch (e) {
+            if (OPEN_TOKENS['h' + id] === token) box.innerHTML = '<div class="evt">' + t('op.fail','Operation failed') + '</div>';
+          }
         });
       });
       monList.querySelectorAll('button.stats').forEach((b) => {
         b.addEventListener('click', async () => {
-          const box = document.getElementById('chart-' + b.dataset.id);
-          if (!box.classList.contains('hidden')) { box.classList.add('hidden'); box.innerHTML = ''; delete OPEN_STATS[b.dataset.id]; return; }
-          const res = await fetch('/api/monitors/' + b.dataset.id + '/stats');
-          if (!res.ok) { box.innerHTML = '<div class="evt">' + t('chart.needPlan','Trend chart requires Starter or above') + '</div>'; box.classList.remove('hidden'); return; }
-          const s = await res.json();
-          OPEN_STATS[b.dataset.id] = s;
-          box.innerHTML = renderChart(s);
+          const id = b.dataset.id;
+          const box = document.getElementById('chart-' + id);
+          if (!box.classList.contains('hidden')) { box.classList.add('hidden'); box.innerHTML = ''; delete OPEN_STATS[id]; return; }
+          // 乐观展开：点击即显示 Loading，后台拉取趋势图，避免干等后端建连
+          box.innerHTML = '<div class="evt">' + t('common.loading','Loading…') + '</div>';
           box.classList.remove('hidden');
+          const token = ++(OPEN_TOKENS['s' + id] || (OPEN_TOKENS['s' + id] = 0));
+          const res = await fetch('/api/monitors/' + id + '/stats');
+          if (OPEN_TOKENS['s' + id] !== token) return; // 已被再次点击取代，丢弃旧响应
+          if (!res.ok) { box.innerHTML = '<div class="evt">' + t('chart.needPlan','Trend chart requires Starter or above') + '</div>'; return; }
+          const s = await res.json();
+          if (OPEN_TOKENS['s' + id] !== token) return;
+          OPEN_STATS[id] = s;
+          box.innerHTML = renderChart(s);
         });
       });
       monList.querySelectorAll('button.pub').forEach((b) => {
         b.addEventListener('click', async () => {
           const id = b.dataset.id;
           const m = list.find((x) => x.id === id);
-          const res = await fetch('/api/monitors/' + id, {
-            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ statusPublic: !(m.statusPublic) }),
-          });
-          if (res.ok) loadMonitors();
-          else { const e = await res.json(); showAlert(errMsg(e) || t('op.fail','Operation failed')); }
+          if (!m) return;
+          const next = !m.statusPublic;
+          // 乐观切换：点击即更新按钮文案，不阻塞；后台 PATCH 在 5s 轮询中自动同步真实状态，避免额外建连(~1s)的干等
+          m.statusPublic = next;
+          b.textContent = next ? t('mon.pubOn','Public ✓') : t('mon.pub','Public');
+          try {
+            const res = await fetch('/api/monitors/' + id, {
+              method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ statusPublic: next }),
+            });
+            if (!res.ok) throw new Error('patch failed');
+          } catch (e) {
+            m.statusPublic = !next; // 失败回滚
+            b.textContent = m.statusPublic ? t('mon.pubOn','Public ✓') : t('mon.pub','Public');
+            showAlert(t('op.fail','Operation failed'));
+          }
         });
       });
       redrawMonitorExtras();   // 恢复上一轮已展开的历史/图表（见 redrawMonitorExtras 注释）
