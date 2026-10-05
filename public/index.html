@@ -1677,8 +1677,23 @@ docker compose up -d</code></pre>
       `).join('');
       monList.querySelectorAll('button.del').forEach((b) => {
         b.addEventListener('click', async () => {
-          await fetch('/api/monitors/' + b.dataset.id, { method: 'DELETE' });
-          loadMonitors();
+          const id = b.dataset.id;
+          const card = b.closest('.mon');
+          if (card) card.style.display = 'none'; // 乐观隐藏：点击即反馈，不等后台 1s 往返
+          try {
+            const res = await fetch('/api/monitors/' + id, { method: 'DELETE' });
+            if (!res.ok) {
+              if (card) card.style.display = ''; // 失败恢复显示
+              const e = await res.json().catch(() => null);
+              showAlert(errMsg(e) || t('op.fail', 'Operation failed'));
+              return;
+            }
+          } catch (err) {
+            if (card) card.style.display = '';
+            showAlert(t('op.fail', 'Operation failed'));
+            return;
+          }
+          loadMonitors(); // 成功：同步真实状态（已删项不再出现）
         });
       });
       monList.querySelectorAll('button.hist').forEach((b) => {
