@@ -25,6 +25,7 @@ import { jsonBodyParser } from './util.js';
 import { registerApiRoutes } from './api.js';
 import { registerPageRoutes } from './pages.js';
 import { runCron } from './cron.js';
+import { flushBackgroundTasks } from '../events.js';
 
 const app = new Hono();
 
@@ -70,7 +71,10 @@ export default {
   async fetch(request, env, ctx) {
     // 环境变量桥 + Hyperdrive 连接注入（幂等；业务模块按 process.env 零改动复用）
     setupDb(env);
-    return app.fetch(request, env, ctx);
+    const res = await app.fetch(request, env, ctx);
+    // 确保「发后即忘」的行为埋点（recordUserEvent）在 isolate 冻结前落库（见 events.js 顶部说明）
+    await flushBackgroundTasks().catch(() => {});
+    return res;
   },
 
   // Cron：每分钟检查循环（leader 租约防重叠）+ 每小时保留清理 + 每月 1 号月报

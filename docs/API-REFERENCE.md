@@ -142,10 +142,11 @@
 
 **响应**
 ```json
-{ "ok": true, "ts": 1700000000000, "region": "local" }
+{ "ok": true, "ts": 1700000000000, "region": "local", "last_check_at": 1700000000000 }
 ```
 
 > `region` 取自环境变量 `PROBE_REGION_NAME`（未配置时为 `local`）。
+> **v2.7（2026-10-05）**：新增 `last_check_at` 字段（UTC 毫秒时间戳，取自 `monitor_checks` 最近一次检查的 `ts`）。该字段用于发现「Web 层存活但检查引擎（cron）静默停摆」这类故障——守护监控可据 `now - last_check_at` 是否超过阈值（如 2h）告警。DB 查询异常时该字段缺省不返回，不影响 `ok` 与 Web 层存活判定。
 > **v1.6（2026-09-13）**：移除 `env` 字段——该字段原读 `PADDLE_ENVIRONMENT || 'sandbox'`，在 Creem 主收款、Paddle 降为 dormant 备用后具误导性；生产实际收款通道以 `PAYMENT_PROVIDER` 为准（管理后台「Env」列展示）。
 
 ## 1. Paddle 配置（无需登录）
@@ -744,7 +745,7 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
   ▸ 仍失败则由 `server.js` 的 `bootWithRetry()` 每 **15s** 重试整条启动链，**进程保持存活**；
   ▸ 初始化成功后才执行 `app.listen(PORT)`。
 ▸ **运维含义**：数据库长时间不可用时，进程存活但**尚未监听端口**（`/health` 不可达）；恢复后自动完成监听，**无需人工 `fly machine restart`**。
-▸ **`GET /health`**：响应结构不变（`{ ok, ts, region }`）。
+▸ **`GET /health`**：响应结构为 `{ ok, ts, region, last_check_at? }`（`last_check_at` 于 v2.7 新增，DB 异常时缺省）。
 
 ### 10.2 幂等保证（重试安全）
 

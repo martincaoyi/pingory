@@ -120,7 +120,22 @@ async function oauthFinish(c, email, name, state, provider) {
 
 export function registerApiRoutes(app) {
   // ===== 健康检查（与 server.js /health 响应形状一致）=====
-  app.get('/health', (c) => c.json({ ok: true, ts: Date.now(), region: process.env.PROBE_REGION_NAME || 'local' }));
+  // 追加 last_check_at：最近一次监控检查的 UTC 毫秒时间戳（monitor_checks.ts 为毫秒）。
+  // 用途：/health 只反映 Web 层存活，不反映 cron 检查引擎是否在跑；外部/守护监控
+  // 可用 last_check_at 判据发现「引擎停摆但 Web 正常」这类静默故障（10-02 迁移后曾发生）。
+  // DB 异常时仅缺字段，不影响 ok 与 Web 层存活判定。
+  app.get('/health', async (c) => {
+    const body = { ok: true, ts: Date.now(), region: process.env.PROBE_REGION_NAME || 'local' };
+    try {
+      const pool = await getPool();
+      const { rows } = await pool.query('SELECT MAX(ts) AS last_check_ts FROM monitor_checks');
+      const t = rows[0]?.last_check_ts;
+      if (t != null) body.last_check_at = Number(t);
+    } catch (e) {
+      console.warn('[health] 读取 last_check_at 失败:', e && e.message);
+    }
+    return c.json(body);
+  });
 
   // ===== Paddle / Creem 配置（公开）=====
   app.get('/api/paddle-config', (c) => c.json({

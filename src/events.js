@@ -4,6 +4,20 @@
 import crypto from 'crypto';
 import { getPool } from './db.js';
 
+// Worker 后台任务追踪：fetch 路径里 recordUserEvent 多为「发后即忘」调用（不 await）。
+// Worker 在响应返回后可能冻结 isolate，导致未 await 的 INSERT 丢失 —— 这正是 user_events
+// 自迁移（10-02）后长期停写的根因（monitor_checks 等被 await 的写入正常，user_events 不是）。
+// 用全局集合登记在途写入，由 cf-worker/index.js 的 fetch 处理器在回包前 flushBackgroundTasks()
+// 落库；Fly 路径（server.js）不调用 flush，集合会自动清理，无害。
+const _pendingBg = new Set();
+function trackBackground(p) {
+  _pendingBg.add(p);
+  p.finally(() => _pendingBg.delete(p)).catch(() => {});
+}
+export async function flushBackgroundTasks() {
+  if (_pendingBg.size) await Promise.all(Array.from(_pendingBg));
+}
+
 export function parseJSON(str, fallback = null) {
   if (!str) return fallback;
   try { return JSON.parse(str); } catch { return fallback; }
@@ -23,15 +37,20 @@ export async function recordUserEvent({ userId, eventType, metadata = {}, req })
   const pool = await getPool();
   const { ip, userAgent } = clientInfo(req);
   const meta = metadata && typeof metadata === 'object' ? JSON.stringify(metadata) : null;
-  try {
-    await pool.query(
-      `INSERT INTO user_events (id, user_id, event_type, metadata, ip, user_agent, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, now())`,
-      [crypto.randomUUID(), userId, eventType, meta, ip, userAgent]
-    );
-  } catch (e) {
-    console.error('[user_events] 记录失败:', e.message);
-  }
+  // 登记为后台任务，确保 Worker 回包前 flush 落库（见模块顶部说明）
+  const write = (async () => {
+    try {
+      await pool.query(
+        `INSERT INTO user_events (id, user_id, event_type, metadata, ip, user_agent, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, now())`,
+        [crypto.randomUUID(), userId, eventType, meta, ip, userAgent]
+      );
+    } catch (e) {
+      console.error('[user_events] 记录失败:', e.message);
+    }
+  })();
+  trackBackground(write);
+  return write;
 }
 
 export async function listUserEvents({ userId, eventType, limit = 100, offset = 0 }) {
