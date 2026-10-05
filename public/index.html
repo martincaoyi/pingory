@@ -765,11 +765,11 @@ docker compose up -d</code></pre>
       vb.innerHTML = t('verify.banner', 'Please verify your email to unlock all features.')
         + '<button id="resendVerify">' + t('verify.resend', 'Resend verification email') + '</button>';
       const btn = document.getElementById('resendVerify');
-      if (btn) btn.addEventListener('click', async () => {
+      if (btn) btn.addEventListener('click', () => withBusy(btn, async () => {
         const r = await fetch('/api/auth/resend-verify', { method: 'POST' });
         const d = await r.json();
         showGlobal(d.ok ? t('verify.sent', 'Verification email resent. Please check your inbox.') : (errMsg(d) || t('verify.fail', 'Failed to send')));
-      });
+      }));
     }
     function ensureVerifyBanner() {
       let vb = document.getElementById('verifyBanner');
@@ -935,7 +935,7 @@ docker compose up -d</code></pre>
           if (pane) pane.classList.add('active');
         };
         const nameSave = document.getElementById('acNameSave');
-        if (nameSave) nameSave.onclick = async () => {
+        if (nameSave) nameSave.onclick = () => withBusy(nameSave, async () => {
           const msg = document.getElementById('acNameMsg'); msg.textContent = '';
           try {
             const r = await fetch('/api/account/profile', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: document.getElementById('acName').value }) });
@@ -945,7 +945,7 @@ docker compose up -d</code></pre>
             const me = await (await fetch('/api/me', { credentials:'same-origin' })).json();
             if (me.user) { window.__currentUser = me.user; renderTopnavLoggedIn(me.user); }
           } catch { msg.style.color='var(--danger)'; msg.textContent = t('ac.network','Network error'); }
-        };
+        });
         const pwSave = document.getElementById('acPwSave');
         if (pwSave) pwSave.onclick = async () => {
           const msg = document.getElementById('acPwMsg'); msg.textContent = '';
@@ -981,7 +981,7 @@ docker compose up -d</code></pre>
           return out;
         };
         const chSaveAll = document.getElementById('acChSaveAll');
-        if (chSaveAll) chSaveAll.onclick = async () => {
+        if (chSaveAll) chSaveAll.onclick = () => withBusy(chSaveAll, async () => {
           const msg = document.getElementById('accMsg_all'); msg.textContent = '';
           try {
             const r = await fetch('/api/account/channels', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ channels: collectAcCh(allowedCh) }) });
@@ -991,7 +991,7 @@ docker compose up -d</code></pre>
             msg.style.color='var(--accent)'; msg.textContent = t('chan.saved','Saved');
             renderChannels();
           } catch { msg.style.color='var(--danger)'; msg.textContent = t('ac.network','Network error'); }
-        };
+        });
         document.querySelectorAll('#acPane-channels [data-test]').forEach((btn) => {
           btn.onclick = async () => {
             const c = btn.dataset.test;
@@ -1009,7 +1009,7 @@ docker compose up -d</code></pre>
           };
         });
         const emailSave = document.getElementById('acEmailSave');
-        if (emailSave) emailSave.onclick = async () => {
+        if (emailSave) emailSave.onclick = () => withBusy(emailSave, async () => {
           const msg = document.getElementById('acEmailMsg'); msg.textContent = '';
           const newEmail = document.getElementById('acEmail').value.trim();
           if (!newEmail) { msg.style.color='var(--danger)'; msg.textContent = t('ac.emailEmpty','Enter a new email'); return; }
@@ -1019,7 +1019,7 @@ docker compose up -d</code></pre>
             if (!r.ok) { msg.style.color='var(--danger)'; msg.textContent = errMsg(d); return; }
             msg.style.color='var(--accent)'; msg.textContent = t('ac.emailSent','Confirmation link sent to your new email');
           } catch { msg.style.color='var(--danger)'; msg.textContent = t('ac.network','Network error'); }
-        };
+        });
       }, 0);
     }
 
@@ -1056,7 +1056,8 @@ docker compose up -d</code></pre>
         <input id="feedbackEmail" placeholder="${t('fb.emailph', 'Your email (optional, so we can reply)')}" />
         <div class="modal-actions"><button id="feedbackCancel">${t('fb.cancel', 'Cancel')}</button><button id="feedbackSend" class="primary">${t('fb.send', 'Send')}</button></div></div>`;
       document.getElementById('feedbackCancel').addEventListener('click', () => modal.classList.add('hidden'));
-      document.getElementById('feedbackSend').addEventListener('click', async () => {
+      const feedbackSendBtn = document.getElementById('feedbackSend');
+      if (feedbackSendBtn) feedbackSendBtn.addEventListener('click', () => withBusy(feedbackSendBtn, async () => {
         const message = document.getElementById('feedbackMsg').value.trim();
         const email = document.getElementById('feedbackEmail').value.trim();
         if (!message) { showAlert(t('fb.empty', 'Please enter your feedback first')); return; }
@@ -1064,7 +1065,7 @@ docker compose up -d</code></pre>
         const d = await r.json();
         if (r.ok) { modal.classList.add('hidden'); document.getElementById('feedbackMsg').value = ''; showGlobal(t('fb.thanks', 'Thanks! We received your feedback.')); }
         else showAlert(errMsg(d) || t('fb.fail', 'Failed to send'));
-      });
+      }));
     }
 
     let creemActive = false;
@@ -1349,12 +1350,13 @@ docker compose up -d</code></pre>
       renderTopnavLoggedIn(user);
       // 邮箱未验证横幅
       ensureVerifyBanner().classList.toggle('hidden', !!user.emailVerified);
-      document.getElementById('logoutBtn').addEventListener('click', async () => {
+      const logoutBtnEl = document.getElementById('logoutBtn');
+      if (logoutBtnEl) logoutBtnEl.addEventListener('click', () => withBusy(logoutBtnEl, async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
         if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         showAuth();
         monList.innerHTML = '';
-      });
+      }));
       loadPlanFeatures();
       loadStatusPage(user);
       mountAdvanced(user);
@@ -1509,10 +1511,18 @@ docker compose up -d</code></pre>
       showGlobal(d.ok ? t('verify.sent', 'Verification email resent. Please check your inbox.') : (errMsg(d) || t('verify.fail', 'Failed to send')));
     }
     async function enableStatusFromOnb(){
-      const p = await fetch('/api/me/status-page', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true }) });
-      if (!p.ok) { const e = await p.json().catch(()=>({})); showGlobal(errMsg(e) || t('onb.step3.fail','Could not enable the status page, please try again')); return; }
-      const r = await fetch('/api/me'); window.__currentUser = (await r.json()).user;
+      const u = window.__currentUser; if (!u) return;
+      const prev = u.statusPageEnabled;
+      u.statusPageEnabled = true; // 乐观切换：点击即更新引导步骤与状态栏，不必等后端建连(~1s)
       renderOnboarding(); renderStatusBarText();
+      try {
+        const p = await fetch('/api/me/status-page', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true }) });
+        if (!p.ok) throw new Error('patch failed');
+      } catch (e) {
+        u.statusPageEnabled = prev; // 失败回滚
+        renderOnboarding(); renderStatusBarText();
+        showGlobal(t('onb.step3.fail','Could not enable the status page, please try again'));
+      }
     }
     function renderOnboarding(){
       const wrap = document.getElementById('onbWrap'); if (!wrap) return;
@@ -1605,12 +1615,30 @@ docker compose up -d</code></pre>
       const en = document.getElementById('spEnable');
       const dis = document.getElementById('spDisable');
       if (en) en.onclick = async () => {
-        await fetch('/api/me/status-page', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true }) });
-        const r = await fetch('/api/me'); const u = (await r.json()).user; window.__currentUser = u; loadStatusPage(u); renderOnboarding();
+        const u = window.__currentUser; if (!u) return;
+        const prev = u.statusPageEnabled;
+        u.statusPageEnabled = true; // 乐观切换：立即切换按钮，不阻塞
+        loadStatusPage(u); renderOnboarding();
+        try {
+          const p = await fetch('/api/me/status-page', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true }) });
+          if (!p.ok) throw new Error('patch failed');
+        } catch (e) {
+          u.statusPageEnabled = prev; loadStatusPage(u); renderOnboarding();
+          showGlobal(t('op.fail','Operation failed'));
+        }
       };
       if (dis) dis.onclick = async () => {
-        await fetch('/api/me/status-page', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: false }) });
-        const r = await fetch('/api/me'); const u = (await r.json()).user; window.__currentUser = u; loadStatusPage(u); renderOnboarding();
+        const u = window.__currentUser; if (!u) return;
+        const prev = u.statusPageEnabled;
+        u.statusPageEnabled = false; // 乐观切换：立即切换按钮，不阻塞
+        loadStatusPage(u); renderOnboarding();
+        try {
+          const p = await fetch('/api/me/status-page', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: false }) });
+          if (!p.ok) throw new Error('patch failed');
+        } catch (e) {
+          u.statusPageEnabled = prev; loadStatusPage(u); renderOnboarding();
+          showGlobal(t('op.fail','Operation failed'));
+        }
       };
     }
 
@@ -1633,6 +1661,18 @@ docker compose up -d</code></pre>
     const OPEN_HIST = {}, OPEN_STATS = {};
     // 乐观展开的请求序号：防止旧请求慢返回覆盖新的展开/收起（与删除同源于迁移后连接池建连慢）
     const OPEN_TOKENS = {};
+    // 轻量"处理中"反馈：点击即禁用按钮并显示占位文案，任务结束后恢复（消除迁移后 Worker 跨境建连慢导致的"点击无反应"）
+    function withBusy(btn, run) {
+      if (!btn || btn.disabled) return;
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = t('common.loading', 'Loading…');
+      const restore = () => { btn.disabled = false; btn.textContent = orig; };
+      try {
+        const p = run();
+        if (p && typeof p.finally === 'function') p.finally(restore);
+        else restore();
+      } catch (e) { restore(); }
+    }
 
     function fmtTime(ts) {
       if (!ts) return t('never','never');
@@ -1706,7 +1746,8 @@ docker compose up -d</code></pre>
           // 乐观展开：点击即显示 Loading，后端取数在后台进行，避免迁移后 Worker 连接池建连(~1s)导致的干等
           box.innerHTML = '<div class="evt">' + t('common.loading','Loading…') + '</div>';
           box.classList.remove('hidden');
-          const token = ++(OPEN_TOKENS['h' + id] || (OPEN_TOKENS['h' + id] = 0));
+          OPEN_TOKENS['h' + id] = (OPEN_TOKENS['h' + id] || 0) + 1;
+          const token = OPEN_TOKENS['h' + id];
           try {
             const res = await fetch('/api/monitors/' + id + '/history');
             const evs = await res.json();
@@ -1726,7 +1767,8 @@ docker compose up -d</code></pre>
           // 乐观展开：点击即显示 Loading，后台拉取趋势图，避免干等后端建连
           box.innerHTML = '<div class="evt">' + t('common.loading','Loading…') + '</div>';
           box.classList.remove('hidden');
-          const token = ++(OPEN_TOKENS['s' + id] || (OPEN_TOKENS['s' + id] = 0));
+          OPEN_TOKENS['s' + id] = (OPEN_TOKENS['s' + id] || 0) + 1;
+          const token = OPEN_TOKENS['s' + id];
           const res = await fetch('/api/monitors/' + id + '/stats');
           if (OPEN_TOKENS['s' + id] !== token) return; // 已被再次点击取代，丢弃旧响应
           if (!res.ok) { box.innerHTML = '<div class="evt">' + t('chart.needPlan','Trend chart requires Starter or above') + '</div>'; return; }
@@ -1826,26 +1868,33 @@ docker compose up -d</code></pre>
 
     addForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const url = document.getElementById('urlInput').value.trim();
-      const name = document.getElementById('nameInput').value.trim();
-      const interval = document.getElementById('intervalInput').value;
-      const type = document.getElementById('typeInput').value || 'http';
-      const config = collectConfig();
-      const channels = (FEATURES && FEATURES.channels.length) ? collectChannels() : { email: { enabled: true } };
-      const minInterval = FEATURES ? FEATURES.minInterval || 300 : 300;
-      const res = await fetch('/api/monitors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, name, interval: Number(interval) || minInterval, type, config, channels }),
-      });
-      if (res.ok) {
-        addForm.reset();
-        document.getElementById('intervalInput').value = minInterval;
-        renderCfg(); renderChannels();
-        loadMonitors();
-      } else {
-        const err = await res.json();
-        showAlert(errMsg(err) || t('op.fail','Operation failed'));
+      const sb = addForm.querySelector('button[type="submit"]');
+      const sbOrig = sb ? sb.textContent : '';
+      if (sb) { sb.disabled = true; sb.textContent = t('common.loading','Loading…'); }
+      try {
+        const url = document.getElementById('urlInput').value.trim();
+        const name = document.getElementById('nameInput').value.trim();
+        const interval = document.getElementById('intervalInput').value;
+        const type = document.getElementById('typeInput').value || 'http';
+        const config = collectConfig();
+        const channels = (FEATURES && FEATURES.channels.length) ? collectChannels() : { email: { enabled: true } };
+        const minInterval = FEATURES ? FEATURES.minInterval || 300 : 300;
+        const res = await fetch('/api/monitors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, name, interval: Number(interval) || minInterval, type, config, channels }),
+        });
+        if (res.ok) {
+          addForm.reset();
+          document.getElementById('intervalInput').value = minInterval;
+          renderCfg(); renderChannels();
+          loadMonitors();
+        } else {
+          const err = await res.json();
+          showAlert(errMsg(err) || t('op.fail','Operation failed'));
+        }
+      } finally {
+        if (sb) { sb.disabled = false; sb.textContent = sbOrig; }
       }
     });
 
@@ -1872,11 +1921,12 @@ docker compose up -d</code></pre>
         const body = document.createElement('div');
         body.innerHTML = '<button id="apiKeyBtn" class="pub">'+t('apikey.gen','Generate / View API Key')+'</button><div id="apiKeyOut" class="empty" style="margin-top:8px;word-break:break-all;"></div>';
         zone.appendChild(advPanel(t('apikey.title','Account API (manage monitors programmatically)'), body));
-        body.querySelector('#apiKeyBtn').onclick = async ()=>{
+        const apiKeyBtn = body.querySelector('#apiKeyBtn');
+        if (apiKeyBtn) apiKeyBtn.onclick = () => withBusy(apiKeyBtn, async ()=>{
           const r = await fetch('/api/account/apikey',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
           const j = await r.json();
           body.querySelector('#apiKeyOut').textContent = j.apiKey || errMsg(j);
-        };
+        });
       }
 
       // --- G7 状态页高级设置 (Pro) ---
@@ -1896,13 +1946,14 @@ docker compose up -d</code></pre>
           <div id="spMsg" class="empty" style="margin-top:8px;"></div>
           <div id="subZone" style="margin-top:14px;"></div>`;
         zone.appendChild(advPanel(t('sp.title','Advanced status page settings'), body));
-        body.querySelector('#spSave').onclick = async ()=>{
+        const spSaveBtn = body.querySelector('#spSave');
+        if (spSaveBtn) spSaveBtn.onclick = () => withBusy(spSaveBtn, async ()=>{
           const payload = { customDomain: body.querySelector('#spDomain').value.trim(), whiteLabel: body.querySelector('#spWhite').checked, password: body.querySelector('#spPw').value, title: body.querySelector('#spTitle').value };
           const r = await fetch('/api/me/status-page',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
           const j = await r.json();
           body.querySelector('#spMsg').textContent = r.ok ? t('sp.saved','Saved') : (errMsg(j)||t('err.fail','Failed'));
           if(r.ok) loadSubscribers(body.querySelector('#subZone'), user);
-        };
+        });
         loadSubscribers(body.querySelector('#subZone'), user);
       }
 
@@ -1946,7 +1997,13 @@ docker compose up -d</code></pre>
         const r = await fetch('/api/me/subscribers'); const list = await r.json();
         box.innerHTML = '<div style="font-weight:600;margin-bottom:6px;">'+t('sp.subs','Status page subscribers')+'</div>' +
           (list.length ? list.map((s)=>`<div style="display:flex;justify-content:space-between;gap:8px;"><span>${s.email}</span><button data-del="${s.id}" style="background:none;border:none;color:#ff5c5c;cursor:pointer;">`+t('btn.del','Delete')+`</button></div>`).join('') : '<div class="empty">'+t('sp.nosub','No subscribers yet')+'</div>');
-        box.querySelectorAll('[data-del]').forEach((b)=> b.onclick = async ()=>{ await fetch('/api/me/subscribers/'+b.dataset.del,{method:'DELETE'}); loadSubscribers(box, user); });
+        box.querySelectorAll('[data-del]').forEach((b)=> b.onclick = async ()=>{
+          const row = b.closest('div');
+          if (row) row.style.display = 'none'; // 乐观移除：点击即隐藏该行，不阻塞
+          const r = await fetch('/api/me/subscribers/'+b.dataset.del,{method:'DELETE'});
+          if (r.ok) loadSubscribers(box, user); // 后台同步真实列表
+          else { if (row) row.style.display = ''; showAlert(t('op.fail','Operation failed')); }
+        });
       } catch {}
     }
     async function loadMaintenance(body){
@@ -1954,14 +2011,21 @@ docker compose up -d</code></pre>
       try {
         const r = await fetch('/api/maintenance-windows'); const arr = await r.json();
         list.innerHTML = arr.length ? arr.map((m)=>`<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;"><span>${m.title} · ${new Date(m.startAt).toLocaleString()} → ${new Date(m.endAt).toLocaleString()}</span><button data-del="${m.id}" style="background:none;border:none;color:#ff5c5c;cursor:pointer;">`+t('btn.del','Delete')+`</button></div>`).join('') : '<div class="empty">'+t('mw.none','No maintenance windows')+'</div>';
-        list.querySelectorAll('[data-del]').forEach((b)=> b.onclick = async ()=>{ await fetch('/api/maintenance-windows/'+b.dataset.del,{method:'DELETE'}); loadMaintenance(body); });
-        body.querySelector('#mwAdd').onclick = async ()=>{
+        list.querySelectorAll('[data-del]').forEach((b)=> b.onclick = async ()=>{
+          const row = b.closest('div');
+          if (row) row.style.display = 'none'; // 乐观移除：点击即隐藏该行，不阻塞
+          const r = await fetch('/api/maintenance-windows/'+b.dataset.del,{method:'DELETE'});
+          if (r.ok) loadMaintenance(body); // 后台同步真实列表
+          else { if (row) row.style.display = ''; showAlert(t('op.fail','Operation failed')); }
+        });
+        const mwAddBtn = body.querySelector('#mwAdd');
+        if (mwAddBtn) mwAddBtn.onclick = () => withBusy(mwAddBtn, async ()=>{
           const start = new Date(body.querySelector('#mwStart').value).getTime();
           const end = new Date(body.querySelector('#mwEnd').value).getTime();
           if(!start||!end){ showAlert(t('mw.pick','Please pick start and end time')); return; }
           const r2 = await fetch('/api/maintenance-windows',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:body.querySelector('#mwTitle').value,startAt:start,endAt:end,monitorIds:'all'})});
           if(r2.ok) loadMaintenance(body); else { const j=await r2.json(); showAlert(errMsg(j)||t('err.fail','Failed')); }
-        };
+        });
       } catch {}
     }
     async function loadTeam(box){
@@ -1978,8 +2042,10 @@ docker compose up -d</code></pre>
           '<div class="empty">'+t('team.shared','Shared monitors')+'：' + (tm.monitors?tm.monitors.length:0) + ' '+(t('team.count',''))+'</div>' +
           '<div style="margin-top:8px;"><input id="teamInvite" placeholder="'+t('team.inviteph','Invite member email')+'" style="padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;"/><button id="teamInviteBtn" class="pub" style="margin-left:6px;">'+t('team.invitebtn','Invite')+'</button></div>' +
           '<button id="teamLeave" style="margin-top:10px;background:none;border:1px solid var(--border);color:#ff5c5c;padding:6px 10px;border-radius:6px;cursor:pointer;">'+t('team.leave','Leave team')+'</button>';
-        box.querySelector('#teamInviteBtn').onclick = async ()=>{ const email=box.querySelector('#teamInvite').value; const r2=await fetch('/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}); const j2=await r2.json(); showAlert(r2.ok?(j2.result==='already'?t('team.already','Already a member'):t('team.joined','Invited')):(errMsg(j2)||t('err.fail','Failed'))); if(r2.ok) loadTeam(box); };
-        box.querySelector('#teamLeave').onclick = async ()=>{ await fetch('/api/team/leave',{method:'POST'}); loadTeam(box); };
+        const teamInviteBtn = box.querySelector('#teamInviteBtn');
+        if (teamInviteBtn) teamInviteBtn.onclick = () => withBusy(teamInviteBtn, async ()=>{ const email=box.querySelector('#teamInvite').value; const r2=await fetch('/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}); const j2=await r2.json(); showAlert(r2.ok?(j2.result==='already'?t('team.already','Already a member'):t('team.joined','Invited')):(errMsg(j2)||t('err.fail','Failed'))); if(r2.ok) loadTeam(box); });
+        const teamLeaveBtn = box.querySelector('#teamLeave');
+        if (teamLeaveBtn) teamLeaveBtn.onclick = () => withBusy(teamLeaveBtn, async ()=>{ await fetch('/api/team/leave',{method:'POST'}); loadTeam(box); });
       } catch {}
     }
     // 一键导入弹窗：选来源格式 + 粘贴导出数据，批量创建监控

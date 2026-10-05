@@ -327,6 +327,7 @@ if (isMsg) {
     'syncThemeIcon',                        // 只换图标，无文案
     'load', 'showLock',                     // status/admin：数据驱动，结果缓存在 __lastStatusData / 由 load() 重入
     'openImportModal', 'openAccountSettings', // 通过 OPEN_MODAL 注册表在语言切换时重建
+    'withBusy',                            // 通用按钮「处理中」辅助：t() 仅在点击时读取最新 I18N，非渲染区块，无需挂语言切换链
   ]);
   const i18nHookMiss = [];
   for (const f of i18nHookFiles) {
