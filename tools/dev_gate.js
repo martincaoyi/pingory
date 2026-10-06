@@ -170,13 +170,13 @@ if (isMsg) {
 
   // 6) S4.5 UI 一致性：public/*.html 不得回退到旧黑主题 / 旧绿 / 旧蓝强调色
   //    防止"只改首页、忘改其他页面"的回退（2026-08-30 教训）。所有页面须统一浅绿调色板（--accent:#1faa6b）。
-  const LEGACY_UI = /#0f1115|#1a1d24|#2a2e37|rgba\(15,17,21|#3ddc84|#1677ff/i;
+  const LEGACY_UI = /#0f1115|#1a1d24|#2a2e37|rgba\(15,17,21|#3ddc84|#1677ff|#06210f/i;
   let uiRegress = false;
   for (const f of htmlFiles) {
     const c = read(f);
     const hit = c.match(LEGACY_UI);
     if (hit) {
-      fail('UI-一致性', `${f}: 检出旧主题色 "${hit[0]}"（旧黑主题/旧绿 #3ddc84/旧蓝 #1677ff）。所有 public 页面须统一浅绿调色板（--accent:#1faa6b，--bg:#f5f8f6），禁止只改首页。请同步所有页面后重试。`);
+      fail('UI-一致性', `${f}: 检出旧主题色 "${hit[0]}"（旧黑主题/旧绿 #3ddc84/旧蓝 #1677ff/绿底黑字 #06210f）。所有 public 页面须统一浅绿调色板（--accent:#1faa6b，--bg:#f5f8f6），禁止只改首页；强调色实心底（按钮/徽章）上的文字一律 #fff。请同步所有页面后重试。`);
       uiRegress = true;
     }
   }
