@@ -59,8 +59,9 @@
     [data-theme="dark"] .upgrade-nudge { background:var(--card-2); border-color:var(--accent-line); color:var(--text); }
     [data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea { background:var(--bg-2); }
     * { box-sizing: border-box; }
-    body { margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-           background:var(--bg); color:var(--text); line-height:1.6; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+           background:var(--bg); color:var(--text); line-height:1.6;
+           -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; text-rendering:optimizeLegibility; }
     .wrap { max-width: 920px; margin: 0 auto; padding: 64px 20px; }
     h1 { font-size: 2.4rem; margin: 0 0 12px; }
     .sub { color: var(--muted); font-size: 1.15rem; margin-bottom: 40px; }
@@ -75,11 +76,17 @@
     .switch input:checked + .slider:before { transform:translateX(24px); }
     .plans { display:grid; grid-template-columns: repeat(3,1fr); gap:20px; align-items:stretch; }
     .plan { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; display:flex; flex-direction:column;
+            position:relative;
             transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
     .plan:nth-child(1) { background:var(--card); }
     .plan:nth-child(2) { background:var(--card-2); border-color:var(--accent-line); }
     .plan:nth-child(3) { background:var(--bg-2); border-color:var(--accent); }
     .plan:hover { transform:translateY(-6px); box-shadow:0 16px 32px rgba(22,36,29,0.12); border-color:var(--accent-line); }
+    .plan.featured { box-shadow:0 0 0 1px var(--accent-line), 0 18px 40px var(--accent-soft); }
+    .plan-badge { position:absolute; top:-13px; left:50%; transform:translateX(-50%);
+                  background:var(--accent); color:#fff; font-size:.72rem; font-weight:700;
+                  letter-spacing:.04em; text-transform:uppercase; padding:4px 14px; border-radius:999px;
+                  box-shadow:0 4px 12px var(--accent-soft); white-space:nowrap; }
     .plan button { margin-top:auto; }
     .plan h3 { margin:0 0 4px; font-size:1.3rem; }
     .price { font-size:2rem; font-weight:700; margin:8px 0; line-height:1.15; }
@@ -90,8 +97,11 @@
     .plan ul { list-style:none; padding:0; margin:16px 0 20px; color:var(--muted); }
     .plan li { padding:4px 0; }
     button { width:100%; padding:12px; border:0; border-radius:8px; font-size:1rem;
-             font-weight:600; cursor:pointer; background:var(--accent); color:#fff; }
-    button:hover { opacity:.9; }
+             font-weight:600; cursor:pointer; background:var(--accent); color:#fff;
+             background-image:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 60%);
+             box-shadow:0 4px 12px var(--accent-soft);
+             transition:transform .15s ease, box-shadow .15s ease, filter .15s ease; }
+    button:hover { transform:translateY(-1px); filter:brightness(1.04); box-shadow:0 8px 18px var(--accent-soft); }
     button.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); }
     .trust { color:var(--muted); font-size:.85rem; margin-top:32px; text-align:center; }
     .dash { margin-top:56px; padding-top:40px; border-top:1px solid var(--border); }
@@ -203,7 +213,7 @@
     .monitor-types { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; margin:40px 0; }
     .mt-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; text-align:center; transition:transform .15s ease, border-color .15s ease; }
     .mt-card.wide { grid-column:span 2; }
-    .mt-card:hover { transform:translateY(-2px); border-color:var(--accent-line); }
+    .mt-card:hover { transform:translateY(-4px); border-color:var(--accent-line); box-shadow:0 12px 28px var(--accent-soft); }
     .mt-icon { font-size:1.8rem; margin-bottom:8px; }
     .mt-title { font-weight:600; font-size:.98rem; margin-bottom:4px; }
     .mt-desc, .mt-src { color:var(--muted); font-size:.82rem; line-height:1.45; }
@@ -236,8 +246,11 @@
     /* 落地页主 CTA（独立 Sign In / Sign Up） */
     .hero-cta { display:flex; gap:12px; margin:28px 0 8px; flex-wrap:wrap; }
     .btn-primary { display:inline-block; padding:12px 28px; border-radius:8px; font-size:1rem; font-weight:600;
-                   background:var(--accent); color:#fff; text-decoration:none; border:0; cursor:pointer; }
-    .btn-primary:hover { opacity:.9; }
+                   background:var(--accent); color:#fff; text-decoration:none; border:0; cursor:pointer;
+                   background-image:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 60%);
+                   box-shadow:0 6px 16px var(--accent-soft);
+                   transition:transform .15s ease, box-shadow .15s ease, filter .15s ease; }
+    .btn-primary:hover { transform:translateY(-1px); box-shadow:0 10px 22px var(--accent-soft); filter:brightness(1.04); }
     .btn-ghost { display:inline-block; padding:12px 28px; border-radius:8px; font-size:1rem; font-weight:600;
                  background:transparent; color:var(--accent); border:1px solid var(--accent); text-decoration:none; cursor:pointer; }
     .btn-ghost:hover { background:var(--accent-soft); }
@@ -452,6 +465,7 @@ docker compose up -d</code></pre>
       </div>
 
       <div class="plan featured">
+        <span class="plan-badge" data-i18n="landing.plan.popular">Most popular</span>
         <h3 data-i18n="landing.plan.starter.title">Starter</h3>
         <div class="price" id="priceStarter"><span class="eq">$40</span><small>/yr</small> = <span class="eq">$3.33</span><small>/mo</small><span class="billed">billed $40/yr · save 2 months</span></div>
         <ul>

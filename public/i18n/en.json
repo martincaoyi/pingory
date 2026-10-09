@@ -366,6 +366,7 @@
   "landing.plan.starter.periodAnn": "/ year",
   "landing.plan.starter.price": "$4",
   "landing.plan.starter.title": "Starter",
+  "landing.plan.popular": "Most popular",
   "landing.selfhost.desc": "Pingory is AGPL-3.0 open source. Clone the repo, set two secrets, and the whole stack — app, scheduler, alerts and PostgreSQL — comes up on your own machine.",
   "landing.selfhost.note": "No Docker? Node.js 18+ and any PostgreSQL work too.",
   "landing.selfhost.readme": "Read the self-hosting docs",

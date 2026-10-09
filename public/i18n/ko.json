@@ -366,6 +366,7 @@
   "landing.plan.starter.periodAnn": "/ 년",
   "landing.plan.starter.price": "$4",
   "landing.plan.starter.title": "Starter",
+  "landing.plan.popular": "가장 인기",
   "landing.selfhost.desc": "Pingory는 AGPL-3.0 오픈소스입니다. 저장소를 복제하고 시크릿 두 개만 설정하면 앱·스케줄러·알림·PostgreSQL 전체 스택이 내 컴퓨터에서 실행됩니다.",
   "landing.selfhost.note": "Docker가 없어도 Node.js 18+와 PostgreSQL이면 됩니다.",
   "landing.selfhost.readme": "셀프 호스팅 문서 보기",

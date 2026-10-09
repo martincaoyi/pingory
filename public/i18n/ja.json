@@ -366,6 +366,7 @@
   "landing.plan.starter.periodAnn": "/ 年",
   "landing.plan.starter.price": "$4",
   "landing.plan.starter.title": "Starter",
+  "landing.plan.popular": "一番人気",
   "landing.selfhost.desc": "Pingory は AGPL-3.0 のオープンソースです。リポジトリを clone して2つのシークレットを設定すれば、アプリ・スケジューラ・アラート・PostgreSQL があなたのマシン上で動き出します。",
   "landing.selfhost.note": "Docker がなくても、Node.js 18+ と任意の PostgreSQL で動きます。",
   "landing.selfhost.readme": "セルフホストの手順を読む",

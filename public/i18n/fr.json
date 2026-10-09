@@ -366,6 +366,7 @@
   "landing.plan.starter.periodAnn": "/ an",
   "landing.plan.starter.price": "$4",
   "landing.plan.starter.title": "Starter",
+  "landing.plan.popular": "Le plus populaire",
   "landing.selfhost.desc": "Pingory est open source sous AGPL-3.0. Clonez le dépôt, définissez deux secrets et toute la pile (application, ordonnanceur, alertes et PostgreSQL) démarre sur votre propre machine.",
   "landing.selfhost.note": "Pas de Docker ? Node.js 18+ et n'importe quel PostgreSQL fonctionnent aussi.",
   "landing.selfhost.readme": "Lire la doc d'auto-hébergement",

@@ -366,6 +366,7 @@
   "landing.plan.starter.periodAnn": "/ 年",
   "landing.plan.starter.price": "$4",
   "landing.plan.starter.title": "Starter",
+  "landing.plan.popular": "最受欢迎",
   "landing.selfhost.desc": "Pingory 是 AGPL-3.0 开源项目。克隆仓库、设置两个密钥，整套服务——应用、调度、告警与 PostgreSQL——就在你自己的机器上跑起来。",
   "landing.selfhost.note": "不想用 Docker？Node.js 18+ 加任意 PostgreSQL 也可以。",
   "landing.selfhost.readme": "阅读自托管文档",
