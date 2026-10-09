@@ -5,7 +5,7 @@
 > **当前线上视觉**：**深空灰底 + 荧光绿强调**（主视觉，2026-08-30 定调，非纯黑）+ 浅色模式（`data-theme` 切换）。配色实际值见 §2，以代码为准。
 > **页面文件**：`public/index.html`（落地+仪表盘一体）/ `signin.html` / `signup.html` / `status.html`（公开状态页）/ `admin.html`。
 > **关联**：CODE-STANDARDS.md §7（i18n）、API-REFERENCE.md。（首页改版专项 PRD 属方案层，按设计不随本仓库公开）
-> **最后更新**：2026-09-04（首次成文，对齐线上 v30）
+> **最后更新**：2026-10-09（反馈悬浮按钮改版：居中绿条 → 右下角胶囊按钮 + 图标）
 > **禁止表格**：遵循全局「禁用表格」铁律。
 
 ---
@@ -81,7 +81,7 @@
 ▸ 状态页开关面板（spEnable/spDomain/spWhite/spPw/spSave）——公开链接展示
 ▸ 增强功能区（Enhanced capabilities，已注册付费档用户可见 add-on 列表）
 ▸ 附加面板：维护窗口（mw*）、团队（team*）、Account API（apiKey*）、一键导入（importBtn/impData/impFmt）、升级提示横幅（upgradeNudge/upgradeLink/upgradeDismiss）
-▸ 悬浮反馈组件（feedback-fab：默认居中悬浮 → 到底贴底；feedbackMsg/Email/Send/Cancel）
+▸ 悬浮反馈组件（feedback-fab：**固定右下角**的胶囊形悬浮按钮，含聊天气泡 SVG 图标 + 「Feedback」文字；hover 上浮 2px + 阴影加深、active 回弹、focus-visible 白描边；窄屏 ≤560px 自动缩小边距与字号；底部贴底时 `.fab-bottom` 上抬避让；feedbackMsg/Email/Send/Cancel）
 ▸ 监控数超限/配额提示（statusBar 等）
 
 ### 4.4 认证页（signin / signup）
