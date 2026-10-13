@@ -4,8 +4,8 @@
 >
 > **迁移期说明（2026-10-02，ADR-0001）**：`src/cf-worker/*`（Hono Worker 入口）正在把本文档描述的全部端点逐条迁移为 Cloudflare Worker 形态。迁移期间：① 端点路径 / 方法 / 请求响应形状 / 错误码与本文档**完全一致**，不新增不删除端点；② 每端点的迁移对账（源 server.js 行号 / 状态 / 验证方式）见 `src/cf-worker/PORT-CHECKLIST.md`；③ Worker 专属差异仅限实现层（自研 DB-backed 会话中间件、邮件走 Resend HTTP、cron 每 tick 限量、db.js Worker 池 `maxUses:1` 防死连接复用、monitors.js 顶层 crypto 惰性化、DB 超时经 `PG_*_TIMEOUT_MS` vars 放宽容忍 Hyperdrive 冷启动、jsonBodyParser 显式挂载、cookie 经 `hono/cookie` setCookie、Worker 侧 `SMTP_FROM` 须为无外层引号的 `Name <email>` 格式否则 Resend 422），不影响本契约；④ **2026-10-02 已部署上线并金丝雀验证通过**：`pingory.com/*` 已切至 Worker（`pingory.u-martin-cao.workers.dev` 为直连预览），Fly 版同日转为热备直至停机。
 >
-> **版本**：v2.8（2026-10-13 迁移收尾：`/health` 新增 `payment{provider,creem_ready}` 回归守卫字段——背景：Fly→Cloudflare 迁移漏搬 Creem 密钥致主通道静默失效两周无人察觉；**端点无增删**——v2.7：2026-10-05 `/health` 新增 `last_check_at`——v2.6：2026-09-29 出海获客前置：新增邮件订阅列表 waitlist 4 端点 + 2 错误码 + 8 语 wl.* 字典键——v2.5：2026-09-23 P1/P2 稳定性：探针改增量取数 + 总并发上限、启动期 DDL 改版本化迁移、数据保留清理、对比页渲染缓存；**端点无增删、错误码仍 37 个、8 语字典零改动**——v2.4 为 P0-2「全局异常兜底与 5xx 语义」；v2.3：2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
-> **最后更新**：2026-10-13（迁移收尾：/health 加 payment 守卫字段 + Creem active 判定加凭证校验）
+> **版本**：v2.9（2026-10-13 webhook 鲁棒性：`POST /api/creem/webhook` 响应语义收紧——**400 仅限验签失败**，验签通过后即使内部处理异常也返回 `200 ok`（此前内部异常同样返 400，会让 Creem 重试 5 次耗尽后**永久丢弃该事件**；触发场景＝DB 抖动导致 `updatePlan` 抛错）。同步改动：`server.js` 与 `src/cf-worker/api.js` 双路径同构；`grant()/revoke()` 内 `updatePlan` 加 try/catch，防单点失败中断后续记账步骤。**端点无增删、错误码数量不变**——v2.8（2026-10-13 迁移收尾：`/health` 新增 `payment{provider,creem_ready}` 回归守卫字段——背景：Fly→Cloudflare 迁移漏搬 Creem 密钥致主通道静默失效两周无人察觉；**端点无增删**——v2.7：2026-10-05 `/health` 新增 `last_check_at`——v2.6：2026-09-29 出海获客前置：新增邮件订阅列表 waitlist 4 端点 + 2 错误码 + 8 语 wl.* 字典键——v2.5：2026-09-23 P1/P2 稳定性：探针改增量取数 + 总并发上限、启动期 DDL 改版本化迁移、数据保留清理、对比页渲染缓存；**端点无增删、错误码仍 37 个、8 语字典零改动**——v2.4 为 P0-2「全局异常兜底与 5xx 语义」；v2.3：2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
+> **最后更新**：2026-10-13（迁移收尾：/health 加 payment 守卫字段 + Creem active 判定加凭证校验；同日 webhook 响应语义收紧——400 仅限验签失败）
 > **关联代码**：`server.js`（路由，共 84 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）；**Cloudflare 迁移新增 `src/cf-worker/index.js`（Worker 入口，ADR-0001）——迁移期 `/health` 与 `/api/*` 将由 Fly 版与 Worker 版并行提供，端点契约与本文档一致，全部端点迁移完成前 Worker 版仅做预览验证，不接生产流量**
 >
 > **2026-09-19 探针可靠性**：本地检查与多区域 `/probe` 均经 `runLocalCheckRetry` 执行——单次检查遇超时 / 网络抖动类错误会重试一次（间隔 1.5s）后再判定 down，消除东京探针偶发抖动造成的假故障；单点 HTTP/Keyword 超时从硬编码 10s 提至 15s（可经 `CHECK_TIMEOUT_MS` 环境变量调参，无需重新部署）。
@@ -545,6 +545,12 @@ Paddle 订阅事件通知。签名手动 HMAC-SHA256 验签，时间戳容差 30
 
 ### POST /api/creem/webhook
 Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HMAC-SHA256(原始 body, CREEM_WEBHOOK_SECRET) 十六进制；body 解析用 `express.raw({type:'*/*'})`（兼容任意 content-type），取 Buffer 原文做 HMAC，复用方案C 归一化账单账本（`recordBillingEvent({provider:'creem'})`）+ `updatePlan`，owner 分析与 Paddle 同源。
+
+**响应（v2.9 收紧）**
+- `200 ok` —— **验签通过后一律返回 200**，包括内部处理异常（仅写 `console.error` 日志，不改变响应码）。理由：Creem 对非 2xx 会按退避重试，**上限 5 次**，耗尽即永久丢弃该事件；把「验签通过但处理失败」也判为失败，等于用一个可重试的通道去放大偶发故障。
+- `400 invalid signature` —— **仅验签失败时返回**（签名不匹配 / 密钥缺失）。
+- ⚠️ 2026-10-13 前：内部处理异常也走外层 catch 返回 `400 invalid`（响应体 `invalid`，与验签失败的 `invalid signature` 区分）；对**已验签**的事件使用可重试错误码，实测会让 Creem 侧长期显示「重试中」（尝试次数 4–5/5），并在耗尽后永久丢弃该事件。故收缩为单一 400 语义 + 处理异常仍返 200。
+- 📌 Creem 事件日志里的 HTTP 400 有两种来源，排查时看**响应体**：`invalid signature` = 密钥问题（如迁移漏搬 secret）；`invalid` = 业务处理异常（DB 等）。
 
 **Event 字段说明**
 - Creem 实测 payload 用 camelCase `eventType`（非 `event_type`）；服务端读取 `event.event_type || event.eventType` 双兼容，避免落入 `default` 不升级。

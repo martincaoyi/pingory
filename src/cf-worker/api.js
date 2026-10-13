@@ -319,12 +319,14 @@ export function registerApiRoutes(app) {
     const signature = c.req.header('creem-signature');
     const secret = process.env.CREEM_WEBHOOK_SECRET;
     const rawBody = c.get('rawBody') || '';
+    // ① 验签失败：唯一返回 400 的情形（让 Creem 明确判定该次投递无效）
+    if (!verifyCreemSignature(rawBody, secret, signature)) {
+      const computed = crypto.createHmac('sha256', secret || '').update(rawBody).digest('hex');
+      console.error('[creem webhook] 验签失败', { received: String(signature || '').slice(0, 24), computed: computed.slice(0, 24), ct: c.req.header('content-type'), bodyLen: rawBody.length, hasSecret: !!secret });
+      return c.text('invalid signature', 400);
+    }
+    // ② 验签通过后：内部处理异常只记日志、仍返回 200（避免「DB 抖动 → 400 → 上游反复重试直至耗尽」）
     try {
-      if (!verifyCreemSignature(rawBody, secret, signature)) {
-        const computed = crypto.createHmac('sha256', secret || '').update(rawBody).digest('hex');
-        console.error('[creem webhook] 验签失败', { received: String(signature || '').slice(0, 24), computed: computed.slice(0, 24), ct: c.req.header('content-type'), bodyLen: rawBody.length, hasSecret: !!secret });
-        return c.text('invalid signature', 400);
-      }
       const event = JSON.parse(rawBody);
       const eventType = event.event_type || event.eventType;
       console.log('[creem webhook]', eventType, event.id);
@@ -344,7 +346,8 @@ export function registerApiRoutes(app) {
 
       const grant = async (doCommission) => {
         if (!u || !plan) return;
-        await updatePlan(u.id, plan, { customerId: custId, subscriptionId: subId });
+        try { await updatePlan(u.id, plan, { customerId: custId, subscriptionId: subId }); }
+        catch (e) { console.error('[creem webhook] updatePlan 失败:', e.message); }
         recordUserEvent({ userId: u.id, eventType: 'plan_upgrade', metadata: { provider: 'creem', plan, cycle }, req: null });
         console.log('[creem webhook] 用户', u.email, '升级到', plan);
         try {
@@ -360,7 +363,8 @@ export function registerApiRoutes(app) {
       };
       const revoke = async () => {
         if (!u) return;
-        await updatePlan(u.id, 'free', { customerId: custId, subscriptionId: null });
+        try { await updatePlan(u.id, 'free', { customerId: custId, subscriptionId: null }); }
+        catch (e) { console.error('[creem webhook] updatePlan 失败:', e.message); }
         recordUserEvent({ userId: u.id, eventType: 'plan_downgrade', metadata: { provider: 'creem', plan: 'free' }, req: null });
         console.log('[creem webhook] 用户', u.email, '降回 free');
         try {
@@ -383,11 +387,10 @@ export function registerApiRoutes(app) {
           break;
         default: break;
       }
-      return c.text('ok', 200);
     } catch (err) {
-      console.error('[creem webhook] 处理失败:', err.message);
-      return c.text('invalid', 400);
+      console.error('[creem webhook] 处理异常（已返回 200，不触发上游重试）:', err && err.message, err && err.stack);
     }
+    return c.text('ok', 200);
   });
 
   // ===== 页面分析 =====
