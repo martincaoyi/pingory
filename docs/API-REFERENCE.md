@@ -550,7 +550,8 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 - `200 ok` —— **验签通过后一律返回 200**，包括内部处理异常（仅写 `console.error` 日志，不改变响应码）。理由：Creem 对非 2xx 会按退避重试，**上限 5 次**，耗尽即永久丢弃该事件；把「验签通过但处理失败」也判为失败，等于用一个可重试的通道去放大偶发故障。
 - `400 invalid signature` —— **仅验签失败时返回**（签名不匹配 / 密钥缺失）。
 - ⚠️ 2026-10-13 前：内部处理异常也走外层 catch 返回 `400 invalid`（响应体 `invalid`，与验签失败的 `invalid signature` 区分）；对**已验签**的事件使用可重试错误码，实测会让 Creem 侧长期显示「重试中」（尝试次数 4–5/5），并在耗尽后永久丢弃该事件。故收缩为单一 400 语义 + 处理异常仍返 200。
-- 📌 Creem 事件日志里的 HTTP 400 有两种来源，排查时看**响应体**：`invalid signature` = 密钥问题（如迁移漏搬 secret）；`invalid` = 业务处理异常（DB 等）。
+- `500 server_error` —— **请求体不是合法 JSON** 时，由全局 body 解析中间件（`src/cf-worker/util.js` 的 `jsonBodyParser`）抛出、经 `app.onError` 返回，**发生在进入本路由之前**（与 Express 版 body-parser 错误中间件路径一致，属刻意对齐）。Creem 实际投递始终是合法 JSON，该分支只用于排查误配置 / 扫描流量。
+- 📌 Creem 事件日志里的 HTTP 400 有两种来源，排查时看**响应体**：`invalid signature` = 密钥问题（如迁移漏搬 secret）；`invalid` = 业务处理异常（DB 等，v2.9 后已不再产生，改为 200 + 日志）。
 
 **Event 字段说明**
 - Creem 实测 payload 用 camelCase `eventType`（非 `event_type`）；服务端读取 `event.event_type || event.eventType` 双兼容，避免落入 `default` 不升级。
