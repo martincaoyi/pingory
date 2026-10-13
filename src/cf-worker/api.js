@@ -39,7 +39,11 @@ function creemConfig() {
   const env = process.env;
   return {
     base: env.CREEM_ENVIRONMENT === 'live' ? 'https://api.creem.io/v1' : 'https://test-api.creem.io/v1',
-    active: (env.PAYMENT_PROVIDER || 'paddle') === 'creem',
+    // active 必须「选中 creem」且关键凭证齐全（API key + webhook secret）：
+    // 只查 provider 不查凭证时，迁移/部署漏配密钥会让前端拿到假 active、结账 500，
+    // 且 webhook 全部验签失败被 400 拒收、billing_events 恒空，无人察觉（2026-10-13 迁移后实测发生）。
+    // 凭证缺失 ⇒ 降级 false，前端自动回退 Paddle 备用通道。
+    active: (env.PAYMENT_PROVIDER || 'paddle') === 'creem' && !!(env.CREEM_API_KEY && env.CREEM_WEBHOOK_SECRET),
     productPlan: {
       [env.CREEM_STARTER_PRODUCT]: 'starter',
       [env.CREEM_PRO_PRODUCT]: 'pro',
@@ -126,6 +130,14 @@ export function registerApiRoutes(app) {
   // DB 异常时仅缺字段，不影响 ok 与 Web 层存活判定。
   app.get('/health', async (c) => {
     const body = { ok: true, ts: Date.now(), region: process.env.PROBE_REGION_NAME || 'local' };
+    // payment：支付通道就绪状态（纯 env 读取，零 DB 依赖）。
+    // 回归守卫：迁移/部署漏配密钥时 Creem 静默失效、前端悄悄降级 Paddle、webhook 全被
+    // 400 拒收（2026-10-13 实测，billing_events 恒空两周无人察觉）——外部监控对本字段
+    // 建 keyword 断言即可第一时间告警。
+    body.payment = {
+      provider: process.env.PAYMENT_PROVIDER || 'paddle',
+      creem_ready: !!(process.env.CREEM_API_KEY && process.env.CREEM_WEBHOOK_SECRET),
+    };
     try {
       const pool = await getPool();
       const { rows } = await pool.query('SELECT MAX(ts) AS last_check_ts FROM monitor_checks');

@@ -4,8 +4,8 @@
 >
 > **迁移期说明（2026-10-02，ADR-0001）**：`src/cf-worker/*`（Hono Worker 入口）正在把本文档描述的全部端点逐条迁移为 Cloudflare Worker 形态。迁移期间：① 端点路径 / 方法 / 请求响应形状 / 错误码与本文档**完全一致**，不新增不删除端点；② 每端点的迁移对账（源 server.js 行号 / 状态 / 验证方式）见 `src/cf-worker/PORT-CHECKLIST.md`；③ Worker 专属差异仅限实现层（自研 DB-backed 会话中间件、邮件走 Resend HTTP、cron 每 tick 限量、db.js Worker 池 `maxUses:1` 防死连接复用、monitors.js 顶层 crypto 惰性化、DB 超时经 `PG_*_TIMEOUT_MS` vars 放宽容忍 Hyperdrive 冷启动、jsonBodyParser 显式挂载、cookie 经 `hono/cookie` setCookie、Worker 侧 `SMTP_FROM` 须为无外层引号的 `Name <email>` 格式否则 Resend 422），不影响本契约；④ **2026-10-02 已部署上线并金丝雀验证通过**：`pingory.com/*` 已切至 Worker（`pingory.u-martin-cao.workers.dev` 为直连预览），Fly 版同日转为热备直至停机。
 >
-> **版本**：v2.6（2026-09-29 出海获客前置：新增邮件订阅列表 waitlist 4 端点 + 2 错误码 + 8 语 wl.* 字典键——v2.5：2026-09-23 P1/P2 稳定性：探针改增量取数 + 总并发上限、启动期 DDL 改版本化迁移、数据保留清理、对比页渲染缓存；**端点无增删、错误码仍 37 个、8 语字典零改动**——v2.4 为 P0-2「全局异常兜底与 5xx 语义」；v2.3：2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
-> **最后更新**：2026-09-29（出海获客前置：email 订阅入口上线，新增 4 端点 + 2 错误码 + 8 语 wl.* 字典键）
+> **版本**：v2.8（2026-10-13 迁移收尾：`/health` 新增 `payment{provider,creem_ready}` 回归守卫字段——背景：Fly→Cloudflare 迁移漏搬 Creem 密钥致主通道静默失效两周无人察觉；**端点无增删**——v2.7：2026-10-05 `/health` 新增 `last_check_at`——v2.6：2026-09-29 出海获客前置：新增邮件订阅列表 waitlist 4 端点 + 2 错误码 + 8 语 wl.* 字典键——v2.5：2026-09-23 P1/P2 稳定性：探针改增量取数 + 总并发上限、启动期 DDL 改版本化迁移、数据保留清理、对比页渲染缓存；**端点无增删、错误码仍 37 个、8 语字典零改动**——v2.4 为 P0-2「全局异常兜底与 5xx 语义」；v2.3：2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
+> **最后更新**：2026-10-13（迁移收尾：/health 加 payment 守卫字段 + Creem active 判定加凭证校验）
 > **关联代码**：`server.js`（路由，共 84 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）；**Cloudflare 迁移新增 `src/cf-worker/index.js`（Worker 入口，ADR-0001）——迁移期 `/health` 与 `/api/*` 将由 Fly 版与 Worker 版并行提供，端点契约与本文档一致，全部端点迁移完成前 Worker 版仅做预览验证，不接生产流量**
 >
 > **2026-09-19 探针可靠性**：本地检查与多区域 `/probe` 均经 `runLocalCheckRetry` 执行——单次检查遇超时 / 网络抖动类错误会重试一次（间隔 1.5s）后再判定 down，消除东京探针偶发抖动造成的假故障；单点 HTTP/Keyword 超时从硬编码 10s 提至 15s（可经 `CHECK_TIMEOUT_MS` 环境变量调参，无需重新部署）。
@@ -142,10 +142,11 @@
 
 **响应**
 ```json
-{ "ok": true, "ts": 1700000000000, "region": "local", "last_check_at": 1700000000000 }
+{ "ok": true, "ts": 1700000000000, "region": "local", "payment": { "provider": "creem", "creem_ready": true }, "last_check_at": 1700000000000 }
 ```
 
 > `region` 取自环境变量 `PROBE_REGION_NAME`（未配置时为 `local`）。
+> **v2.8（2026-10-13）**：新增 `payment` 字段（`provider` = 当前支付通道；`creem_ready` = Creem 关键凭证 API key + webhook secret 是否齐全，纯 env 读取零 DB 依赖）。回归守卫：Fly→Cloudflare 迁移曾漏搬 Creem 密钥，导致主通道静默失效（前端悄悄降级 Paddle、webhook 全被 400 拒收、`billing_events` 两周恒空无人察觉）——外部监控可对 `creem_ready:false` 或 `provider` 不符建 keyword 告警。
 > **v2.7（2026-10-05）**：新增 `last_check_at` 字段（UTC 毫秒时间戳，取自 `monitor_checks` 最近一次检查的 `ts`）。该字段用于发现「Web 层存活但检查引擎（cron）静默停摆」这类故障——守护监控可据 `now - last_check_at` 是否超过阈值（如 2h）告警。DB 查询异常时该字段缺省不返回，不影响 `ok` 与 Web 层存活判定。
 > **v1.6（2026-09-13）**：移除 `env` 字段——该字段原读 `PADDLE_ENVIRONMENT || 'sandbox'`，在 Creem 主收款、Paddle 降为 dormant 备用后具误导性；生产实际收款通道以 `PAYMENT_PROVIDER` 为准（管理后台「Env」列展示）。
 
@@ -745,7 +746,7 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
   ▸ 仍失败则由 `server.js` 的 `bootWithRetry()` 每 **15s** 重试整条启动链，**进程保持存活**；
   ▸ 初始化成功后才执行 `app.listen(PORT)`。
 ▸ **运维含义**：数据库长时间不可用时，进程存活但**尚未监听端口**（`/health` 不可达）；恢复后自动完成监听，**无需人工 `fly machine restart`**。
-▸ **`GET /health`**：响应结构为 `{ ok, ts, region, last_check_at? }`（`last_check_at` 于 v2.7 新增，DB 异常时缺省）。
+▸ **`GET /health`**：响应结构为 `{ ok, ts, region, payment{provider,creem_ready}, last_check_at? }`（`payment` v2.8 新增；`last_check_at` v2.7 新增，DB 异常时缺省）。
 
 ### 10.2 幂等保证（重试安全）
 

@@ -499,7 +499,11 @@ app.post(
 // checkout 创建 + webhook 验签 + 调同一 recordBillingEvent/updatePlan，不改动 Paddle 任何逻辑。
 // Creem 出问题只需把 PAYMENT_PROVIDER 改回 paddle 即可切回，无需动代码。
 const CREEM_BASE = process.env.CREEM_ENVIRONMENT === 'live' ? 'https://api.creem.io/v1' : 'https://test-api.creem.io/v1';
-const CREEM_ACTIVE = (process.env.PAYMENT_PROVIDER || 'paddle') === 'creem';
+// active 必须「选中 creem」且关键凭证齐全（API key + webhook secret）：
+// 只查 provider 不查凭证时，部署漏配密钥会让前端拿到假 active、结账 500，
+// 且 webhook 全部验签失败被 400 拒收、billing_events 恒空，无人察觉（2026-10-13 迁移后实测发生）。
+const CREEM_ACTIVE = (process.env.PAYMENT_PROVIDER || 'paddle') === 'creem'
+  && !!(process.env.CREEM_API_KEY && process.env.CREEM_WEBHOOK_SECRET);
 
 // 前端查询当前激活的收款渠道（公开信息，无密钥）
 app.get('/api/creem-config', (req, res) => {
@@ -2071,7 +2075,16 @@ app.delete('/api/v1/monitors/:id', requireApiKey, async (req, res) => {
 
 // 健康检查（供编排平台 / Uptime Robot 探测本服务存活）
 app.get('/health', (_req, res) => {
-  res.json({ ok: true, ts: Date.now(), region: process.env.PROBE_REGION_NAME || 'local' });
+  // payment：支付通道就绪状态（纯 env 读取，零 DB 依赖；与 cf-worker /health 形状一致）。
+  // 回归守卫：漏配密钥时 Creem 静默失效、webhook 全被 400 拒收（2026-10-13 实测），
+  // 外部监控对本字段建 keyword 断言即可第一时间告警。
+  res.json({
+    ok: true, ts: Date.now(), region: process.env.PROBE_REGION_NAME || 'local',
+    payment: {
+      provider: process.env.PAYMENT_PROVIDER || 'paddle',
+      creem_ready: !!(process.env.CREEM_API_KEY && process.env.CREEM_WEBHOOK_SECRET),
+    },
+  });
 });
 
 // ===== 未匹配的 /api/* 统一兜底（P1-11）=====
