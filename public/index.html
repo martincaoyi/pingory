@@ -11,21 +11,70 @@
   <link rel="manifest" href="/site.webmanifest">
   <meta name="description" content="Free for 50 monitors. Upgrade for 1-minute checks, public status pages & incident timelines. No vendor lock-in." />
   <link rel="canonical" href="https://pingory.com/" />
-  <!-- P2-6 SEO 结构化数据（SoftwareApplication）：价格与 PRODUCT.md 真值表一致；不写 aggregateRating（无真实评分，绝不编造） -->
+  <!-- P2-6 SEO 结构化数据（Organization + WebSite + SoftwareApplication，@graph 单一实体图）：
+       · 价格与 PRODUCT.md / src/plans.js 真值表一致（Free 0 / Starter 4 / Pro 6 USD/月）；
+         priceSpecification 标明按月计费，避免被读成一次性价格
+       · sameAs 只列可核实的官方档案（GitHub 仓库）；X 主账号属个人资产、未绑定产品，
+         不作 Organization.sameAs（如需人物实体，另建 founder Person 节点）
+       · 不写 aggregateRating（无真实评分，绝不编造）
+       · Organization 仅在本首页声明一次；对比页/状态页不重复声明，避免多节点实体冲突
+       · 不写多区域声明：线上为单区域探针，多区域仅自托管可开
+       · 检查频率口径：托管版 Cron 为 1 分钟粒度，30 秒仅自托管可达 ⇒ 描述据实区分 -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Pingory",
-    "url": "https://pingory.com/",
-    "applicationCategory": "DeveloperApplication",
-    "operatingSystem": "Web",
-    "description": "Uptime monitoring with 30-second checks, keyword/API assertions, public status pages and incident timelines. Free for 50 monitors.",
-    "author": { "@type": "Organization", "name": "Pingory" },
-    "offers": [
-      { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "50 monitors, 5-minute checks" },
-      { "@type": "Offer", "name": "Starter", "price": "4", "priceCurrency": "USD", "description": "100 monitors, 1-minute checks" },
-      { "@type": "Offer", "name": "Pro", "price": "6", "priceCurrency": "USD", "description": "Unlimited monitors, 30-second checks" }
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://pingory.com/#organization",
+        "name": "Pingory",
+        "url": "https://pingory.com/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://pingory.com/icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        "sameAs": [
+          "https://github.com/martincaoyi/pingory"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://pingory.com/#website",
+        "url": "https://pingory.com/",
+        "name": "Pingory",
+        "inLanguage": "en",
+        "publisher": { "@id": "https://pingory.com/#organization" }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://pingory.com/#softwareapplication",
+        "name": "Pingory",
+        "url": "https://pingory.com/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Web",
+        "description": "Uptime monitoring with 1-minute checks on the hosted service (30-second checks when self-hosted), keyword/API assertions, public status pages and incident timelines. The free plan includes 50 monitors.",
+        "isAccessibleForFree": true,
+        "publisher": { "@id": "https://pingory.com/#organization" },
+        "offers": [
+          {
+            "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD",
+            "description": "50 monitors, checks every 5 minutes",
+            "priceSpecification": { "@type": "UnitPriceSpecification", "price": "0", "priceCurrency": "USD", "unitCode": "MON", "billingIncrement": 1 }
+          },
+          {
+            "@type": "Offer", "name": "Starter", "price": "4", "priceCurrency": "USD",
+            "description": "100 monitors, checks every 1 minute",
+            "priceSpecification": { "@type": "UnitPriceSpecification", "price": "4", "priceCurrency": "USD", "unitCode": "MON", "billingIncrement": 1 }
+          },
+          {
+            "@type": "Offer", "name": "Pro", "price": "6", "priceCurrency": "USD",
+            "description": "Unlimited monitors, 30-second checks when self-hosted (1 minute hosted)",
+            "priceSpecification": { "@type": "UnitPriceSpecification", "price": "6", "priceCurrency": "USD", "unitCode": "MON", "billingIncrement": 1 }
+          }
+        ]
+      }
     ]
   }
   </script>
