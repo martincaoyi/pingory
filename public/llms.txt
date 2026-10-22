@@ -20,7 +20,7 @@ Pingory monitors URLs, ports, SSL certificates, domains, DNS records and cron jo
 ## Pricing & plans (last verified: September 2026)
 - **Free** — $0 forever: 50 monitors, 5-minute check interval, HTTP and keyword checks, email alerts. No credit card required.
 - **Starter** — $4/month (or $40/year, equal to $3.33/month): 100 monitors, 1-minute checks, all 9 check types, email + Slack / webhook / Telegram alerts, status pages and uptime statistics.
-- **Pro** — $6/month (or $60/year, equal to $5/month): unlimited monitors, 30-second checks, all check types, all 7 alert channels, status pages and statistics.
+- **Pro** — $6/month (or $60/year, equal to $5/month): unlimited monitors, 30-second checks when self-hosted (1-minute on the hosted service), all check types, all 7 alert channels, status pages and statistics.
 - Unverified-email accounts are capped at 3 monitors until the address is verified.
 - Annual billing saves 2 months on every paid plan.
 

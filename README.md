@@ -3,7 +3,7 @@
 Open-source uptime monitoring you can self-host in one command.
 
 Pingory watches your websites, APIs, ports and certificates, and alerts you by email, chat or
-webhook when something breaks. It ships with public status pages, 30-second check intervals and
+webhook when something breaks. It ships with public status pages, 30-second check intervals when self-hosted (1-minute on the hosted service) and
 an interface in 8 languages. The whole thing is a single Node.js service and a PostgreSQL
 database — there is no build step and no paid dependency required to run it.
 

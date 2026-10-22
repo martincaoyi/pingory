@@ -483,7 +483,7 @@ docker compose up -d</code></pre>
     <!-- 信任感增强（#269，学 Better Uptime / Hyperping：实时统计 + 三步上手） -->
     <div class="trust-strip">
       <div class="stat"><div class="num">50</div><div class="lbl" data-i18n="landing.stat.monitors">free monitors</div></div>
-      <div class="stat"><div class="num">30s</div><div class="lbl" data-i18n="landing.stat.interval">fastest check interval</div></div>
+      <div class="stat"><div class="num">30s</div><div class="lbl" data-i18n="landing.stat.interval">fastest check interval (self-hosted)</div></div>
       <div class="stat"><div class="num">24/7</div><div class="lbl" data-i18n="landing.stat.alerts">real-time alerts</div></div>
       <div class="stat"><div class="num">∞</div><div class="lbl" data-i18n="landing.stat.history">history kept, no lock-in</div></div>
     </div>
@@ -533,7 +533,7 @@ docker compose up -d</code></pre>
         <div class="price" id="pricePro"><span class="eq">$60</span><small>/yr</small> = <span class="eq">$5</span><small>/mo</small><span class="billed">billed $60/yr · save 2 months</span></div>
         <ul>
           <li data-i18n="landing.plan.pro.feature1">Unlimited monitors</li>
-          <li data-i18n="landing.plan.pro.feature2">30-second checks</li>
+          <li data-i18n="landing.plan.pro.feature2">30-second checks (self-hosted)</li>
           <li data-i18n="landing.plan.pro.feature3">365-day history</li>
           <li data-i18n="landing.plan.pro.feature4">All monitor types</li>
           <li data-i18n="landing.plan.pro.feature5">All alert channels</li>
@@ -1345,7 +1345,7 @@ docker compose up -d</code></pre>
       if (plan === 'pro') {
         const body =
           '<p class="story">' + t('upgrade.proNarrative',
-            'Scenario: a client asks for a status page on your own domain with your logo. On Starter, status pages live on a pingory subdomain \u2014 no custom domain, no team seats, 1-minute checks. On Pro, you get a custom domain with white-label branding, team access for up to 3, 30-second checks, every alert channel, and a full year of history. ')
+            'Scenario: a client asks for a status page on your own domain with your logo. On Starter, status pages live on a pingory subdomain \u2014 no custom domain, no team seats, 1-minute checks. On Pro, you get a custom domain with white-label branding, team access for up to 3, 30-second checks (self-hosted), every alert channel, and a full year of history. ')
           + '</p>'
           + '<div class="cmp">'
           + '<div class="cmp-col"><h4>' + t('upgrade.proCurrentLabel', 'Your current plan \u00b7 Starter') + '</h4><ul>'
@@ -1358,7 +1358,7 @@ docker compose up -d</code></pre>
           + '</ul></div>'
           + '<div class="cmp-col cmp-hl"><h4>' + t('upgrade.proLabel', 'Pro \u2014 everything in Starter, plus') + '</h4><ul>'
           + li('landing.plan.pro.feature1', 'Unlimited monitors')
-          + li('landing.plan.pro.feature2', '30-second checks')
+          + li('landing.plan.pro.feature2', '30-second checks (self-hosted)')
           + li('landing.plan.pro.feature3', '365-day history')
           + li('landing.plan.pro.feature4', 'All monitor types')
           + li('landing.plan.pro.feature5', 'All alert channels')
@@ -1399,7 +1399,7 @@ docker compose up -d</code></pre>
       upgradeNudge.classList.remove('hidden');
       upgradeNudge.innerHTML = '<button class="dismiss" id="proDismiss">' + t('upgrade.dismiss', 'Dismiss') + '</button>'
         + '<p class="story">' + t('upgrade.proNarrative',
-            'Scenario: a client asks for a status page on your own domain with your logo. On Starter, status pages live on a pingory subdomain — no custom domain, no team seats, 1-minute checks. On Pro, you get a custom domain with white-label branding, team access for up to 3, 30-second checks, every alert channel, and a full year of history. ')
+            'Scenario: a client asks for a status page on your own domain with your logo. On Starter, status pages live on a pingory subdomain — no custom domain, no team seats, 1-minute checks. On Pro, you get a custom domain with white-label branding, team access for up to 3, 30-second checks (self-hosted), every alert channel, and a full year of history. ')
         + '<a class="upgrade-link" id="proUpgradeLink">' + t('upgrade.proCta', 'See what Pro adds →') + '</a></p>';
       const link = document.getElementById('proUpgradeLink');
       if (link) link.onclick = () => openUpgrade('pro');
