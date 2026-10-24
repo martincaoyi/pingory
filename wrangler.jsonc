@@ -15,7 +15,7 @@
     // 且该重定向发生在边缘静态层、先于 run_worker_first，导致隐私页多一跳 307）。
     // 已实证：ASSETS 绑定 fetch 不吃此重定向（/status.html 经绑定 200 直出），Worker 路径行为不变。
     "html_handling": "none",
-    "run_worker_first": ["/", "/index.html", "/privacy.html", "/api/*", "/status/*", "/compare/*", "/vs/*", "/health", "/compare-uptimerobot.html", "/compare-betterstack.html", "/compare-pingdom.html", "/llms-txt-checker", "/llms-txt-checker.html"]
+    "run_worker_first": ["/", "/index.html", "/privacy.html", "/api/*", "/status/*", "/compare/*", "/vs/*", "/health", "/compare-uptimerobot.html", "/compare-betterstack.html", "/compare-pingdom.html", "/llms-txt-checker", "/llms-txt-checker.html", "/blog", "/blog.html", "/blog/*", "/ai-readability", "/ai-readability.html"]
   },
   // Hyperdrive：id 已回填（pingory-db，创建于 Cloudflare 预览部署阶段）
   "hyperdrive": [

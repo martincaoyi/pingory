@@ -8,6 +8,22 @@
 
 ---
 
+## 2026-10-24 · D45 B1 内容集群：4 篇 AI 可读性指南 + 索引 + 定位页（增长/SEO）
+
+> 一句话：用 5 个静态页面把「AI 可读性」这个语义位占住，全部内链回 `/llms-txt-checker` 与 `/#plans`；页面只写静态可验证项，明确写出「测不了什么」。
+
+- **新增 5 个页面**（服务端直出，无 JS 也完整）：`/blog`（索引）、`/blog/what-is-llms-txt`、`/blog/ai-crawlers-list`、`/blog/block-ai-crawlers`、`/ai-readability`，合计约 8,400 词，各页字数均在测试区间内。共用新建 `public/blog.css`（深浅双主题、760px 内容区、表格横向滚动、代码块深底浅字）。
+- **路由（Worker 与自托管同构）**：`src/cf-worker/pages.js` 新增 `BLOG_PAGES` 显式白名单 + `/blog`、`/ai-readability`；`.html` 与尾斜杠一律 301 到规范路径；未匹配的 `/blog/*` 在 Worker 侧 `c.notFound()`（404），**不使用** `/blog/:slug` 动态读文件。`server.js` 同位置补同名常量与三条路由组；`wrangler.jsonc` 的 `run_worker_first` 增加 `/blog`、`/blog.html`、`/blog/*`、`/ai-readability`、`/ai-readability.html`（`/blog.html` 必须显式列出，否则 `html_handling: "none"` 下静态层会先直出 200，301 永远不执行）。
+- **口径红线（写进页面，逐条可查）**：llms.txt 为 2024-09 Jeremy Howard 的社区提案、非 W3C/IETF、2026 年无主流厂商公开承诺读取；8 个爬虫 token 与 `src/ai-visibility.js` 逐字一致，`Google-Extended` 明确写成「robots.txt 令牌、无独立 UA」；robots 遵守只写 documented to obey，不写 enforced；**`ChatGPT-User` 标为「robots.txt 可能不适用」（OpenAI 官方口径：用户触发）**；AI Readability 监护只在 Pro（$6），免费工具页是单次检查；托管服务单区域，仅保留「自托管可跑多探针实例」一句；不写任何无出处百分比、不写 `aggregateRating`、不做 UA 伪造探测。
+- **Cloudflare 口径按 2026-09-15 变更重写**：旧「Block AI Bots」单开关已弃用，改为 Search / Training / Agent 三控制；`Block` 与 `Block on pages with ads` 会连带 Applebot/Bingbot/Googlebot，要「禁训练保搜索」必须用 `Disallow AI Training`；Managed Robots.txt 已并入 Bot Preference Sync。此段是全批唯一依赖时间点的事实，已注明日期。
+- **SEO/GEO**：每页 `title` ≤ 60、description 140–160、canonical + `hreflang en/x-default`、OG/Twitter 全套、单个 `@graph`（文章 = `Article`+`BreadcrumbList`+`FAQPage`，定位页 = `WebPage`+`BreadcrumbList`）；每个 H2 后第一句为 ≤25 词可摘句；每页 ≥1 张带数字的 HTML 表格；正文含 `Last verified: October 2026`；每页一处反向边界。
+- **站内资产**：`public/sitemap.xml` 26 → 31 条（`/blog` 0.7、三篇指南 0.8、`/ai-readability` 0.9，`lastmod` 2026-10-24）；`public/llms.txt` 在 Product pages 补上此前缺失的 `/llms-txt-checker`，并新增 `## Guides (AI Readability)` 区（索引 + 3 篇 + 定位页）；README 新增 `## AI Readability checklist`（3 条要点 + 2 个链接，作站外共引锚点）；`docs/API-REFERENCE.md` §8.2 补路由表、§8.1 的 sitemap 条数 25 → 31。
+- **审阅修复（写/审分离，2 P0 + 7 P1）**：① P0 — `ChatGPT-User` 原先标为「遵循 robots.txt」，与 OpenAI 官方文档（`robots.txt rules may not apply`）相反，已改表、正文、FAQ 与 JSON-LD 四处一致；② P0 — 误伤段落原写「Googlebot 被允许但渲染请求仍被挡」自相矛盾（渲染请求用 Googlebot UA），已改为三种情形分述（仅通配符 / 加 Googlebot 组 / 其余 agent 仍被挡）；③ P1 — 检索组描述（OAI-SearchBot、PerplexityBot 是定时索引，不是每次有人提问）、`Eight tokens cover almost every` 的过度概括、nginx map 一处 `if` 同时挡两组却注释「删掉即放行检索」、`ai-readability` 的 down 判定（只有 core 项 `fail` 才 down，`warn` 只降分）、`/blog.html` 未进 `run_worker_first`、sitemap 优先级与索引页读数不一致，均已修。
+- **常驻回归**：新增 `tools/test-blog-pages.mjs`（**315 条断言**，纯 Node 无依赖）。静态模式查本地文件 + `pages.js`/`server.js`/`wrangler.jsonc` 路由；`--url` 模式对线上跑同一套，另加 6 条 301 与 1 条 404 断言。覆盖 title/description 长度、canonical/hreflang 自指、唯一 H1、JSON-LD 可解析与 `Article.headline` 与 H1 逐字一致、FAQ 问答与正文逐字一致、H2 首句 ≤25 词、禁用表述（aggregateRating / multi-region / global network / $4 与 AI monitor 同句 / `ChatGPT-User` 误标为遵循）、空链、字数区间、内链闭环、sitemap 31 条、llms.txt 收录。
+- **`dev_gate`**：11 项全绿（含 API-契约同步）。
+
+---
+
 ## 2026-10-24 · D43/D44 公开 AI Readability 检查端点 + `/llms-txt-checker` 免费页（增长转化）
 
 > 一句话：把 D39–D42 做的 12 项 AI 可读性引擎**开一个免费入口**，用一次免费检查换一个注册意向。承接「关键词全量实测」的结论——工具意图词只有约 200 个、12 项检测已全部承接，所以这一批**不再加检测项**，只做「让搜索引擎和用户都能进来的门」。

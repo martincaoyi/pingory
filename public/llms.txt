@@ -6,11 +6,19 @@ Pingory monitors URLs, ports, SSL certificates, domains, DNS records and cron jo
 
 ## Product pages
 - [Home](https://pingory.com/): Product overview, feature list and signup.
+- [llms.txt Checker](https://pingory.com/llms-txt-checker): Free single check of any public domain — llms.txt, robots.txt, sitemap, first-screen text and access for eight AI crawlers. No account required.
 - [Pricing](https://pingory.com/#pricing): Plans, quotas and billing options (monthly / annual toggle on page).
 - [Public status page](https://pingory.com/status.html): Current service status.
 - [Refund policy](https://pingory.com/refund.html): Refund terms.
 - [Privacy policy](https://pingory.com/privacy.html): Data handling, cookie-less first-party analytics.
 - [Terms of service](https://pingory.com/terms.html): Legal terms.
+
+## Guides (AI Readability)
+- [Guide index](https://pingory.com/blog): All four guides, with reading times and a one-line summary of each.
+- [What is llms.txt](https://pingory.com/blog/what-is-llms-txt): The format field by field, where to serve it, and why a correct file can still be ignored.
+- [AI crawlers list](https://pingory.com/blog/ai-crawlers-list): The eight user-agent tokens in training and search groups, with documented robots.txt behaviour.
+- [Block AI crawlers](https://pingory.com/blog/block-ai-crawlers): robots.txt, Cloudflare, Vercel and nginx rules, plus the wildcard mistake that blocks Googlebot.
+- [AI readability vs AI visibility](https://pingory.com/ai-readability): Which questions a technical check can answer, and which are outcomes nobody can query.
 
 ## Comparisons (independently useful, honestly states where competitors win)
 - [Pingory vs UptimeRobot](https://pingory.com/compare/uptimerobot): Detailed 2026 comparison of pricing per monitor, check types and limits. Also available in [zh](https://pingory.com/zh/compare/uptimerobot), [es](https://pingory.com/es/compare/uptimerobot), [pt](https://pingory.com/pt/compare/uptimerobot), [de](https://pingory.com/de/compare/uptimerobot), [fr](https://pingory.com/fr/compare/uptimerobot), [ja](https://pingory.com/ja/compare/uptimerobot), [ko](https://pingory.com/ko/compare/uptimerobot).
@@ -28,7 +36,7 @@ Pingory monitors URLs, ports, SSL certificates, domains, DNS records and cron jo
 - Monitor types (paid plans): HTTP/HTTPS status code, keyword content check, ping (ICMP), TCP port, SSL certificate, domain expiry (WHOIS), API monitor with header + JSON assertions, DNS record, heartbeat / cron dead-man switch. Free plan supports HTTP and keyword checks.
 - Alert channels: email, Slack, webhook, Telegram (Starter); Discord, Microsoft Teams, PagerDuty (Pro).
 - An HTTP monitor counts as "up" only for status codes 200-399; redirects are followed.
-- Hosted service runs checks from a single region; self-hosted deployments can run multiple probe instances for multi-region coverage.
+- Hosted service runs checks from a single region; self-hosted deployments can run additional probe instances from other locations.
 - Open source under AGPL-3.0: [GitHub repository](https://github.com/martincaoyi/pingory). Self-host with Docker; point it at your own PostgreSQL database.
 - No credit card required for the Free plan.
 - Industry: website and infrastructure monitoring (SaaS + self-hosted).

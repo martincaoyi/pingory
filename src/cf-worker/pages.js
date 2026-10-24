@@ -5,6 +5,9 @@
 //   · GET /vs/{slug}            301 → /compare/{slug}
 //   · GET /compare-{slug}.html  301 → /compare/{slug}
 //   · GET /status/:slug         公开状态页 HTML（status.html）
+//   · GET /blog                 内容索引（blog.html）
+//   · GET /blog/{slug}          B1 指南白名单（未匹配 → 404）
+//   · GET /ai-readability       定位页（ai-readability.html）
 //
 // 与 server.js 的差异：模板与 i18n 字典不再读本地 fs（Workers 无文件系统），
 // 改为经 env.ASSETS.fetch 读取 public/ 下的同一份文件；渲染逻辑（cmpLocalize /
@@ -18,6 +21,12 @@ const CMP_PAGES = {
   uptimerobot: { path: '/compare/uptimerobot', template: '/compare-uptimerobot.html' },
   betterstack: { path: '/compare/betterstack', template: '/compare-betterstack.html' },
   pingdom:     { path: '/compare/pingdom',     template: '/compare-pingdom.html' },
+};
+// B1 内容集群（D45）：规范路径 → public/ 下的静态文件。显式白名单。
+const BLOG_PAGES = {
+  '/blog/what-is-llms-txt':   '/blog/what-is-llms-txt.html',
+  '/blog/ai-crawlers-list':   '/blog/ai-crawlers-list.html',
+  '/blog/block-ai-crawlers':  '/blog/block-ai-crawlers.html',
 };
 // 只预载本页用到的键，避免整包拖慢首屏（与 server.js 同款正则）
 const CMP_I18N_KEY = /^(cmp\.|cmpbs\.|cmppd\.|nav\.|footer\.|landing\.ctaFree$)/;
@@ -147,6 +156,23 @@ export function registerPageRoutes(app) {
   app.get('/llms-txt-checker', (c) => c.env.ASSETS.fetch(new URL('/llms-txt-checker.html', c.req.url)));
   app.get('/llms-txt-checker/', (c) => c.redirect('/llms-txt-checker', 301));
   app.get('/llms-txt-checker.html', (c) => c.redirect('/llms-txt-checker', 301));
+
+  // 内容集群 B1（D45）——白名单映射，不用 /blog/:slug 动态读任意文件名。
+  // 未匹配的 /blog/* 显式 404：静态兜底会把未知路径当资产请求处理，必须在这里截断。
+  app.get('/blog', (c) => c.env.ASSETS.fetch(new URL('/blog.html', c.req.url)));
+  app.get('/blog/', (c) => c.redirect('/blog', 301));
+  app.get('/blog.html', (c) => c.redirect('/blog', 301));
+
+  for (const [path, asset] of Object.entries(BLOG_PAGES)) {
+    app.get(path, (c) => c.env.ASSETS.fetch(new URL(asset, c.req.url)));
+    app.get(path + '/', (c) => c.redirect(path, 301));
+    app.get(path + '.html', (c) => c.redirect(path, 301));
+  }
+  app.get('/blog/*', (c) => c.notFound());
+
+  app.get('/ai-readability', (c) => c.env.ASSETS.fetch(new URL('/ai-readability.html', c.req.url)));
+  app.get('/ai-readability/', (c) => c.redirect('/ai-readability', 301));
+  app.get('/ai-readability.html', (c) => c.redirect('/ai-readability', 301));
 }
 
 function hostnameSafe(c) {

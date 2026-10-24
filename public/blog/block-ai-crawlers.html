@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<!--
+  D45 · B1 guide #3 — /blog/block-ai-crawlers
+  Target query: block ai crawlers. Includes the plan's #19 material as a section
+  (documented-not-enforced, Google-Extended is a token). Every config below is
+  copyable; the nginx map and robots.txt groups are RFC 9309 valid.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Block AI Crawlers Without Breaking Google</title>
+  <meta name="description" content="Block AI crawlers with robots.txt, Cloudflare, Vercel or nginx without blocking Googlebot: copyable rules per token, and the mistake that hurts search." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://pingory.com/blog/block-ai-crawlers" />
+  <link rel="alternate" hreflang="en" href="https://pingory.com/blog/block-ai-crawlers" />
+  <link rel="alternate" hreflang="x-default" href="https://pingory.com/blog/block-ai-crawlers" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Pingory" />
+  <meta property="og:title" content="How to Block AI Crawlers Without Breaking Google" />
+  <meta property="og:description" content="Block AI crawlers with robots.txt, Cloudflare, Vercel or nginx without blocking Googlebot: copyable rules per token, and the mistake that hurts search." />
+  <meta property="og:url" content="https://pingory.com/blog/block-ai-crawlers" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Pingory — uptime and AI Readability monitoring" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="How to Block AI Crawlers Without Breaking Google" />
+  <meta name="twitter:description" content="Block AI crawlers with robots.txt, Cloudflare, Vercel or nginx without blocking Googlebot: copyable rules per token, and the mistake that hurts search." />
+  <meta name="twitter:image" content="https://pingory.com/icon-512.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <link rel="stylesheet" href="/blog.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": "How to Block (or Allow) AI Crawlers Without Breaking Google",
+        "description": "Block AI crawlers with robots.txt, Cloudflare, Vercel or nginx without blocking Googlebot: copyable rules per token, and the mistake that hurts search.",
+        "datePublished": "2026-10-24",
+        "dateModified": "2026-10-24",
+        "inLanguage": "en",
+        "author": { "@type": "Person", "name": "Martin Cao", "url": "https://pingory.com/" },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pingory",
+          "url": "https://pingory.com/",
+          "logo": { "@type": "ImageObject", "url": "https://pingory.com/icon-512.png" }
+        },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": "https://pingory.com/blog/block-ai-crawlers" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://pingory.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://pingory.com/blog" },
+          { "@type": "ListItem", "position": 3, "name": "Block AI crawlers", "item": "https://pingory.com/blog/block-ai-crawlers" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Does blocking GPTBot remove me from ChatGPT?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Not directly. GPTBot is documented as a training crawler. Answers in ChatGPT search are fetched by OAI-SearchBot and ChatGPT-User, which are separate tokens. Blocking all three takes you out of training and out of the index, but OpenAI states robots.txt may not apply to the user-initiated ChatGPT-User, so only an edge rule reliably stops it." }
+          },
+          {
+            "@type": "Question",
+            "name": "Will blocking AI crawlers hurt my Google rankings?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Not if you block the right tokens. Google-Extended is a robots.txt token for Gemini training and does not affect Google Search. A wildcard Disallow for every agent does affect Search, because it blocks Googlebot and the CSS and JavaScript it needs to render pages." }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I block AI crawlers without editing robots.txt?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes, at the network or edge layer, with two caveats. User agents can be forged, so you may block scrapers wearing an AI name and miss real crawlers. And Google-Extended has no user agent, so only robots.txt can control it." }
+          },
+          {
+            "@type": "Question",
+            "name": "How long does an AI crawler block take effect?",
+            "acceptedAnswer": { "@type": "Answer", "text": "The next fetch after the rule is live, which for index crawlers can be days. Content already collected is not recalled: a block changes future behaviour, not copies that already exist in a corpus or an index." }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+  <span class="spacer"></span>
+  <button id="themeToggle" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+  <a class="btn" href="/signin.html">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+</nav>
+
+<main class="wrap">
+<article>
+  <p class="kicker">Guides · Crawler policy</p>
+  <h1>How to Block (or Allow) AI Crawlers Without Breaking Google</h1>
+  <p class="meta">Last verified: October 2026 · About 8 minutes of reading</p>
+  <p class="lede">There are four places to state or enforce a crawler rule, and only one is worth starting with. This guide gives copyable configuration for robots.txt, Cloudflare, Vercel and nginx, then shows the edit that takes a site out of Google Search — a far more common mistake than an over-permissive AI policy.</p>
+
+  <h2>Decide first: training vs search</h2>
+  <p class="answer">Block training crawlers if you want to limit future models; block search crawlers and you leave today's answers.</p>
+  <p>The two groups are not interchangeable, and a single wildcard rule hits both. Training tokens are GPTBot, ClaudeBot, Google-Extended and CCBot. Search tokens are OAI-SearchBot, ChatGPT-User, Claude-User and PerplexityBot. The background on each is in <a href="/blog/ai-crawlers-list">the AI crawlers list</a>.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Pick a policy before you write a rule.</caption>
+      <thead>
+        <tr><th scope="col">Goal</th><th scope="col">Training group</th><th scope="col">Search group</th><th scope="col">Tokens blocked</th><th scope="col">Typical effect</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Stay in answers</th><td>Block</td><td>Allow</td><td>4 of 8</td><td>Less training input; retrieval rules untouched</td></tr>
+        <tr><th scope="row">Full opt-out</th><td>Block</td><td>Block</td><td>7 of 8 via robots.txt</td><td>Out of training and out of indexes; ChatGPT-User needs an edge rule</td></tr>
+        <tr><th scope="row">Maximum exposure</th><td>Allow</td><td>Allow</td><td>0 of 8</td><td>Nothing changes; the default for most sites</td></tr>
+        <tr><th scope="row">One wildcard line</th><td>Block</td><td>Block</td><td>Every agent, Googlebot included</td><td>Also blocks Googlebot's CSS and JavaScript fetches</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The last row is the tempting shortcut: one line, all eight tokens blocked. It also blocks Googlebot, which is the failure covered further down.</p>
+
+  <h2>robots.txt syntax, crawler by crawler</h2>
+  <p class="answer">One group per token, a blank line between groups, and a Disallow of / is enough to state the policy.</p>
+  <p>This block implements "block training, allow search". Multiple <code>User-agent</code> lines can share one group, so the three fetchers are combined and Google-Extended is listed separately for clarity:</p>
+  <pre><code># Block training crawlers
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: CCBot
+Disallow: /
+
+# Google-Extended is a token, not a fetcher:
+# it controls Gemini training for pages Googlebot already crawled.
+User-agent: Google-Extended
+Disallow: /
+
+# Allow retrieval crawlers explicitly
+User-agent: OAI-SearchBot
+Allow: /
+
+# ChatGPT-User is user-initiated: robots.txt may not apply.
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+# Everything else keeps the default rules
+User-agent: *
+Disallow: /admin/
+Disallow: /api/</code></pre>
+  <p>Four details that decide whether this actually works:</p>
+  <ul>
+    <li><strong>Group semantics.</strong> A blank line ends a group. If you forget it, the next <code>User-agent</code> line is treated as another name for the same group, and your rules leak across agents.</li>
+    <li><strong>Longest match wins.</strong> <code>Allow: /blog/</code> beats <code>Disallow: /</code> for a bot that is otherwise blocked, which is how you keep a public section readable.</li>
+    <li><strong>The file must be 200.</strong> A robots.txt behind a login redirect, or served as HTML by an SPA fallback, is treated as missing or unparseable. Some crawlers then crawl everything.</li>
+    <li><strong>Google-Extended blocks nothing.</strong> It is a usage instruction, so it belongs in the same file but does not stop a fetch. Only the other tokens have a fetcher to stop.</li>
+  </ul>
+
+  <h2>Cloudflare</h2>
+  <p class="answer">Since 15 September 2026 Cloudflare enforces three separate AI controls — search, training and agents — and its Block setting also stops Googlebot.</p>
+  <p>Older guides describe a single "Block AI Bots" switch, which Cloudflare retired on 15 September 2026. The replacement is three controls: Search, Training and Agent. The difference is not cosmetic — <em>Block</em> and <em>Block on pages with ads</em> now apply to mixed-use crawlers such as Applebot, Bingbot and Googlebot, so blocking Training takes you out of traditional search too. The setting that refuses training while keeping search intact is <strong>Disallow AI Training</strong>.</p>
+  <ol>
+    <li>Open the zone, then Security, then Bots, then AI Crawl Control. A zone that has not migrated may still show the legacy switch.</li>
+    <li>Read the Search control first. If it is set to Block, Googlebot and Bingbot are affected, not only AI crawlers.</li>
+    <li>For Training, choose Disallow AI Training rather than Block if you want to stay discoverable.</li>
+    <li>Agent controls govern on-demand fetchers. Block on pages with ads is the usual middle ground.</li>
+    <li>Keep robots.txt consistent with the dashboard. Managed Robots.txt became Bot Preference Sync, which writes your choices into robots.txt.</li>
+  </ol>
+  <p>New zones start with recommended defaults — ad-supported sites with search allowed, training disallowed and agents blocked on ad pages; everything else with all three allowed. Review them rather than accept them.</p>
+  <div class="boundary">
+    <p><strong>What the edge layer cannot do:</strong> it cannot act on Google-Extended, because there is no request to match. It also cannot distinguish a real crawler from a client that copies its user agent unless you rely on verified bot checks. Treat the dashboard as enforcement and robots.txt as the statement of intent.</p>
+  </div>
+
+  <h2>Vercel</h2>
+  <p class="answer">On Vercel, robots.txt covers policy and a middleware or firewall rule covers enforcement; headers alone cannot match a user agent.</p>
+  <p><code>vercel.json</code> can set headers and redirects per path, but it cannot branch on <code>User-Agent</code>. For a Next.js project on Vercel, the shortest enforcement path is middleware:</p>
+  <pre><code>// middleware.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+// Google-Extended is deliberately absent: it has no user agent.
+const BLOCKED = ['GPTBot', 'ClaudeBot', 'CCBot'];
+
+export function middleware(req: NextRequest) {
+  const ua = req.headers.get('user-agent') ?? '';
+  if (BLOCKED.some((token) =&gt; ua.includes(token))) {
+    return new NextResponse('Forbidden', { status: 403 });
+  }
+  return NextResponse.next();
+}
+
+export const config = { matcher: '/:path*' };</code></pre>
+  <p>On Pro and Enterprise plans, the Vercel firewall can express the same rule without a deploy. Either way, keep the robots.txt block above: middleware returns 403 to everything that matches, including a scraper, while robots.txt is what a well-behaved crawler reads first.</p>
+
+  <h2>nginx</h2>
+  <p class="answer">An nginx map on the user agent is the cheapest server-side block, as long as you accept that the header is forgeable.</p>
+  <pre><code># /etc/nginx/conf.d/ai-crawlers.conf
+map $http_user_agent $block_training {
+    default                                0;
+    ~*GPTBot                               1;
+    ~*ClaudeBot                            1;
+    ~*CCBot                                1;
+}
+
+map $http_user_agent $block_search {
+    default                                                    0;
+    ~*(OAI-SearchBot|ChatGPT-User|Claude-User|PerplexityBot)   1;
+}
+
+server {
+    listen 443 ssl;
+    server_name example.com;
+
+    # Enforces the training block only. Adding $block_search here
+    # would also remove you from AI answers.
+    if ($block_training) {
+        return 403;
+    }
+
+    # To leave AI answers as well, uncomment:
+    # if ($block_search) { return 403; }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}</code></pre>
+  <p>Three notes. Both <code>map</code> blocks must live in the <code>http</code> context, so a file included from <code>nginx.conf</code> is the right home. The patterns are case-insensitive, which matters because some clients send lowercase. <code>$block_search</code> is defined but not enforced by default: uncomment the second condition only if you intend to leave AI answers too.</p>
+
+  <h2>The misconfiguration that breaks Google too</h2>
+  <p class="answer">A bare wildcard Disallow of / blocks Googlebot with everything else, and a Googlebot group only rescues part of the damage.</p>
+  <p>This is the version people paste after reading that "AI crawlers ignore robots.txt":</p>
+  <pre><code># Do not deploy this
+User-agent: *
+Disallow: /
+
+# This line does not undo the damage for every other agent,
+# and some crawlers never read it.
+User-agent: Googlebot
+Allow: /
+
+# Google-Extended is not Googlebot. Blocking it is safe;
+# blocking * is not.
+User-agent: Google-Extended
+Allow: /</code></pre>
+  <p>What happens depends on whether the Googlebot group is present.</p>
+  <ul>
+    <li><strong>Wildcard alone</strong> — the common form — blocks Googlebot, including the renderer requests that fetch stylesheets and scripts. Pages already indexed stay, but new and updated pages stop being fetched.</li>
+    <li><strong>Wildcard plus the Googlebot group</strong> recovers Googlebot and its renderer, because renderer requests carry the Googlebot user agent. Traditional search keeps working.</li>
+    <li><strong>Everything else stays blocked.</strong> Bingbot, Applebot, Googlebot-Image and Googlebot-Video (separate user agents), link-preview fetchers and every AI crawler you did not name fall into the wildcard group.</li>
+  </ul>
+  <p>The second form is the trap: Search Console stops complaining about the main page, while image search, Bing, link previews and third-party verification quietly go dark.</p>
+  <p>The safe version keeps the wildcard permissive and blocks named tokens:</p>
+  <pre><code># Correct: block the crawlers you mean, leave everything else alone
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: *
+Disallow: /admin/
+Disallow: /cart/
+Allow: /</code></pre>
+  <p>The difference is one line of scope. The first file makes a statement about every crawler on the internet. The second names four tokens and leaves Googlebot, Bingbot and the rest untouched.</p>
+
+  <h2>How to verify it worked</h2>
+  <p class="answer">Verify the policy as data, then verify enforcement in logs; a curl with a forged user agent proves neither.</p>
+  <ol>
+    <li><strong>Fetch the file.</strong> <code>curl -s https://example.com/robots.txt</code> should return your rules with status 200 and <code>text/plain</code>. Check that blank lines separate the groups.</li>
+    <li><strong>Read the policy back.</strong> For each of the eight tokens, decide whether the file allows or blocks the homepage and a deeper path. That is what the free <a href="/llms-txt-checker">AI readability check</a> reports, without pretending to be a bot.</li>
+    <li><strong>Watch real traffic.</strong> Keep client IPs for a week and check which agents actually arrive. A blocked crawler disappears from logs; a spoofed one does not.</li>
+    <li><strong>Check Search Console after any wildcard change.</strong> Settings, then Crawl stats, then by response. A new "Blocked by robots.txt" line for Googlebot assets is the signal that you overreached; edge 403s appear in firewall events instead.</li>
+  </ol>
+  <p>Note what this does not establish. A 200 from curl proves the file is served, not that a vendor obeys it. A 403 for a forged header proves your rule matches, not that the real crawler is affected. Those are the two claims most "I tested it" posts get wrong.</p>
+
+  <div class="related">
+    <h3>Keep reading</h3>
+    <ul>
+      <li><a href="/blog/ai-crawlers-list">AI crawlers in 2026</a> — the eight tokens, their owners and what each one fetches.</li>
+      <li><a href="/blog/what-is-llms-txt">What llms.txt is</a> — the reading list that sits next to your crawl rules.</li>
+      <li><a href="/ai-readability">AI readability vs AI visibility</a> — which of these questions a check can answer.</li>
+    </ul>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <p class="answer">Four questions cover the intent behind most block requests: search impact, scope, alternatives and timing.</p>
+  <details class="faq-item">
+    <summary>Does blocking GPTBot remove me from ChatGPT?</summary>
+    <p>Not directly. GPTBot is documented as a training crawler. Answers in ChatGPT search are fetched by OAI-SearchBot and ChatGPT-User, which are separate tokens. Blocking all three takes you out of training and out of the index, but OpenAI states robots.txt may not apply to the user-initiated ChatGPT-User, so only an edge rule reliably stops it.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Will blocking AI crawlers hurt my Google rankings?</summary>
+    <p>Not if you block the right tokens. Google-Extended is a robots.txt token for Gemini training and does not affect Google Search. A wildcard Disallow for every agent does affect Search, because it blocks Googlebot and the CSS and JavaScript it needs to render pages.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Can I block AI crawlers without editing robots.txt?</summary>
+    <p>Yes, at the network or edge layer, with two caveats. User agents can be forged, so you may block scrapers wearing an AI name and miss real crawlers. And Google-Extended has no user agent, so only robots.txt can control it.</p>
+  </details>
+  <details class="faq-item">
+    <summary>How long does an AI crawler block take effect?</summary>
+    <p>The next fetch after the rule is live, which for index crawlers can be days. Content already collected is not recalled: a block changes future behaviour, not copies that already exist in a corpus or an index.</p>
+  </details>
+
+  <div class="cta">
+    <h2>Check any site free</h2>
+    <p class="answer">See whether your rules allow or block all eight AI tokens, before you deploy anything.</p>
+    <div class="cta-actions">
+      <a class="cta-main" href="/llms-txt-checker">Check any site free</a>
+      <a class="cta-alt" href="/#plans">See plans</a>
+    </div>
+  </div>
+
+  <p class="meta meta-end">Last verified: October 2026. Rules were checked against RFC 9309 and vendor crawler documentation on 2026-10-24; Cloudflare behaviour varies by zone age, so confirm it in your own dashboard.</p>
+</article>
+</main>
+
+<footer class="site-footer">
+  <nav>
+    <a href="/blog">Guides</a>
+    <a href="/compare/uptimerobot">Compare</a>
+    <a href="/compare/betterstack">vs Better Stack</a>
+    <a href="/compare/pingdom">vs Pingdom</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/refund.html">Refund</a>
+    <a href="/#plans">Pricing</a>
+    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+  </nav>
+  <p>Contact: <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p>© 2026 Pingory. All rights reserved.</p>
+</footer>
+
+<script>
+(function () {
+  var tt = document.getElementById('themeToggle');
+  function sync() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+  if (tt) tt.addEventListener('click', function () {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    if (dark) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme = 'dark';
+    try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
+<script src="/analytics.js"></script>
+</body>
+</html>

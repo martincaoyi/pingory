@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<!--
+  D45 · B1 index — /blog
+  Hub for the four B1 guides plus the free checker. WebPage + BreadcrumbList + ItemList,
+  deliberately not an Article. Cards carry reading time and a one-line summary.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pingory Guides: AI Readability, Crawlers and llms.txt</title>
+  <meta name="description" content="Four technical guides on AI readability: llms.txt, the AI crawler list, safe blocking rules, and what a readability score can actually measure." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://pingory.com/blog" />
+  <link rel="alternate" hreflang="en" href="https://pingory.com/blog" />
+  <link rel="alternate" hreflang="x-default" href="https://pingory.com/blog" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Pingory" />
+  <meta property="og:title" content="Pingory Guides: AI Readability, Crawlers and llms.txt" />
+  <meta property="og:description" content="Four technical guides on AI readability: llms.txt, the AI crawler list, safe blocking rules, and what a readability score can actually measure." />
+  <meta property="og:url" content="https://pingory.com/blog" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Pingory — uptime and AI Readability monitoring" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Pingory Guides: AI Readability, Crawlers and llms.txt" />
+  <meta name="twitter:description" content="Four technical guides on AI readability: llms.txt, the AI crawler list, safe blocking rules, and what a readability score can actually measure." />
+  <meta name="twitter:image" content="https://pingory.com/icon-512.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <link rel="stylesheet" href="/blog.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "name": "Pingory Guides: AI Readability and Crawler Policy",
+        "url": "https://pingory.com/blog",
+        "description": "Four technical guides on AI readability: llms.txt, the AI crawler list, safe blocking rules, and what a readability score can actually measure.",
+        "datePublished": "2026-10-24",
+        "dateModified": "2026-10-24",
+        "inLanguage": "en",
+        "isPartOf": { "@type": "WebSite", "name": "Pingory", "url": "https://pingory.com/" },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pingory",
+          "url": "https://pingory.com/",
+          "logo": { "@type": "ImageObject", "url": "https://pingory.com/icon-512.png" }
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://pingory.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://pingory.com/blog" }
+        ]
+      },
+      {
+        "@type": "ItemList",
+        "name": "AI readability guides",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "url": "https://pingory.com/blog/what-is-llms-txt" },
+          { "@type": "ListItem", "position": 2, "url": "https://pingory.com/blog/ai-crawlers-list" },
+          { "@type": "ListItem", "position": 3, "url": "https://pingory.com/blog/block-ai-crawlers" },
+          { "@type": "ListItem", "position": 4, "url": "https://pingory.com/ai-readability" }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+  <span class="spacer"></span>
+  <button id="themeToggle" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+  <a class="btn" href="/signin.html">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+</nav>
+
+<main class="wrap">
+<article>
+  <p class="kicker">Guides</p>
+  <h1>Pingory Guides: AI Readability and Crawler Policy</h1>
+  <p class="meta">Last verified: October 2026 · Four guides, about 33 minutes in total</p>
+  <p class="lede">These guides are written for people who own the server: developers, site owners and technical leads who need to know what a crawler receives, not what a vendor would like them to believe. Every page states what it verified, when, and what it cannot prove.</p>
+
+  <h2>Three guides and one positioning page</h2>
+  <p class="answer">Start with the file most sites are missing, then the crawler list, then the blocking rules, then the measurement boundary.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Reading order and time. All four were reviewed on the same date.</caption>
+      <thead>
+        <tr><th scope="col">Guide</th><th scope="col">Question it answers</th><th scope="col">Minutes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>llms.txt</td><td>What the file is, how to write one, why it can be ignored</td><td>7</td></tr>
+        <tr><td>AI crawlers list</td><td>Which eight user agents exist and what each one fetches</td><td>10</td></tr>
+        <tr><td>Block AI crawlers</td><td>Which rule to deploy, and which one breaks Googlebot</td><td>8</td></tr>
+        <tr><td>AI readability</td><td>What the 12 checks measure, and what they cannot</td><td>6</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="cards">
+    <a class="card" href="/blog/what-is-llms-txt">
+      <h3>llms.txt: What It Is and How to Write One</h3>
+      <p>The full format with a copyable example, where to serve it, and why a valid file can still be ignored. 9 minutes.</p>
+    </a>
+    <a class="card" href="/blog/ai-crawlers-list">
+      <h3>AI Crawlers in 2026: The Full List</h3>
+      <p>Eight user-agent tokens, their owners and what each one fetches, including why Google-Extended is not a crawler. 10 minutes.</p>
+    </a>
+    <a class="card" href="/blog/block-ai-crawlers">
+      <h3>How to Block AI Crawlers Without Breaking Google</h3>
+      <p>Copyable robots.txt, Cloudflare, Vercel and nginx rules, plus the wildcard edit that takes a site out of Search. 8 minutes.</p>
+    </a>
+    <a class="card" href="/ai-readability">
+      <h3>AI Readability vs AI Visibility</h3>
+      <p>The 12 checks behind the score, what each one verifies, and the questions no tool can answer. 6 minutes.</p>
+    </a>
+  </div>
+
+  <h2>Start with a check</h2>
+  <p class="answer">The free checker runs all 12 checks against any public domain in about ten seconds.</p>
+  <a class="card" href="/llms-txt-checker">
+    <h3>llms.txt Checker</h3>
+    <p>Fetches llms.txt, robots.txt, sitemap.xml and the homepage exactly as served, reports access for eight AI user agents, and never impersonates one. No account required.</p>
+  </a>
+
+  <h2>How these guides are written</h2>
+  <p class="answer">Claims here are dated and tied to a named source; where a check stops, the page says so.</p>
+  <ul>
+    <li><strong>No simulated crawlers.</strong> No page here sends a forged <code>GPTBot</code> user agent and calls it a test, because real verification happens by source IP.</li>
+    <li><strong>Dates and sources.</strong> Each guide carries a verification date and names the specification or vendor document behind a claim.</li>
+    <li><strong>Stated limits.</strong> Where a check stops, the page says so. A readability score is a technical snapshot, not a forecast of citations or traffic.</li>
+  </ul>
+  <div class="boundary">
+    <p><strong>What none of these guides can tell you:</strong> whether an AI product will mention, cite or recommend your site. That outcome depends on the model, the question and the moment, and no file on your server records it.</p>
+  </div>
+
+  <div class="cta">
+    <h2>Check any site free</h2>
+    <p class="answer">Run the 12 checks on your own domain before changing anything.</p>
+    <div class="cta-actions">
+      <a class="cta-main" href="/llms-txt-checker">Check any site free</a>
+      <a class="cta-alt" href="/#plans">See plans</a>
+    </div>
+  </div>
+
+  <p class="meta meta-end">Last verified: October 2026. All four guides were reviewed on 2026-10-24.</p>
+</article>
+</main>
+
+<footer class="site-footer">
+  <nav>
+    <a href="/blog">Guides</a>
+    <a href="/compare/uptimerobot">Compare</a>
+    <a href="/compare/betterstack">vs Better Stack</a>
+    <a href="/compare/pingdom">vs Pingdom</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/refund.html">Refund</a>
+    <a href="/#plans">Pricing</a>
+    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+  </nav>
+  <p>Contact: <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p>© 2026 Pingory. All rights reserved.</p>
+</footer>
+
+<script>
+(function () {
+  var tt = document.getElementById('themeToggle');
+  function sync() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+  if (tt) tt.addEventListener('click', function () {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    if (dark) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme = 'dark';
+    try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
+<script src="/analytics.js"></script>
+</body>
+</html>

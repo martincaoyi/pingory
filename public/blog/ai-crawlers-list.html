@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<!--
+  D45 · B1 guide #2 — /blog/ai-crawlers-list
+  Target queries: ai crawler, gptbot. Single source of truth for the eight tokens:
+  src/ai-visibility.js (AI_CRAWLERS). No UA token outside that list is named here.
+  Google-Extended is a robots.txt token acting on Googlebot, not a standalone fetcher.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Crawlers 2026: GPTBot, ClaudeBot, CCBot and 5 More</title>
+  <meta name="description" content="The eight AI crawlers that matter in 2026, grouped by training and search, with user-agent tokens, owners and documented robots.txt behaviour for each." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://pingory.com/blog/ai-crawlers-list" />
+  <link rel="alternate" hreflang="en" href="https://pingory.com/blog/ai-crawlers-list" />
+  <link rel="alternate" hreflang="x-default" href="https://pingory.com/blog/ai-crawlers-list" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Pingory" />
+  <meta property="og:title" content="AI Crawlers 2026: GPTBot, ClaudeBot, CCBot and 5 More" />
+  <meta property="og:description" content="The eight AI crawlers that matter in 2026, grouped by training and search, with user-agent tokens, owners and documented robots.txt behaviour for each." />
+  <meta property="og:url" content="https://pingory.com/blog/ai-crawlers-list" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Pingory — uptime and AI Readability monitoring" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="AI Crawlers 2026: GPTBot, ClaudeBot, CCBot and 5 More" />
+  <meta name="twitter:description" content="The eight AI crawlers that matter in 2026, grouped by training and search, with user-agent tokens, owners and documented robots.txt behaviour for each." />
+  <meta name="twitter:image" content="https://pingory.com/icon-512.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <link rel="stylesheet" href="/blog.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": "AI Crawlers in 2026: The Full List (GPTBot, ClaudeBot, CCBot, PerplexityBot)",
+        "description": "The eight AI crawlers that matter in 2026, grouped by training and search, with user-agent tokens, owners and documented robots.txt behaviour for each.",
+        "datePublished": "2026-10-24",
+        "dateModified": "2026-10-24",
+        "inLanguage": "en",
+        "author": { "@type": "Person", "name": "Martin Cao", "url": "https://pingory.com/" },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pingory",
+          "url": "https://pingory.com/",
+          "logo": { "@type": "ImageObject", "url": "https://pingory.com/icon-512.png" }
+        },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": "https://pingory.com/blog/ai-crawlers-list" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://pingory.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://pingory.com/blog" },
+          { "@type": "ListItem", "position": 3, "name": "AI crawlers list", "item": "https://pingory.com/blog/ai-crawlers-list" }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+  <span class="spacer"></span>
+  <button id="themeToggle" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+  <a class="btn" href="/signin.html">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+</nav>
+
+<main class="wrap">
+<article>
+  <p class="kicker">Guides · AI crawlers</p>
+  <h1>AI Crawlers in 2026: The Full List (GPTBot, ClaudeBot, CCBot, PerplexityBot)</h1>
+  <p class="meta">Last verified: October 2026 · About 10 minutes of reading</p>
+  <p class="lede">Eight tokens have public vendor documentation and a stated purpose, and they fall into two groups with opposite consequences. This page lists them with their owners, what they fetch, and what their vendors actually promise about robots.txt — which for one of them is nothing. It also explains why you cannot identify a real crawler from its user agent, the detail most lists leave out.</p>
+
+  <h2>The two groups that matter</h2>
+  <p class="answer">Two groups matter: training crawlers that collect material for future models, and search crawlers that fetch pages to answer a question now.</p>
+  <p>Blocking the first group limits what future models learn from you. Blocking the second removes you from answers today. Treating them as one category is the single most common policy mistake, because the two decisions have different costs and different reversibility.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>The split, in one row each.</caption>
+      <thead>
+        <tr><th scope="col">Group</th><th scope="col">Count</th><th scope="col">Tokens</th><th scope="col">What a fetch does</th><th scope="col">Cost of blocking</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Training</th><td>4</td><td>GPTBot, ClaudeBot, Google-Extended, CCBot</td><td>Adds pages to a corpus used to train or ground a model later</td><td>Invisible now; affects future models</td></tr>
+        <tr><th scope="row">Search</th><td>4</td><td>OAI-SearchBot, ChatGPT-User, Claude-User, PerplexityBot</td><td>Fetches pages on a schedule for an index, or during a live question</td><td>Immediate: you are absent from that answer or that index</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The list below is the set evaluated by Pingory's AI Readability check. It is deliberately short: these are the tokens with public vendor documentation and a stated purpose, not every bot that has ever requested a page.</p>
+  <p>One clarification before the tables. A <strong>user agent</strong> is a string the client sends. A <strong>token</strong> is the name you write in robots.txt. For seven of the eight entries those are the same string, which is convenient but also the source of the Google-Extended confusion covered below. The address a request comes from is a third thing entirely, and it is the only one that carries evidence.</p>
+
+  <h2>Training crawlers</h2>
+  <p class="answer">The training group is GPTBot, ClaudeBot, Google-Extended and CCBot, and only three of them are actual fetchers.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Training tokens: owner, purpose and documented robots behaviour.</caption>
+      <thead>
+        <tr><th scope="col">Token</th><th scope="col">Owner</th><th scope="col">Purpose</th><th scope="col">Robots.txt support and source</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">GPTBot</th><td>OpenAI</td><td>Crawls public pages that may be used in model training</td><td>Yes — OpenAI Bots docs</td></tr>
+        <tr><th scope="row">ClaudeBot</th><td>Anthropic</td><td>Crawls pages that may be used to train Claude models</td><td>Yes — Anthropic crawler docs</td></tr>
+        <tr><th scope="row">Google-Extended</th><td>Google</td><td>A robots.txt token that controls Gemini training and grounding for content already crawled by Googlebot</td><td>Token, not a fetcher — Google crawler docs</td></tr>
+        <tr><th scope="row">CCBot</th><td>Common Crawl</td><td>Builds the public Common Crawl corpus, which many model builders consume</td><td>Yes — Common Crawl CCBot page</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Two notes on that table. First, <strong>Google-Extended has no standalone user agent</strong>: it is a control token you disallow in robots.txt, and the fetching is done by Googlebot under Google's normal crawl rules. Disallowing it does not remove you from Google Search. Second, CCBot feeds a corpus rather than a single product, so blocking it affects every downstream consumer of Common Crawl, not just one vendor.</p>
+
+  <h2>Search crawlers</h2>
+  <p class="answer">The search group mixes two scheduled index crawlers (OAI-SearchBot, PerplexityBot) with two user-triggered fetchers (ChatGPT-User, Claude-User).</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Search tokens: owner, trigger and documented robots behaviour.</caption>
+      <thead>
+        <tr><th scope="col">Token</th><th scope="col">Owner</th><th scope="col">Trigger</th><th scope="col">Robots.txt support and source</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">OAI-SearchBot</th><td>OpenAI</td><td>Builds and refreshes the index used by ChatGPT search results</td><td>Yes — OpenAI Bots docs</td></tr>
+        <tr><th scope="row">ChatGPT-User</th><td>OpenAI</td><td>A user asks ChatGPT to open or read a specific URL</td><td><strong>No</strong> — user-initiated; OpenAI states robots.txt rules may not apply</td></tr>
+        <tr><th scope="row">Claude-User</th><td>Anthropic</td><td>A user asks Claude to visit a page during a conversation</td><td>Yes — Anthropic crawler docs</td></tr>
+        <tr><th scope="row">PerplexityBot</th><td>Perplexity</td><td>Indexes pages used to compose Perplexity answers</td><td>Yes — Perplexity crawler docs</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The distinction inside this group is frequency. Index crawlers arrive on a schedule and can be managed like a search engine. User-triggered fetchers arrive when a person is already looking at your domain, so a block produces a visible failure rather than a quiet omission. If a customer pastes your URL into a chat product and gets "I cannot access that page", this group is usually why.</p>
+  <p>One member of the group breaks the pattern. OpenAI states that robots.txt rules <strong>may not apply to ChatGPT-User</strong>, because the request is initiated by a user rather than by a crawl schedule. A rule written for that token is a statement of preference, not a control. If you genuinely need to stop it, the block has to happen at the edge — a WAF rule, authentication, or a rate limit — and even then you are matching a user agent that can be copied.</p>
+  <p>It also means the two halves of this group fail differently. Block OAI-SearchBot and your pages quietly drop out of an index you never see. Block ChatGPT-User and the failure happens in front of a person, in a conversation, with no error message reaching you. Neither shows up in your analytics as a 403, which is why the check has to happen on the policy side.</p>
+
+  <h2>Do AI crawlers respect robots.txt?</h2>
+  <p class="answer">Seven of the eight tokens are documented to obey robots.txt; the eighth, ChatGPT-User, is explicitly outside that promise.</p>
+  <p>robots.txt is defined by RFC 9309, and each vendor in the tables above documents support for its token — with the ChatGPT-User exception noted. That is the accurate wording: <em>documented to obey</em>, or <em>declares support</em>. There is no authority that audits compliance, no penalty for ignoring a rule, and no technical mechanism that forces a fetch to stop. A crawler operator can change behaviour without notice, and a new crawler can appear with no policy at all.</p>
+  <p>What you can rely on is narrower and still useful. Because the vendors publish the tokens, a rule written against those tokens is legible to the operator. If a documented crawler ignores an explicit rule, that is a fact worth recording — in your logs, with a timestamp and the source IP — rather than an assumption either way.</p>
+  <p>This is also why a checker should describe your policy rather than simulate a bot. If a tool sends a fake <code>GPTBot</code> header and your WAF answers 403, the only thing proven is that the WAF blocks forged requests. Real crawlers arrive from vendor addresses, so the simulation can report a block that does not exist.</p>
+  <h3>Google-Extended is a token, not a crawler</h3>
+  <p>This is the item most lists get wrong. Google-Extended does not appear as a user agent in your logs, because there is no Google-Extended fetcher. It is a robots.txt token that tells Google whether content already crawled by Googlebot may be used for Gemini training and grounding. Two consequences follow:</p>
+  <ul>
+    <li>You will never see a request from it, so "I checked my logs and Google-Extended never visits" proves nothing.</li>
+    <li>Disallowing it is a usage decision, not an access decision. Googlebot keeps crawling; you stay in Search.</li>
+  </ul>
+  <p>For that reason the Pingory checker evaluates Google-Extended as policy rather than as traffic, and reports it separately from the fetchers.</p>
+
+  <h2>How to tell a real crawler from a spoofed one</h2>
+  <p class="answer">A user agent is self-declared text, so only the source IP address can support a claim about identity.</p>
+  <p>Anyone can send <code>User-Agent: GPTBot</code> from a laptop. That is why networks such as Cloudflare check the connecting address against a published list of vendor ranges before treating a request as legitimate, and why a user-agent match alone is not evidence.</p>
+  <p>To check a suspicious request in your own logs, work in this order:</p>
+  <ol>
+    <li><strong>Log the address, not the string.</strong> Keep the client IP for at least a few days; user agents are trivially forged and useless alone.</li>
+    <li><strong>Reverse-resolve it.</strong> A genuine vendor address usually resolves to a hostname in that vendor's domain. Forward-confirm the result to make sure the name points back to the same IP.</li>
+    <li><strong>Compare against published ranges.</strong> OpenAI, Google and Common Crawl publish their ranges. Check membership, not similarity.</li>
+    <li><strong>Do not test by impersonation.</strong> Sending a fake <code>GPTBot</code> header from your own machine tells you how your WAF treats a forged request. It tells you nothing about whether the real crawler can reach you.</li>
+  </ol>
+  <div class="boundary">
+    <p><strong>What this list cannot do:</strong> it cannot identify a caller, and it cannot prove that a real crawler was blocked. A 403 in your logs with an AI user agent may be a scraper wearing the name. Only IP verification separates the two.</p>
+  </div>
+  <p>Cloudflare users get part of this for free: verified bot detection compares the connecting address with published ranges and labels the request accordingly in firewall analytics. If your logs come from a proxy that strips the client address, no amount of user-agent analysis will recover the missing evidence. Fix the logging before drawing conclusions from it.</p>
+
+  <h2>What to do with this list</h2>
+  <p class="answer">Write rules per token, starting from the policy you want: allow retrieval, decide separately about training, then verify the result.</p>
+  <p>The mainstream 2026 position is to allow the search group and make a deliberate choice about the training group. That combination is not a failure state; it is a policy. What matters is that the decision is explicit and that the file actually implements it.</p>
+  <ul>
+    <li>If you want a chance to appear in AI answers, keep the three robots-controlled search tokens allowed on the pages that answer customer questions. That buys eligibility, not a citation: the answer still depends on the index, the question and the model.</li>
+    <li>If you want to limit future training, disallow the training group — and remember that Google-Extended is a token, so the rule looks different from the others.</li>
+    <li>If you are unsure, change nothing for a week and read your logs first. Blocking is reversible; a lost answer is not visible to you at all.</li>
+  </ul>
+  <p>Concrete syntax for each token, plus Cloudflare, Vercel and nginx versions, is in <a href="/blog/block-ai-crawlers">how to block AI crawlers without breaking Google</a>. If you only want to know where you stand right now, run the free <a href="/llms-txt-checker">AI readability check</a>: it reports allow or block for all eight tokens on both the homepage and a deeper path, and it never impersonates a crawler to do it. The background on the file that pairs with these rules is in <a href="/blog/what-is-llms-txt">what llms.txt is</a>.</p>
+  <p>Whatever you choose, write down the date and the reason. Policies drift: a CDN default changes, a security plugin ships a new rule set, a staging robots.txt gets promoted to production. A one-line note in the repository beats reconstructing the decision six months later from firewall logs.</p>
+
+  <div class="sources">
+    <h3>Sources</h3>
+    <ul>
+      <li><a href="https://llmstxt.org/" target="_blank" rel="noopener">llmstxt.org</a> — the original llms.txt proposal.</li>
+      <li><a href="https://www.rfc-editor.org/rfc/rfc9309" target="_blank" rel="noopener">RFC 9309</a> — the robots.txt standard.</li>
+      <li><a href="https://platform.openai.com/docs/bots" target="_blank" rel="noopener">OpenAI bots documentation</a> — GPTBot, OAI-SearchBot, ChatGPT-User.</li>
+      <li><a href="https://support.anthropic.com/" target="_blank" rel="noopener">Anthropic support</a> — ClaudeBot and Claude-User behaviour.</li>
+      <li><a href="https://developers.google.com/search/docs/crawling-indexing/google-common-crawlers" target="_blank" rel="noopener">Google crawler documentation</a> — Googlebot and the Google-Extended token.</li>
+      <li><a href="https://commoncrawl.org/" target="_blank" rel="noopener">Common Crawl</a> — CCBot and the public corpus.</li>
+      <li><a href="https://docs.perplexity.ai/" target="_blank" rel="noopener">Perplexity documentation</a> — PerplexityBot.</li>
+    </ul>
+  </div>
+
+  <div class="related">
+    <h3>Keep reading</h3>
+    <ul>
+      <li><a href="/blog/block-ai-crawlers">How to block AI crawlers without breaking Google</a> — copyable robots.txt, Cloudflare, Vercel and nginx rules.</li>
+      <li><a href="/blog/what-is-llms-txt">What llms.txt is and how to write one</a> — the reading list that sits next to your crawl policy.</li>
+      <li><a href="/ai-readability">AI readability vs AI visibility</a> — why access is checkable and citations are not.</li>
+    </ul>
+  </div>
+
+  <div class="cta">
+    <h2>Check any site free</h2>
+    <p class="answer">See allow or block for all eight tokens, on the homepage and a deeper path.</p>
+    <p>Includes robots.txt parsing and llms.txt. No account needed.</p>
+    <div class="cta-actions">
+      <a class="cta-main" href="/llms-txt-checker">Check any site free</a>
+      <a class="cta-alt" href="/#plans">See plans</a>
+    </div>
+  </div>
+
+  <p class="meta meta-end">Last verified: October 2026. Token names, owners and documented behaviour were checked on 2026-10-24 against each vendor's crawler documentation.</p>
+</article>
+</main>
+
+<footer class="site-footer">
+  <nav>
+    <a href="/blog">Guides</a>
+    <a href="/compare/uptimerobot">Compare</a>
+    <a href="/compare/betterstack">vs Better Stack</a>
+    <a href="/compare/pingdom">vs Pingdom</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/refund.html">Refund</a>
+    <a href="/#plans">Pricing</a>
+    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+  </nav>
+  <p>Contact: <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p>© 2026 Pingory. All rights reserved.</p>
+</footer>
+
+<script>
+(function () {
+  var tt = document.getElementById('themeToggle');
+  function sync() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+  if (tt) tt.addEventListener('click', function () {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    if (dark) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme = 'dark';
+    try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
+<script src="/analytics.js"></script>
+</body>
+</html>

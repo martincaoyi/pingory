@@ -48,6 +48,27 @@ Email is sent over SMTP, so you can point it at any provider you already use
   reuse it across every monitor
 - **8 languages** — English, 中文, Español, Português, Deutsch, Français, 日本語, 한국어
 
+## AI Readability checklist
+
+Pingory also checks whether a site is *readable* to AI crawlers: twelve static checks over the
+files and markup a fetcher receives. These are the three that fail most often, and they apply to
+any site, not just one running this code.
+
+- **Serve the three discovery files at the exact root.** `/robots.txt`, `/sitemap.xml` and
+  `/llms.txt` must return HTTP 200 with a text content type. A single-page-app fallback that
+  answers with `200 text/html` is the most common failure, and it looks fine in a browser.
+- **Decide about the eight AI user agents on purpose.** Blocking the training group while
+  allowing the retrieval group is a defensible 2026 policy. A wildcard `Disallow: /` is not: it
+  also blocks Googlebot and the CSS and JavaScript it needs to render pages.
+- **Do not ship a JavaScript-only first screen.** If the HTML contains no body text before
+  scripts run, a crawler that does not execute JavaScript sees an empty page, even when a browser
+  renders it perfectly.
+
+Each user-agent token, owner and documented `robots.txt` behaviour is listed in
+[the AI crawler guide](https://pingory.com/blog/ai-crawlers-list). To see what a crawler actually
+receives from a domain, run the free single check at
+[pingory.com/llms-txt-checker](https://pingory.com/llms-txt-checker).
+
 ## Quick start (Docker)
 
 Requires Docker and Docker Compose. Nothing else.

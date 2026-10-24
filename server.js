@@ -341,6 +341,31 @@ app.get('/llms-txt-checker', (_req, res) => res.sendFile('llms-txt-checker.html'
 app.get('/llms-txt-checker/', (_req, res) => res.redirect(301, '/llms-txt-checker'));
 app.get('/llms-txt-checker.html', (_req, res) => res.redirect(301, '/llms-txt-checker'));
 
+// ===== 内容集群 B1（D45，自托管路径）=====
+// 与 Worker 的 BLOG_PAGES 白名单逐条对应；不用 /blog/:slug，未匹配的 /blog/xxx
+// 落到 express.static 的 404，绝不返回 200。
+// Express 默认非严格路由："/blog/" 与 "/blog" 会命中同一个 handler，所以尾斜杠
+// 只能在这一层用 req.path 区分——另注册 "/blog/" 会把规范地址也一起 301 掉。
+const BLOG_PAGES = {
+  '/blog/what-is-llms-txt': 'blog/what-is-llms-txt.html',
+  '/blog/ai-crawlers-list': 'blog/ai-crawlers-list.html',
+  '/blog/block-ai-crawlers': 'blog/block-ai-crawlers.html',
+};
+app.get('/blog.html', (_req, res) => res.redirect(301, '/blog'));
+app.get('/blog', (req, res) => (req.path.endsWith('/')
+  ? res.redirect(301, '/blog')
+  : res.sendFile('blog.html', { root: 'public' })));
+for (const [routePath, file] of Object.entries(BLOG_PAGES)) {
+  app.get(routePath + '.html', (_req, res) => res.redirect(301, routePath));
+  app.get(routePath, (req, res) => (req.path.endsWith('/')
+    ? res.redirect(301, routePath)
+    : res.sendFile(file, { root: 'public' })));
+}
+app.get('/ai-readability.html', (_req, res) => res.redirect(301, '/ai-readability'));
+app.get('/ai-readability', (req, res) => (req.path.endsWith('/')
+  ? res.redirect(301, '/ai-readability')
+  : res.sendFile('ai-readability.html', { root: 'public' })));
+
 // ===== 静态托管前端 =====
 app.use(express.static('public'));
 

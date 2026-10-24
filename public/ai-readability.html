@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<!--
+  D45 · B1 positioning page — /ai-readability
+  Target query: ai readability. Deliberately a WebPage, not an Article: this is a
+  product/positioning page. The core argument: visibility is an outcome you cannot
+  query; readability is a precondition you can check. No ranking or citation claims.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Readability: What You Can Measure (and What You Cannot)</title>
+  <meta name="description" content="AI readability is a set of technical preconditions you can verify, not a ranking. See all 12 checks, their weights, and what no tool can measure." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://pingory.com/ai-readability" />
+  <link rel="alternate" hreflang="en" href="https://pingory.com/ai-readability" />
+  <link rel="alternate" hreflang="x-default" href="https://pingory.com/ai-readability" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Pingory" />
+  <meta property="og:title" content="AI Readability: What You Can Measure (and What You Cannot)" />
+  <meta property="og:description" content="AI readability is a set of technical preconditions you can verify, not a ranking. See all 12 checks, their weights, and what no tool can measure." />
+  <meta property="og:url" content="https://pingory.com/ai-readability" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Pingory — uptime and AI Readability monitoring" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="AI Readability: What You Can Measure (and What You Cannot)" />
+  <meta name="twitter:description" content="AI readability is a set of technical preconditions you can verify, not a ranking. See all 12 checks, their weights, and what no tool can measure." />
+  <meta name="twitter:image" content="https://pingory.com/icon-512.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <link rel="stylesheet" href="/blog.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "name": "AI Readability vs AI Visibility: What You Can Actually Measure",
+        "url": "https://pingory.com/ai-readability",
+        "description": "AI readability is a set of technical preconditions you can verify, not a ranking. See all 12 checks, their weights, and what no tool can measure.",
+        "datePublished": "2026-10-24",
+        "dateModified": "2026-10-24",
+        "inLanguage": "en",
+        "isPartOf": { "@type": "WebSite", "name": "Pingory", "url": "https://pingory.com/" },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pingory",
+          "url": "https://pingory.com/",
+          "logo": { "@type": "ImageObject", "url": "https://pingory.com/icon-512.png" }
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://pingory.com/" },
+          { "@type": "ListItem", "position": 2, "name": "AI Readability", "item": "https://pingory.com/ai-readability" }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+  <span class="spacer"></span>
+  <button id="themeToggle" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+  <a class="btn" href="/signin.html">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+</nav>
+
+<main class="wrap">
+<article>
+  <p class="kicker">Positioning · AI Readability</p>
+  <h1>AI Readability vs AI Visibility: What You Can Actually Measure</h1>
+  <p class="meta">Last verified: October 2026 · About 6 minutes of reading</p>
+  <p class="lede">This page exists to draw one line clearly. What an AI product says about you is an outcome you cannot query reliably. Whether your site is technically readable to a crawler is a precondition you can check today, item by item. Pingory sells a check for the second thing and nothing for the first; the rest of this page explains why.</p>
+
+  <h2>Two different questions</h2>
+  <p class="answer">"Will ChatGPT recommend me" is an outcome; "can a crawler read my site" is a precondition, and only the second is testable.</p>
+  <p>Vendors routinely blur them. One is a question about a model's behaviour in a session you do not control; the other is a question about bytes on the wire. Mixing them produces dashboards that look precise and mean nothing.</p>
+
+  <h2>Visibility is an outcome you cannot query</h2>
+  <p class="answer">AI visibility depends on model version, region, language, prompt and time, so no single number can represent it.</p>
+  <p>Ask the same question twice in the same hour and you can get different answers. Change one word in the prompt and the answer changes shape. A model answers in the language of the question, with a knowledge cutoff that differs per product, and with retrieval that depends on what its index fetched last week. Any tool that reports "your AI visibility is 73" is collapsing those variables into a number that will not reproduce.</p>
+  <p>Running a fixed prompt set many times and logging the outputs is a legitimate sampling exercise. It still measures the model's behaviour, not your site, and it cannot tell you why an answer changed, because the model, the index and the prompt are all moving.</p>
+  <div class="boundary">
+    <p><strong>What Pingory does not sell:</strong> rank tracking for AI answers, citation counts, share of voice, or a forecast of traffic from chat products. Those numbers are not stable enough to alert on, and an alert that fires on noise is worse than no alert.</p>
+  </div>
+
+  <h2>Readability is a precondition you can check</h2>
+  <p class="answer">Readability is whether the files and markup a crawler receives are present, valid and permissive.</p>
+  <p>That question has a stable answer. A fetcher receives a status code, a content type, a robots.txt, a sitemap, a block of HTML and a set of headers. Each can be inspected, and the result does not change between two runs a minute apart. It is the same category of check as uptime: deterministic, repeatable, worth alerting on when it changes.</p>
+  <p>The honest framing is that readability is necessary but not sufficient. A perfectly readable site can still be ignored. What a check can do is remove the boring failures — a stray <code>noindex</code>, a canonical pointing at a staging host, an SPA shell with no text — so that if you are absent from an answer, it is not because of a deploy mistake.</p>
+
+  <h2>The 12 checks</h2>
+  <p class="answer">Eight core checks carry 88 points and can fail the status; four enhancements carry 12 points and only move the score.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Weights sum to 100. A core check that returns fail sets the status to down; a warn only lowers the score.</caption>
+      <thead>
+        <tr><th scope="col">Check</th><th scope="col">Group</th><th scope="col">Weight</th><th scope="col">What it verifies</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">robots.txt</th><td>Core</td><td>8</td><td>Reachable as text, parses as RFC 9309 groups, not an HTML fallback</td></tr>
+        <tr><th scope="row">AI crawler matrix</th><td>Core</td><td>22</td><td>Eight tokens evaluated on the homepage and a deeper path</td></tr>
+        <tr><th scope="row">llms.txt</th><td>Core</td><td>6</td><td>Exists, non-empty, at least one heading and one Markdown link</td></tr>
+        <tr><th scope="row">JSON-LD</th><td>Core</td><td>12</td><td>Every block parses, has a context and at least one type</td></tr>
+        <tr><th scope="row">First-screen text</th><td>Core</td><td>12</td><td>Text present in the HTML before JavaScript runs</td></tr>
+        <tr><th scope="row">sitemap.xml</th><td>Core</td><td>6</td><td>Valid urlset or sitemapindex with at least one entry</td></tr>
+        <tr><th scope="row">noindex</th><td>Core</td><td>18</td><td>Meta robots and X-Robots-Tag parsed token by token</td></tr>
+        <tr><th scope="row">canonical</th><td>Core</td><td>4</td><td>Canonical resolves to this page on the same host and scheme</td></tr>
+        <tr><th scope="row">Meta title and description</th><td>Enhancement</td><td>5</td><td>Both present and within sane length ranges</td></tr>
+        <tr><th scope="row">Open Graph</th><td>Enhancement</td><td>3</td><td>og:title, og:description and og:image present</td></tr>
+        <tr><th scope="row">H1</th><td>Enhancement</td><td>2</td><td>Exactly one non-empty H1</td></tr>
+        <tr><th scope="row">Image alt text</th><td>Enhancement</td><td>2</td><td>Non-decorative images carry an alt attribute</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Two checks deserve a note. The crawler matrix weighs 22 because access overrides everything else: if a token is disallowed, the rest of the page does not matter. <code>noindex</code> weighs 18 because it is the most common accident — a staging header promoted to production removes a page from indexes while every other check still passes.</p>
+
+  <h2>JS-rendered sites</h2>
+  <p class="answer">If your first-screen HTML is an empty shell, a crawler that does not execute JavaScript sees no text at all.</p>
+  <p>The check fetches the page the way a plain HTTP client does and measures how much text is in the response before any script runs. A client-rendered app typically returns a few hundred bytes of <code>&lt;div id="root"&gt;&lt;/div&gt;</code> plus script tags, so the measured text is near zero even though a browser shows a complete page.</p>
+  <p>Whether that matters depends on the consumer. Search engines render JavaScript, with a queue and a budget. Many AI fetchers do not run scripts at all, so a page can be indexed by Google and still be invisible to a retrieval bot.</p>
+  <p>Three ways to test your own site, cheapest first:</p>
+  <ol>
+    <li><code>curl -s https://example.com | grep -c "&lt;p"</code> — count paragraphs in the raw response.</li>
+    <li>View source in the browser and search for a sentence you know is on the page. If it is absent, it is not in the HTML.</li>
+    <li>Run the <a href="/llms-txt-checker">free check</a>, which reports the measured character count and flags a JavaScript-only shell.</li>
+  </ol>
+  <p>A static or server-rendered page fixes this by construction. For an app that must stay client-rendered, the usual remedy is to render the content that matters — headings, body copy, prices, docs — on the server and hydrate the interactive parts afterwards. Adding a <code>&lt;noscript&gt;</code> summary helps a human reader and does little for a parser.</p>
+
+  <h2>What this does not measure</h2>
+  <p class="answer">A readability score cannot tell you whether a model cited you, ranked you, or will ever mention you.</p>
+  <ul>
+    <li><strong>Citations and rankings.</strong> No file on your server records what an answer engine said about you yesterday.</li>
+    <li><strong>Whether a real crawler can reach you.</strong> The check fetches from a single address. If your WAF blocks it but allows a vendor, the result is unknown, not a verdict on your site.</li>
+    <li><strong>Training inclusion.</strong> A permissive robots.txt does not guarantee a page was used, and a block does not remove copies already collected.</li>
+    <li><strong>Content quality.</strong> A page can score 100 and still be the least useful result for a question.</li>
+    <li><strong>Model behaviour over time.</strong> Vendor policies change without notice; the check reports what was served, not what will be honoured.</li>
+  </ul>
+  <p>If you need the second item answered properly, the only reliable method is log analysis with source-IP verification — see <a href="/blog/ai-crawlers-list">the AI crawlers list</a> for why a user agent alone proves nothing.</p>
+
+  <h2>Where this fits in monitoring</h2>
+  <p class="answer">Readability is a snapshot when you run it once, and a regression signal only when it runs on a schedule.</p>
+  <p>The failures that hurt are the quiet ones: a deploy replaces robots.txt, a plugin starts answering <code>/llms.txt</code> with HTML, a firewall rule catches a retrieval crawler. None produce a 500, so uptime monitoring never sees them. That is why the check is also a monitor type.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>What each plan includes. Prices are per month, billed monthly.</caption>
+      <thead>
+        <tr><th scope="col">Plan</th><th scope="col">Price</th><th scope="col">Monitors</th><th scope="col">Interval</th><th scope="col">AI Readability monitoring</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Free</th><td>$0</td><td>50</td><td>5 minutes</td><td>No; the free checker is a single check</td></tr>
+        <tr><th scope="row">Starter</th><td>$4</td><td>100</td><td>1 minute</td><td>No</td></tr>
+        <tr><th scope="row">Pro</th><td>$6</td><td>Unlimited</td><td>60 seconds hosted</td><td>Yes, alerts on change</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Starter covers the nine standard check types: HTTP, keyword, ping, TCP port, SSL, domain expiry, API assertions, DNS and heartbeat. The AI type is Pro only. Self-hosted deployments can run at 30-second intervals, and can run additional probe instances from other locations if you need them.</p>
+
+  <div class="related">
+    <h3>Keep reading</h3>
+    <ul>
+      <li><a href="/blog/ai-crawlers-list">AI crawlers in 2026</a> — the eight tokens the matrix evaluates, and how to identify a real one.</li>
+      <li><a href="/blog/block-ai-crawlers">How to block AI crawlers</a> — the rules that change the matrix result, without breaking Google.</li>
+      <li><a href="/blog/what-is-llms-txt">What llms.txt is</a> — the file that carries 6 of the 100 points.</li>
+    </ul>
+  </div>
+
+  <div class="cta">
+    <h2>Check any site free</h2>
+    <p class="answer">Run all 12 checks against any public domain in about ten seconds, with no account.</p>
+    <div class="cta-actions">
+      <a class="cta-main" href="/llms-txt-checker">Check any site free</a>
+      <a class="cta-alt" href="/#plans">See plans</a>
+    </div>
+  </div>
+
+  <p class="meta meta-end">Last verified: October 2026. Weights and plan limits were read from the running service on 2026-10-24; the hosted service checks from a single region.</p>
+</article>
+</main>
+
+<footer class="site-footer">
+  <nav>
+    <a href="/blog">Guides</a>
+    <a href="/compare/uptimerobot">Compare</a>
+    <a href="/compare/betterstack">vs Better Stack</a>
+    <a href="/compare/pingdom">vs Pingdom</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/refund.html">Refund</a>
+    <a href="/#plans">Pricing</a>
+    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+  </nav>
+  <p>Contact: <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p>© 2026 Pingory. All rights reserved.</p>
+</footer>
+
+<script>
+(function () {
+  var tt = document.getElementById('themeToggle');
+  function sync() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+  if (tt) tt.addEventListener('click', function () {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    if (dark) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme = 'dark';
+    try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
+<script src="/analytics.js"></script>
+</body>
+</html>

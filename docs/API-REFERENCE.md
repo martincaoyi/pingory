@@ -780,7 +780,7 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 | GET | `/vs/pingdom` | **301** → `/compare/pingdom` |
 | GET | `/compare-pingdom.html` | **301** → `/compare/pingdom` |
 
-▸ **robots.txt / sitemap.xml**（2026-09-15 新增，`public/` 静态直出）：robots 禁 `/admin.html`、`/api/`、`/signin.html` 并声明 sitemap；sitemap 列出首页 + 3 个对比页（三页各含 7 语变体，2026-09-24 起共 25 URL）。
+▸ **robots.txt / sitemap.xml**（2026-09-15 新增，`public/` 静态直出）：robots 禁 `/admin.html`、`/api/`、`/signin.html` 并声明 sitemap；sitemap 列出首页 + 3 个对比页（三页各含 7 语变体，2026-10-24 起共 31 URL，新增免费检查器、指南索引、3 篇指南与定位页）。
 
 ▸ **对比页多语回归验证**：`node tools/verify-cmp-i18n.cjs` —— 渲染占位泄漏 / html lang / canonical / preload / JSON-LD、静态英文 vs en 字典漂移对账、8 语键集一致、sitemap 变体齐全，四项全检。
 
@@ -793,6 +793,25 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 ▸ 文案走 i18n 字典 `cmp.*`（100 键 × 8 语）。
 ▸ 页内语言切换 = **整页 URL 跳转**（`/compare/uptimerobot` ↔ `/de/compare/uptimerobot`），保证 URL 语言与内容语言一致。
 ▸ 服务端另注入 `window.__I18N_PRELOAD__`（`cmp.*`/`nav.*`/`footer.*` 子集）供前端复用，避免二次 fetch。
+
+### 8.2 内容页：免费检查器与 B1 指南（D43 / D45，2026-10-24）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/llms-txt-checker` | 免费 llms.txt 检查器（`public/llms-txt-checker.html`，D43） |
+| GET | `/llms-txt-checker/`、`/llms-txt-checker.html` | **301** → `/llms-txt-checker` |
+| GET | `/blog` | 指南索引（`public/blog.html`） |
+| GET | `/blog/`、`/blog.html` | **301** → `/blog` |
+| GET | `/blog/what-is-llms-txt` | 指南（`public/blog/what-is-llms-txt.html`） |
+| GET | `/blog/ai-crawlers-list` | 指南（`public/blog/ai-crawlers-list.html`） |
+| GET | `/blog/block-ai-crawlers` | 指南（`public/blog/block-ai-crawlers.html`） |
+| GET | `/blog/<slug>/`、`/blog/<slug>.html` | **301** → `/blog/<slug>`（仅上述三条白名单） |
+| GET | `/ai-readability` | 定位页（`public/ai-readability.html`） |
+| GET | `/ai-readability/`、`/ai-readability.html` | **301** → `/ai-readability` |
+
+▸ **白名单映射**：`src/cf-worker/pages.js` 的 `BLOG_PAGES` 与 `server.js` 同名常量逐条对应，不用动态 `:slug` 读任意文件；Worker 侧未匹配的 `/blog/*` 显式 `c.notFound()`（404），自托管侧落到 `express.static` 的 404，两条路径都不会把未知 slug 兜成 200。
+▸ **`run_worker_first`**：`wrangler.jsonc` 增加 `/blog`、`/blog/*`、`/ai-readability`、`/ai-readability.html`，否则静态层会抢先处理 `/blog.html` 的别名请求。
+▸ **回归**：`node tools/test-blog-pages.mjs`（本地静态 315 条）与 `node tools/test-blog-pages.mjs --url https://pingory.com`（部署后线上断言，含 301 与 404）。
 
 ---
 

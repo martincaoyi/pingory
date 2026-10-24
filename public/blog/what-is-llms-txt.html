@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<!--
+  D45 · B1 guide #1 — /blog/what-is-llms-txt
+  Target query: llms.txt. Facts: llms.txt is a September 2024 community proposal by
+  Jeremy Howard (Answer.AI); no W3C recommendation, no IETF RFC, no vendor mandate.
+  No major AI vendor publicly commits to reading it as of October 2026.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>llms.txt: What It Is and How to Write One (2026)</title>
+  <meta name="description" content="What llms.txt is, the full format with a copyable example, where to serve it, and why a correct file can still be ignored by AI crawlers in 2026." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://pingory.com/blog/what-is-llms-txt" />
+  <link rel="alternate" hreflang="en" href="https://pingory.com/blog/what-is-llms-txt" />
+  <link rel="alternate" hreflang="x-default" href="https://pingory.com/blog/what-is-llms-txt" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Pingory" />
+  <meta property="og:title" content="llms.txt: What It Is and How to Write One (2026)" />
+  <meta property="og:description" content="What llms.txt is, the full format with a copyable example, where to serve it, and why a correct file can still be ignored by AI crawlers in 2026." />
+  <meta property="og:url" content="https://pingory.com/blog/what-is-llms-txt" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Pingory — uptime and AI Readability monitoring" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="llms.txt: What It Is and How to Write One (2026)" />
+  <meta name="twitter:description" content="What llms.txt is, the full format with a copyable example, where to serve it, and why a correct file can still be ignored by AI crawlers in 2026." />
+  <meta name="twitter:image" content="https://pingory.com/icon-512.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <link rel="stylesheet" href="/blog.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": "llms.txt: What It Is, How to Write One, and Whether AI Actually Reads It",
+        "description": "What llms.txt is, the full format with a copyable example, where to serve it, and why a correct file can still be ignored by AI crawlers in 2026.",
+        "datePublished": "2026-10-24",
+        "dateModified": "2026-10-24",
+        "inLanguage": "en",
+        "author": { "@type": "Person", "name": "Martin Cao", "url": "https://pingory.com/" },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pingory",
+          "url": "https://pingory.com/",
+          "logo": { "@type": "ImageObject", "url": "https://pingory.com/icon-512.png" }
+        },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": "https://pingory.com/blog/what-is-llms-txt" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://pingory.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://pingory.com/blog" },
+          { "@type": "ListItem", "position": 3, "name": "What is llms.txt", "item": "https://pingory.com/blog/what-is-llms-txt" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is llms.txt an official standard?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Jeremy Howard of Answer.AI proposed it in September 2024 as a community convention. There is no W3C recommendation, no IETF RFC and no vendor mandate, and no AI company is obliged to read the file." }
+          },
+          {
+            "@type": "Question",
+            "name": "Where exactly should llms.txt live?",
+            "acceptedAnswer": { "@type": "Answer", "text": "At the root of the exact host you want covered, for example https://example.com/llms.txt. A copy under /docs/llms.txt or on a different subdomain is not the same location, and a checker that looks at the root will report it as missing." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does adding llms.txt get my site cited by ChatGPT?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No tool can promise that. No major AI vendor has publicly committed to reading llms.txt, and citation depends on the model, the question, the language and the moment. A valid file is a cheap signal, not a ranking lever." }
+          },
+          {
+            "@type": "Question",
+            "name": "Should I block AI crawlers and still publish llms.txt?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Those are separate decisions. robots.txt decides who may fetch; llms.txt describes what is worth reading. Many sites in 2026 block training crawlers, allow retrieval crawlers and keep a valid llms.txt for the ones that do read it." }
+          },
+          {
+            "@type": "Question",
+            "name": "How many links should llms.txt contain?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Fewer than your sitemap, by a wide margin. A practical target is 10 to 50 links covering docs, pricing, API reference and changelog. If the file mirrors thousands of URLs it stops being curation and becomes a second sitemap." }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+  <span class="spacer"></span>
+  <button id="themeToggle" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+  <a class="btn" href="/signin.html">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+</nav>
+
+<main class="wrap">
+<article>
+  <p class="kicker">Guides · llms.txt</p>
+  <h1>llms.txt: What It Is, How to Write One, and Whether AI Actually Reads It</h1>
+  <p class="meta">Last verified: October 2026 · About 9 minutes of reading</p>
+  <p class="lede">Most guides explain the syntax and stop there. This one also covers the part that decides whether the file does anything: what a crawler is actually obliged to do with it, which is nothing. You will get a complete, copyable example, the exact serving requirements, and a way to test your own file without guessing.</p>
+
+  <h2>What llms.txt is</h2>
+  <p class="answer">llms.txt is a plain-text Markdown file at /llms.txt that names the pages you want an AI system to read first.</p>
+  <p>Jeremy Howard of Answer.AI proposed it in September 2024 as a community convention. It is not a W3C recommendation, not an IETF RFC and not a requirement from any AI vendor. Nothing enforces it, and no company has to fetch it.</p>
+  <p>The file is small on purpose: a title, one line about the site, then a handful of links grouped by purpose. Being plain text, it costs almost nothing to serve and diffs cleanly between deploys.</p>
+
+  <h2>What problem it was meant to solve</h2>
+  <p class="answer">The proposal targets a real gap: HTML navigation is noisy, and a crawler has to guess which pages carry the substance.</p>
+  <p>A typical marketing site buries four useful pages under cookie banners, mega-menus, tag archives and paginated listings. A sitemap does not help much either: it lists every URL with equal weight and says nothing about which ones are worth a fetch. llms.txt states that judgement explicitly — here are the ten pages that describe this product, in reading order.</p>
+  <p>It is a reading list, not an access-control list. The distinction matters later, when people expect the file to keep crawlers out.</p>
+
+  <h2>The format, field by field</h2>
+  <p class="answer">The format is one H1, an optional blockquote summary, then H2 sections holding Markdown links with optional notes.</p>
+  <p>There is no schema and no validator with authority. The proposal describes a shape, and every element below is a convention rather than a rule. In practice, these are the parts that matter:</p>
+  <ul>
+    <li><strong>H1</strong> — the site or product name, once. A file without a heading gives a reader nothing to anchor on.</li>
+    <li><strong>Blockquote summary</strong> — one line, directly after the H1. It tells the reader what the site is before any link is followed.</li>
+    <li><strong>H2 sections</strong> — groups such as Documentation, Product, Optional. The last one is a convention for links that can be skipped when context is short.</li>
+    <li><strong>Link list items</strong> — <code>- [Title](absolute URL): one-line note</code>. Absolute URLs only; relative paths depend on a base the reader may not have.</li>
+  </ul>
+  <p>A complete example you can adapt as-is:</p>
+  <pre><code># Example Site
+
+&gt; Example Site is a hosted API for invoice parsing. Docs, pricing and changelog below.
+
+## Documentation
+- [Getting started](https://example.com/docs/start): Install the SDK and send a first request
+- [API reference](https://example.com/docs/api): Every endpoint, parameter and error code
+- [Webhooks](https://example.com/docs/webhooks): Retries, signatures and delivery order
+
+## Product
+- [Pricing](https://example.com/pricing): Plans, quotas and overage rules
+- [Changelog](https://example.com/changelog): Release notes, newest first
+
+## Optional
+- [Status page](https://example.com/status): Current availability and incident history
+- [Security](https://example.com/security): Data retention and subprocessors</code></pre>
+  <p>Two details are worth copying. Every link carries a short note, because a note is the only place the file can explain why the page matters. And the sections are ordered by what a newcomer needs first.</p>
+
+  <h2>Where to put it and how to serve it</h2>
+  <p class="answer">Serve it at the domain root as /llms.txt with HTTP 200 and the header text/plain; charset=utf-8.</p>
+  <p>The path is literal. <code>https://example.com/llms.txt</code> is the file; <code>https://example.com/docs/llms.txt</code> is a different URL that a root-only reader will never request. If you run several subdomains, each host needs its own copy, because there is no cross-host include mechanism.</p>
+  <p>The most common serving failure is a single-page app or catch-all route answering <code>/llms.txt</code> with <code>200 text/html</code> and the app shell. The status code looks fine and the content is wrong. Two ways to prevent it:</p>
+  <pre><code># nginx — serve the real file and never fall through to the SPA
+location = /llms.txt {
+    default_type "text/plain; charset=utf-8";
+    add_header X-Content-Type-Options nosniff;
+    try_files /llms.txt =404;
+}
+
+# Cloudflare Pages / Netlify — public/_headers
+/llms.txt
+  Content-Type: text/plain; charset=utf-8</code></pre>
+  <p>Then confirm what the network actually returns, not what your editor shows:</p>
+  <pre><code>curl -sI https://example.com/llms.txt | head -n 5
+# HTTP/2 200
+# content-type: text/plain; charset=utf-8
+
+curl -s https://example.com/llms.txt | head -n 3
+# # Example Site</code></pre>
+  <p>If the second command prints <code>&lt;!DOCTYPE html&gt;</code>, the file is not being served. Fix that before touching the content.</p>
+
+  <h2>How it differs from robots.txt</h2>
+  <p class="answer">robots.txt controls access and is obeyed by convention; llms.txt only suggests what is worth reading.</p>
+  <p>These two files are routinely confused, and the confusion produces bad advice. One of them can keep a crawler out. The other cannot.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Three discovery files, three different jobs.</caption>
+      <thead>
+        <tr><th scope="col">Aspect</th><th scope="col">robots.txt</th><th scope="col">sitemap.xml</th><th scope="col">llms.txt</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">First published</th><td>1994</td><td>2005</td><td>September 2024</td></tr>
+        <tr><th scope="row">Status</th><td>RFC 9309</td><td>sitemaps.org protocol</td><td>Community proposal</td></tr>
+        <tr><th scope="row">Can it block a fetch?</th><td>Yes</td><td>No</td><td>No</td></tr>
+        <tr><th scope="row">What it lists</th><td>Paths and the agents allowed to fetch them</td><td>Every indexable URL</td><td>10 to 50 pages worth reading</td></tr>
+        <tr><th scope="row">Typical size</th><td>Under 10 KB</td><td>Up to 50,000 URLs per file</td><td>Under 5 KB</td></tr>
+        <tr><th scope="row">If you get it wrong</th><td>You block the wrong agent</td><td>Stale URLs waste crawl budget</td><td>It is ignored silently</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>So the rule is simple: policy goes in robots.txt, inventory goes in sitemap.xml, judgement goes in llms.txt. A file that tries to do the first job will fail, because readers treat it as advisory text.</p>
+
+  <h2>Adoption in 2026</h2>
+  <p class="answer">As of October 2026, no major AI vendor publicly commits to reading llms.txt, so adoption is intent rather than a guarantee.</p>
+  <p>The publishing side is active: CMS plugins generate the file, documentation themes ship one, and directories list sites that have it. Real requests for <code>/llms.txt</code> do appear in server logs, sometimes from AI-adjacent agents, sometimes from SEO crawlers collecting the file as a signal.</p>
+  <p>The consuming side is quieter. OpenAI, Anthropic, Google and Perplexity document robots.txt and their own user-agent rules; none of them documents llms.txt as a supported input or a requirement. A request in a log proves that something fetched the file. It does not prove that the file shaped an answer, and Pingory does not publish percentages it cannot verify.</p>
+  <aside class="note">
+    <p>This is why the page avoids the phrase "AI-ready". A file can be perfectly formatted and still never be read. The only honest claim is that llms.txt is cheap to publish and harmless to get wrong.</p>
+  </aside>
+
+  <h2>Why a correctly formatted file can still be ignored</h2>
+  <p class="answer">A valid file can be ignored because nothing obliges a crawler to fetch it, parse it, or prefer the links inside.</p>
+  <p>Five mechanisms explain most of the gap between "we published it" and "it did something":</p>
+  <ol>
+    <li><strong>No enforcement layer.</strong> robots.txt is followed because crawler operators chose to follow it and said so publicly. llms.txt has no equivalent commitment, so a crawler that skips it is not violating anything.</li>
+    <li><strong>Crawlers already have sources.</strong> Sitemaps, internal links and rendered HTML give a retrieval system enough to work with. A second map is a convenience, not a necessity.</li>
+    <li><strong>Retrieval is query-driven.</strong> When a person asks a question, the system fetches pages that match the question. Your curated home page may never be the best match for that specific query.</li>
+    <li><strong>Serving errors.</strong> The file returns HTML, 404, a redirect chain, or plain text behind a bot challenge. Anything that is not a 200 with text is a silent failure.</li>
+    <li><strong>Policy beats preference.</strong> If robots.txt disallows the crawler, the reading list is irrelevant. Access control always wins over a suggestion.</li>
+  </ol>
+  <p>None of this makes publishing pointless: a small one-time cost, an unmeasurable upside, and a file you can verify in ten seconds.</p>
+
+  <h2>How to verify yours</h2>
+  <p class="answer">Verify the file the way a crawler would: exact path, status 200, plain text, one H1 and at least one link.</p>
+  <p>Run these four checks after every deploy that touches routing:</p>
+  <ul>
+    <li>The URL is <code>https://your-domain/llms.txt</code>, with no trailing slash and no redirect.</li>
+    <li>The response is <code>200</code> and the content type starts with <code>text/plain</code>.</li>
+    <li>The body starts with a single <code>#</code> heading and contains at least one Markdown link.</li>
+    <li>Every link resolves. A 404 inside the file is worse than no entry, because it wastes the one fetch you may get.</li>
+  </ul>
+  <p>If you would rather not do that by hand, the free <a href="/llms-txt-checker">llms.txt checker</a> fetches the same files a crawler would and reports what is missing. It runs 12 checks, of which llms.txt is one worth 6 points; the crawler-access matrix is worth 22 and usually explains a low score. That checker is a single check with no account. Recurring monitoring is a different product, covered in <a href="/ai-readability">AI readability</a>.</p>
+
+  <div class="related">
+    <h3>Keep reading</h3>
+    <ul>
+      <li><a href="/blog/ai-crawlers-list">The eight AI crawlers that matter in 2026</a> — which user agents to allow, and why the list is split in two.</li>
+      <li><a href="/blog/block-ai-crawlers">How to block AI crawlers without breaking Google</a> — robots.txt, Cloudflare, Vercel and nginx, with the misconfiguration that hurts.</li>
+      <li><a href="/ai-readability">AI readability vs AI visibility</a> — what a technical check can and cannot tell you.</li>
+    </ul>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <p class="answer">These five questions cover the parts readers ask about most: status, location, citation, policy and size.</p>
+  <details class="faq-item">
+    <summary>Is llms.txt an official standard?</summary>
+    <p>No. Jeremy Howard of Answer.AI proposed it in September 2024 as a community convention. There is no W3C recommendation, no IETF RFC and no vendor mandate, and no AI company is obliged to read the file.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Where exactly should llms.txt live?</summary>
+    <p>At the root of the exact host you want covered, for example https://example.com/llms.txt. A copy under /docs/llms.txt or on a different subdomain is not the same location, and a checker that looks at the root will report it as missing.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Does adding llms.txt get my site cited by ChatGPT?</summary>
+    <p>No tool can promise that. No major AI vendor has publicly committed to reading llms.txt, and citation depends on the model, the question, the language and the moment. A valid file is a cheap signal, not a ranking lever.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Should I block AI crawlers and still publish llms.txt?</summary>
+    <p>Those are separate decisions. robots.txt decides who may fetch; llms.txt describes what is worth reading. Many sites in 2026 block training crawlers, allow retrieval crawlers and keep a valid llms.txt for the ones that do read it.</p>
+  </details>
+  <details class="faq-item">
+    <summary>How many links should llms.txt contain?</summary>
+    <p>Fewer than your sitemap, by a wide margin. A practical target is 10 to 50 links covering docs, pricing, API reference and changelog. If the file mirrors thousands of URLs it stops being curation and becomes a second sitemap.</p>
+  </details>
+
+  <div class="cta">
+    <h2>Check any site free</h2>
+    <p class="answer">See what a crawler actually receives from your domain.</p>
+    <p>llms.txt, robots.txt, sitemap, first-screen text and access for eight AI user agents. No account needed.</p>
+    <div class="cta-actions">
+      <a class="cta-main" href="/llms-txt-checker">Check any site free</a>
+      <a class="cta-alt" href="/#plans">See plans</a>
+    </div>
+  </div>
+
+  <p class="meta meta-end">Last verified: October 2026. Facts on this page were checked against the original llms.txt proposal, RFC 9309 and vendor crawler documentation on 2026-10-24.</p>
+</article>
+</main>
+
+<footer class="site-footer">
+  <nav>
+    <a href="/blog">Guides</a>
+    <a href="/compare/uptimerobot">Compare</a>
+    <a href="/compare/betterstack">vs Better Stack</a>
+    <a href="/compare/pingdom">vs Pingdom</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/refund.html">Refund</a>
+    <a href="/#plans">Pricing</a>
+    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+  </nav>
+  <p>Contact: <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p>© 2026 Pingory. All rights reserved.</p>
+</footer>
+
+<script>
+(function () {
+  var tt = document.getElementById('themeToggle');
+  function sync() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+  if (tt) tt.addEventListener('click', function () {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    if (dark) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme = 'dark';
+    try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
+<script src="/analytics.js"></script>
+</body>
+</html>
