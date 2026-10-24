@@ -11,10 +11,12 @@ export const PLAN_MIN_INTERVAL = { free: 300, starter: 60, pro: 30 };
 export const EMAIL_VERIFY_MONITOR_CAP = 3;
 
 // 各套餐开放的检查类型
+// ai = AI 可读性监护（12 项静态检查）。只给 Pro：免费页 /llms-txt-checker 已向所有人
+// 公开单次检查，Starter 再给就没有增量；放在 Pro 才能形成升档动力。
 const TYPES = {
   free: ['http', 'keyword'],
   starter: ['http', 'keyword', 'ping', 'tcp', 'ssl', 'domain', 'api', 'dns', 'heartbeat'],
-  pro: ['http', 'keyword', 'ping', 'tcp', 'ssl', 'domain', 'api', 'dns', 'heartbeat'],
+  pro: ['http', 'keyword', 'ping', 'tcp', 'ssl', 'domain', 'api', 'dns', 'heartbeat', 'ai'],
 };
 
 // 各套餐开放的告警渠道
@@ -71,6 +73,7 @@ export const TYPE_LABELS = {
   api: 'API monitor (Header + JSON assert)',
   dns: 'DNS record',
   heartbeat: 'Heartbeat / Cron dead-man',
+  ai: 'AI readability (12 checks)',
 };
 
 export const CHANNEL_LABELS = {

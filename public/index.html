@@ -175,6 +175,16 @@
     .mon .history { width:100%; margin-top:12px; }
     .evt { font-size:.8rem; color:var(--muted); padding:5px 0; border-top:1px solid var(--border); display:flex; gap:10px; }
     .evt .t { color:#6b7280; white-space:nowrap; }
+    /* AI 可读性详情面板：状态用文字标签而非颜色块，暗色主题下也清晰 */
+    .ai-head { font-size:.82rem; color:var(--text); padding:6px 0; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .ai-score { font-weight:600; }
+    .ai-s { font-size:.7rem; letter-spacing:.04em; padding:1px 6px; border-radius:4px; border:1px solid var(--border); white-space:nowrap; }
+    .ai-s.pass { color:#1faa6b; border-color:#1faa6b55; }
+    .ai-s.warn { color:#b45309; border-color:#b4530955; }
+    .ai-s.fail { color:#dc2626; border-color:#dc262655; }
+    .ai-s.skip { color:var(--muted); }
+    .ai-note { font-size:.78rem; color:var(--muted); padding:4px 0 0; }
+    .ai-chg { font-size:.78rem; color:#b45309; padding:2px 0; }
     .empty { color:var(--muted); font-size:.9rem; }
     .authbar { display:flex; justify-content:flex-end; align-items:center; gap:12px;
                margin-bottom:24px; color:var(--muted); font-size:.9rem; min-height:36px; }
@@ -1452,7 +1462,7 @@ docker compose up -d</code></pre>
       renderChannels();
     }
     // 兜底类型列表：即使 /api/plan-features 失败，类型下拉也必须可用，否则无法添加监控
-    const DEFAULT_TYPES = ['http', 'keyword', 'ping', 'tcp', 'ssl', 'domain', 'api', 'dns', 'heartbeat'];
+    const DEFAULT_TYPES = ['http', 'keyword', 'ping', 'tcp', 'ssl', 'domain', 'api', 'dns', 'heartbeat', 'ai'];
     // 填充类型下拉。⚠️ map 形参绝不可命名为 t —— 会遮蔽全局翻译函数 t()（历史 bug：下拉恒为空 → type='' → 403 无法添加监控）
     function fillTypeOptions() {
       const sel = document.getElementById('typeInput');
@@ -1482,9 +1492,10 @@ docker compose up -d</code></pre>
       const urlHint = {
         http: 'https://example.com', keyword: 'https://example.com', api: 'https://api.example.com/health',
         heartbeat: t('cfg.hint.heartbeat', 'Your site must call POST /api/heartbeat/<id> periodically'),
+        ai: t('cfg.hint.ai', 'Domain only, e.g. example.com — we fetch the homepage and 3 root files'),
       };
       let html = '';
-      if (urlHint[type]) html += `<label>${t('cfg.target','Target URL')}</label><div class="hint">${urlHint[type]}</div>`;
+      if (urlHint[type]) html += `<label>${type === 'ai' ? t('cfg.domain', 'Domain') : t('cfg.target', 'Target URL')}</label><div class="hint">${urlHint[type]}</div>`;
       if (type === 'keyword') {
         html += `<label>${t('cfg.keyword','Keyword')}</label><input id="cfgKeyword" placeholder="${t('cfg.kwph','String the page must contain')}" />`;
       } else if (type === 'tcp') {
@@ -1502,6 +1513,9 @@ docker compose up -d</code></pre>
       } else if (type === 'dns') {
         html += `<label>${t('cfg.recordType','Record type')}</label><input id="cfgRecordType" value="A" />`;
         html += `<label>${t('cfg.expected','Expected values (comma separated)')}</label><input id="cfgExpected" placeholder="1.2.3.4,1.2.3.5" />`;
+      } else if (type === 'ai') {
+        html += `<label>${t('cfg.aiMinText','Minimum readable text (chars, optional)')}</label><input id="cfgAiMinText" type="number" placeholder="200" />`;
+        html += `<div class="hint">${t('cfg.aiHint','12 static checks: robots.txt, AI crawler access, llms.txt, JSON-LD, readable text, sitemap, noindex, canonical, title/description, Open Graph, H1, image alt. Technical prerequisites only — not a ranking or citation prediction.')}</div>`;
       }
       if (type === 'http' || type === 'api') {
         html += `<label>${t('cfg.slow','Slow response threshold (ms, optional)')}</label><input id="cfgSlow" type="number" placeholder="2000" />`;
@@ -1556,6 +1570,8 @@ docker compose up -d</code></pre>
       } else if (type === 'http') {
         const s = val('cfgSlow'); if (s) c.slowThresholdMs = Number(s);
         const cd = val('cfgCodes'); if (cd) c.expectedStatuses = cd.split(',').map((s) => Number(s.trim())).filter(Boolean);
+      } else if (type === 'ai') {
+        const mt = val('cfgAiMinText'); if (mt) c.minTextChars = Number(mt);
       }
       if (type === 'http' || type === 'api') {
         const s = val('cfgSlow'); if (s) c.slowThresholdMs = Number(s);
@@ -1763,6 +1779,37 @@ docker compose up -d</code></pre>
       return s.replace('{detail}', p[1] || '');
     }
 
+    // ===== AI 可读性详情面板（数据来自 monitor.config._ai.snap，由检查引擎写入）=====
+    const AI_ITEM_LABELS = {
+      robots_txt: 'robots.txt', crawler_matrix: 'AI crawler access', llms_txt: 'llms.txt',
+      json_ld: 'Structured data (JSON-LD)', text_content: 'Readable text without JS', sitemap: 'sitemap.xml',
+      noindex: 'Indexing allowed', canonical: 'Canonical URL', meta: 'Meta title & description',
+      open_graph: 'Open Graph tags', h1: 'H1 heading', alt_text: 'Image alt text',
+    };
+    function aiHtml(snap) {
+      if (!snap || !snap.items) {
+        return '<div class="evt"><span>' + t('ai.pending', 'Waiting for the first check (runs on the monitor interval).') + '</span></div>';
+      }
+      const when = snap.at ? fmtTime(Date.parse(snap.at)) : '';
+      let out = `<div class="ai-head"><span class="ai-score">${snap.unknown ? '—' : (snap.score != null ? snap.score + '/100' : '—')}</span>
+        <span>${escapeHtml(when)}</span></div>`;
+      if (snap.unknown) {
+        // 被 WAF 拦：明确说「不知道」，不要让用户误读成 0 分
+        out += `<div class="ai-note">${t('ai.unknown', 'Unknown — your site blocked our crawler')}${snap.blockedBy ? ` (${escapeHtml(snap.blockedBy)})` : ''}. ${t('ai.unknownHint', 'Strict bot protection often blocks AI crawlers too.')}</div>`;
+      }
+      for (const [k, v] of (snap.changes || []).entries()) {
+        out += `<div class="ai-chg">${escapeHtml(String(v))}</div>`;
+      }
+      for (const it of snap.items) {
+        const label = t('ai.item.' + it.k, AI_ITEM_LABELS[it.k] || it.k);
+        const st = String(it.s || 'skip');
+        out += `<div class="evt"><span class="ai-s ${st}">${st.toUpperCase()}</span>
+          <span><strong>${escapeHtml(label)}</strong>${it.m ? ' — ' + escapeHtml(it.m) : ''}</span></div>`;
+      }
+      out += `<div class="ai-note">${t('ai.note', 'Technical prerequisites only. Not a ranking or citation prediction.')}</div>`;
+      return out;
+    }
+
     function renderMonitors(list) {
       window.__lastMonitors = list;   // 供语言切换时重绘（见 __afterLang）
       if (!list.length) {
@@ -1779,11 +1826,13 @@ docker compose up -d</code></pre>
               ${m.status === 'down' && m.lastError ? '· ' + escapeHtml(fmtMonitorError(m.lastError)) : ''}</div>
           </div>
           <div class="acts">
+            ${m.type === 'ai' ? `<button class="ai-chk" data-id="${m.id}">${t('mon.ai','AI')}</button>` : ''}
             <button class="stats" data-id="${m.id}">${t('mon.stats','Stats')}</button>
             <button class="hist" data-id="${m.id}">${t('mon.hist','History')}</button>
             <button class="pub" data-id="${m.id}">${m.statusPublic ? t('mon.pubOn','Public ✓') : t('mon.pub','Public')}</button>
             <button class="del" data-id="${m.id}">${t('mon.del','Delete')}</button>
           </div>
+          <div class="history hidden" id="aiv-${m.id}"></div>
           <div class="history hidden" id="hist-${m.id}"></div>
           <div class="chart hidden" id="chart-${m.id}"></div>
         </div>
@@ -1807,6 +1856,18 @@ docker compose up -d</code></pre>
             return;
           }
           loadMonitors(); // 成功：同步真实状态（已删项不再出现）
+        });
+      });
+      monList.querySelectorAll('button.ai-chk').forEach((b) => {
+        b.addEventListener('click', () => {
+          const id = b.dataset.id;
+          const box = document.getElementById('aiv-' + id);
+          if (!box) return;
+          if (!box.classList.contains('hidden')) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+          const m = (window.__lastMonitors || []).find((x) => x.id === id);
+          const snap = m && m.config && m.config._ai ? m.config._ai.snap : null;
+          box.innerHTML = aiHtml(snap);
+          box.classList.remove('hidden');
         });
       });
       monList.querySelectorAll('button.hist').forEach((b) => {

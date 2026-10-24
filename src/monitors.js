@@ -10,6 +10,7 @@ import { getUserById } from './auth.js';
 import { planFeatures } from './plans.js';
 import { MON_ERR } from './monerr.js';
 import { assertSafeTarget, safeFetch } from './ssrf-guard.js';
+import { checkAiVisibility } from './ai-visibility.js';
 
 // node:dns / node:tls / node:child_process 改为**懒加载**（Worker 兼容，ADR-0001）：
 // Cloudflare Workers(nodejs_compat) 不保证提供这三类能力（child_process 必无；dns/tls 视版本），
@@ -522,6 +523,13 @@ function checkHeartbeat(monitor) {
 }
 
 // 本地单点检查（按 type 分发）；导出供多区域 worker 复用
+/**
+ * AI 可读性检查专用 fetch：`maxRedirects: 5` 跟随完整跳转链
+ * （http→https→www 常见两跳，只跟一跳会把正常站判成 SITE_REDIRECT_LOOP）。
+ * 每一跳都过 SSRF 守卫。
+ */
+const aiFetch = (url, init) => safeFetch(url, init, { maxRedirects: 5 });
+
 export async function runLocalCheck(monitor) {
   const c = monitor.config || {};
   const t = monitor.type;
@@ -540,6 +548,12 @@ export async function runLocalCheck(monitor) {
     case 'api': return checkApi(target, c);
     case 'dns': return checkDns(target, c.recordType || 'A', c.expectedValues || []);
     case 'heartbeat': return checkHeartbeat(monitor);
+    case 'ai': return checkAiVisibility(target, {
+      fetchImpl: aiFetch,
+      // 上一次快照（存在 config._ai.prev，用于生成「什么变了」）
+      prev: (c._ai && c._ai.prev) || null,
+      minTextChars: c.minTextChars,
+    });
     case 'http':
     default: return checkHttp(target, c);
   }
@@ -592,6 +606,7 @@ async function runCheck(monitor, plan) {
   const regions = getProbeRegions(plan);
   const confirm = Math.max(1, Math.ceil(regions.length / 2));
   let down = 0, lastError = null, lastRt = null, warn = null;
+  let upDetail = null, downDetail = null;
   for (const r of regions) {
     const start = Date.now();
     let res;
@@ -617,12 +632,88 @@ async function runCheck(monitor, plan) {
       res = await runLocalCheckRetry(monitor);
     }
     res.responseTime = res.responseTime ?? (monitor.type === 'heartbeat' ? null : Date.now() - start);
-    if (res.status === 'down') { down++; lastError = res.error; }
+    if (res.status === 'down') { down++; lastError = res.error; if (res.detail) downDetail = res.detail; }
+    else if (!upDetail && res.detail) upDetail = res.detail;
     if (res.responseTime != null) lastRt = res.responseTime;
     if (res.warn) warn = res.warn;
   }
   const status = down >= confirm ? 'down' : 'up';
-  return { status, responseTime: lastRt, error: status === 'down' ? lastError : null, warn, regions: regions.length };
+  // D41：detail 必须透传 —— 否则 score / matrix / fingerprint / changes 全在
+  // runCheck 这一层被丢掉，AI 监控和历史面板都拿不到东西（二审第 9 条）
+  return {
+    status,
+    responseTime: lastRt,
+    error: status === 'down' ? lastError : null,
+    warn,
+    regions: regions.length,
+    detail: status === 'down' ? (downDetail || upDetail) : (upDetail || downDetail),
+  };
+}
+
+// ============================================================
+// AI 可读性专用：告警指纹门控 + 连续 unknown 计数（D41）
+// ============================================================
+// 为什么不能直接用 warnFresh：它是「距上次 >10 分钟即再发」，没有内容比较 ⇒
+// 只要状态持续 warn，就每 10 分钟发一条，一天 144 条。而真正在意的是「变了没有」。
+// 状态存在 monitor.config._ai（JSON TEXT）里，零 DB 迁移（Worker 不跑 DDL）。
+const AI_UNKNOWN_WARN_TEXT = 'AI checks could not run: your site returned a bot-protection challenge to our crawler. Add Pingory to your allowlist.';
+
+// 导出仅供单测（D41）：告警指纹门控是纯函数，不碰 DB
+export function applyAiWarnGate(monitor, detail, prevWarnAt) {
+  const now = Date.now();
+  const cooled = now - prevWarnAt > 10 * 60 * 1000;
+
+  if (!monitor.config || typeof monitor.config !== 'object') monitor.config = {};
+  const cfg = monitor.config;
+  if (!cfg._ai || typeof cfg._ai !== 'object') cfg._ai = {};
+  const st = cfg._ai;
+
+  let warnFresh = false;
+  let warnText = null;
+
+  if (!detail) return { warnFresh: false, warnText: null };
+
+  if (detail.unknown) {
+    // 被 WAF 拦不是故障，但连续 3 次都测不到，用户该知道了 —— 只提醒一次
+    st.unk = (st.unk || 0) + 1;
+    if (st.unk >= 3 && !st.unw) {
+      warnFresh = cooled;
+      if (cooled) { st.unw = true; warnText = AI_UNKNOWN_WARN_TEXT; }
+    }
+    // 测不到时不推进指纹：等能测到时再和「上次真实状态」比
+  } else {
+    st.unk = 0;
+    st.unw = false;
+    const fp = detail.fingerprint || null;
+    const changed = !!fp && fp !== (st.fp || null);
+    warnFresh = changed && cooled;
+    // 只在冷却允许时前移指纹 ⇒ 被冷却挡下的变化会在下一个检查点补发，不会被静默吞掉
+    if (changed && cooled) st.fp = fp;
+  }
+
+  // 上一次快照（只存 diff 需要的三个字段，避免 config 膨胀）
+  st.prev = { status: detail.status || null, matrix: detail.matrix || {}, snapshot: detail.snapshot || null };
+
+  // 面板用的紧凑快照：12 项 + 分数 + 变更，message 截断到 200 字符
+  if (Array.isArray(detail.items)) {
+    st.snap = {
+      at: detail.checkedAt || new Date(now).toISOString(),
+      score: detail.score,
+      status: detail.status,
+      unknown: !!detail.unknown,
+      reason: detail.reason || null,
+      blockedBy: detail.blockedBy || null,
+      changes: (detail.changes || []).slice(0, 5),
+      items: detail.items.map((i) => ({
+        k: i.key,
+        s: i.status,
+        r: (i.detail && i.detail.reason) || null,
+        m: String(i.message || '').slice(0, 200),
+      })),
+    };
+  }
+
+  return { warnFresh, warnText };
 }
 
 // ============================================================
@@ -648,9 +739,21 @@ export async function checkMonitor(monitor) {
   const downConfirmed = result.status === 'down' && consecutiveFailures >= confirmThreshold;
 
   // 慢响应 / 即将过期等 warning（不改变 status，但触发一次告警）
-  const isWarn = !!result.warn;
   const prevWarnAt = slowState.get(monitor.id) || 0;
-  const warnFresh = isWarn && Date.now() - prevWarnAt > 10 * 60 * 1000;
+
+  // AI 类型走指纹门控：同指纹不重发；指纹变化才告警（详见 applyAiWarnGate）
+  let aiGate = null;
+  if (monitor.type === 'ai') {
+    aiGate = applyAiWarnGate(monitor, result.detail || null, prevWarnAt);
+    if (aiGate.warnText && !result.warn) {
+      // 连续 3 次测不到 ⇒ 一次性提醒（不是故障，是「我们看不见」）
+      result.warn = aiGate.warnText;
+      if (result.detail) result.detail.unknownWarn = true;
+    }
+  }
+
+  const isWarn = !!result.warn;
+  const warnFresh = isWarn && (aiGate ? aiGate.warnFresh : Date.now() - prevWarnAt > 10 * 60 * 1000);
   if (warnFresh) slowState.set(monitor.id, Date.now());
   const prevSlow = slowState.get(monitor.id + ':slow');
   const slowThreshold = monitor.config?.slowThresholdMs;

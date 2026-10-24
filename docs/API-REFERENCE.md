@@ -308,9 +308,11 @@ OAuth 回调终点。用 code 换取 token 并获取邮箱，按邮箱找/建用
 | `api` | 合法 URL | starter+ | 自定义 header + JSON 断言 |
 | `dns` | 域名 | starter+ | 记录值比对 |
 | `heartbeat` | 合法 URL（回填端点） | starter+ | 后台任务按时上报 |
+| `ai` | 域名（允许带 scheme，取 hostname） | **pro only** | AI 可读性监护：12 项静态检查（D41，2026-10-24） |
 
-- Free 仅 `http` / `keyword`；Starter/Pro 全 9 类。不支持的类型返回 **403**。
+- Free 仅 `http` / `keyword`；Starter 8 类；Pro 9 类 + `ai`。不支持的类型返回 **403**。
 - `validateTarget(type, url)`：http/keyword/api/heartbeat 要求合法 URL；其余仅要求非空字符串。
+- `ai` 类型：`url` 只保留 hostname（`https://example.com/x` → `example.com`），检查会抓 homepage + `/robots.txt` + `/llms.txt` + `/sitemap.xml`（跟随最多 5 跳重定向，每跳过 SSRF 守卫）。
 
 ### config 配置字段（按 type）
 | type | config 字段 | 说明 |
@@ -325,6 +327,25 @@ OAuth 回调终点。用 code 换取 token 并获取邮箱，按邮箱找/建用
 | `api` | `method`、`headers`、`body`、`assertPath: string`、`assertEquals` | JSON 断言（如 `assertPath: "data.ok"`） |
 | `dns` | `recordType: string`（默认 A）、`expectedValues: string[]` | 解析值比对 |
 | `heartbeat` | （无） | 由 `POST /api/heartbeat/:id` 回填 `lastSuccessAt` |
+| `ai` | `minTextChars: number`（默认 200）、`_ai`（**只读，服务端维护**） | `_ai` 存指纹/快照，客户端写入会被丢弃 |
+
+**`config._ai`（服务端内部状态，2026-10-24 D41 新增）**
+
+```json
+{ "_ai": {
+    "fp": "a1b2…",              // 上次已告警的指纹（核心项状态 + 被禁爬虫名）
+    "unk": 0,                    // 连续 unknown（探测被 WAF 拦）次数
+    "unw": false,                // unknown 提醒是否已发（只发一次）
+    "prev": { "status": "up", "matrix": {"GPTBot":"allow"}, "snapshot": {} },
+    "snap": { "at": "…", "score": 88, "status": "up", "unknown": false,
+              "changes": ["GPTBot: allow → disallow"],
+              "items": [{"k":"robots_txt","s":"pass","r":"ok","m":"…"}] }
+} }
+```
+
+- 出现在 `GET /api/monitors` 的返回里，供详情面板渲染；**公开状态页不返回 config**（`buildStatusPage` 只取白名单列）。
+- `POST`/`PATCH` 传入 `config._ai` 会被剥离；`PATCH` 时服务端保留旧值。
+- 告警语义：**指纹不变不重复告警**；`unknown`（WAF 拦截）返回 `status:"up"` 且 `score:null`，连续 3 次才发一次 warning。
 
 ### channels 告警渠道配置（v1.8 · 2026-09-14 Plan A 改版）
 `channels` 为对象，键为渠道名，值**至少含 `enabled: true`**；**按套餐过滤**，非本档渠道被静默丢弃，返回 201 时只保留有效渠道。

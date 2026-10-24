@@ -250,6 +250,8 @@ if (isMsg) {
       'landing.plan.free.price','landing.plan.starter.price','landing.plan.pro.price',
       'landing.plan.starter.title','landing.plan.pro.title',
       'landing.type.heartbeat.title','landing.type.http.title','type.ping',
+      // 协议名 / 文件名 / 通用缩写，8 语一律保留英文（AI 可读性面板，D41）
+      'mon.ai','ai.item.robots_txt','ai.item.llms_txt','ai.item.sitemap',
     ]);
     const i18nUntranslated = [];
     for (const k of Object.keys(i18nDict.en || {})) {

@@ -600,13 +600,17 @@ export function registerApiRoutes(app) {
     }
     const finalPublic = statusPublic && planHasStatusPage(plan);
 
+    // 内部状态位（_ai 等）不接受客户端写入，避免伪造指纹压掉告警
+    const userConfig = (config && typeof config === 'object') ? { ...config } : {};
+    delete userConfig._ai;
+
     try {
       const monitor = createMonitor({
         url: nres.url,
         name: name ? String(name).trim() : null,
         interval: parsedInterval,
         type,
-        config,
+        config: userConfig,
         channels: safeChannels,
         statusPublic: finalPublic,
         userId,
@@ -667,7 +671,14 @@ export function registerApiRoutes(app) {
       if (!m || m.userId !== userId) return c.json(apiErr(E.MONITOR_NOT_FOUND), 404);
       const plan = (await getUserById(userId))?.plan ?? 'free';
       const { config, channels, statusPublic, interval, name } = c.get('body') || {};
-      if (config !== undefined) m.config = config;
+      if (config !== undefined) {
+        // 保留后端自己维护的内部状态（_ai：指纹/快照），否则前端每次保存都会把它清掉，
+        // 导致「指纹永远为空 ⇒ 每次都算变化 ⇒ 每次检查都告警」
+        const prevInternal = (m.config && typeof m.config === 'object') ? m.config._ai : undefined;
+        m.config = (config && typeof config === 'object') ? { ...config } : {};
+        delete m.config._ai;
+        if (prevInternal !== undefined) m.config._ai = prevInternal;
+      }
       if (interval !== undefined) {
         const minI = planMinInterval(plan);
         const v = Number(interval);

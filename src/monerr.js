@@ -11,6 +11,13 @@
 // ⚠️ 新增检查类型时，错误码必须同步补进：
 //   src/monerr.js（本文件）+ public/i18n/*.json 的 monerr.* 8 语键
 //   + public/index.html、public/status.html 的 MONERR_CODES 列表。
+//
+// 📌 例外（2026-10-24 D41，`ai` 类型）：AI 可读性检查失败时写入的是**英文整句**
+//   （如 "AI crawler access: All retrieval-class AI crawlers are blocked…"），
+//   不是稳定错误码。原因：失败原因来自 12 个检查项的动态判定组合，错误码化会
+//   产生上百个码，8 语翻译不可维护。monErrText() / fmtMonitorError() 对未识别的
+//   字符串原样返回，因此展示与告警均为可读英文。若将来要求本地化，再收敛成
+//   `ai_<item>_<reason>` 形式的少量码。
 
 export const MON_ERR = {
   TIMEOUT: 'timeout',                        // HTTP/fetch 超时（err.name === 'AbortError'）

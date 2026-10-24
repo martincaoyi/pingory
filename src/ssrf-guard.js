@@ -99,20 +99,30 @@ export async function assertSafeTarget(hostname) {
 // 带 SSRF 守卫的 fetch：手动处理重定向（对跳转目标再校验），拒绝内网。
 // 注：DNS 重绑定(TOCTOU)的理论窗口未完全封堵——需 undici 自定义 connect 钉死解析 IP；
 // 本范围以 dns.lookup 预校验 + 重定向再校验覆盖主威胁（认证用户直填内网地址 / 内网域名）。
-export async function safeFetch(urlStr, init = {}) {
-  const host = hostnameFromUrl(urlStr);
-  const pre = await assertSafeTarget(host);
-  if (!pre.ok) throw new Error('TARGET_BLOCKED:' + pre.reason);
-  const res = await fetch(urlStr, { ...init, redirect: 'manual' });
-  if (res.status >= 300 && res.status < 400) {
-    const loc = res.headers.get('location');
-    if (loc) {
-      let next;
-      try { next = new URL(loc, urlStr).toString(); } catch { return res; }
-      const ns = await assertSafeTarget(hostnameFromUrl(next));
-      if (!ns.ok) throw new Error('TARGET_BLOCKED:redirect');
-      return fetch(next, { ...init, redirect: 'manual' });
-    }
+//
+// maxRedirects 默认 1 = 保持历史行为（只跟一跳），9 种既有检查类型逐字节不变。
+// 需要跟随完整跳转链的调用方（如 AI 可读性检查，站点常见 http→https→www 两跳）显式传大值。
+export async function safeFetch(urlStr, init = {}, { maxRedirects = 1 } = {}) {
+  let current = urlStr;
+  let hops = 0;
+
+  for (;;) {
+    const pre = await assertSafeTarget(hostnameFromUrl(current));
+    if (!pre.ok) throw new Error('TARGET_BLOCKED:' + (hops === 0 ? pre.reason : 'redirect'));
+
+    const res = await fetch(current, { ...init, redirect: 'manual' });
+    if (res.status < 300 || res.status >= 400) return res;
+
+    const loc = res.headers && res.headers.get ? res.headers.get('location') : null;
+    if (!loc) return res;
+    if (hops >= maxRedirects) return res; // 与旧行为一致：超出预算时把 3xx 原样交回调用方
+
+    let next;
+    try { next = new URL(loc, current).toString(); } catch { return res; }
+    // 拒绝非 http(s) 跳转（否则 file: / data: 会绕过主机校验）
+    if (!/^https?:/i.test(next)) return res;
+
+    hops += 1;
+    current = next;
   }
-  return res;
 }
