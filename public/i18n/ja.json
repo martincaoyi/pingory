@@ -648,6 +648,7 @@
   "monerr.ssl_expiring": "SSL 証明書はあと {detail} 日で期限切れになります",
   "monerr.domain_expiring": "ドメインはあと {detail} 日で期限切れになります",
   "nav.compare": "UptimeRobot と比較 →",
+  "nav.llmsChecker": "llms.txt チェッカー",
   "footer.compare": "比較",
   "footer.compareBs": "Better Stack比較",
   "footer.comparePd": "Pingdom比較",

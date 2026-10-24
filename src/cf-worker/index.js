@@ -5,7 +5,8 @@
 //   env.js      环境变量桥 + Hyperdrive 注入（业务模块读 process.env 零改动）
 //   session.js  DB-backed 会话中间件（复用 connect-pg-simple 的 session 表）
 //   util.js     错误码 / 限流 / 共享辅助（与 server.js 逐语义对齐）
-//   pages.js    动态页面路由（/ 、/compare/* ×12 、/status/:slug）
+//   pages.js    动态页面路由（/ 、/compare/* ×12 、/status/:slug 、/llms-txt-checker）
+//   public-ai.js 公开 AI Readability 检查端点（GET /api/public/ai-check，落库限流）
 //   api.js      全部 /api/* 端点 + /health + /api 404 兜底
 //   cron.js     scheduled：leader 租约 + 到期检查 + 保留清理 + 月报
 //
@@ -15,7 +16,8 @@
 // ⚠️ 部署注意（wrangler.jsonc 由 owner 维护，本文件不改动它）：
 //   Workers Assets 默认「先静态后 Worker」——与 ASSETS 同路径的请求不会进 Worker。
 //   要让 / 、/api/* 、/status/* 、/compare/* 由本 Worker 接管，wrangler.jsonc 的
-//   assets 段需要加 "run_worker_first": ["/", "/api/*", "/status/*", "/compare/*", "/vs/*", "/health"]
+//   assets 段需要加 "run_worker_first": ["/", "/api/*", "/status/*", "/compare/*", "/vs/*", "/health",
+//   "/llms-txt-checker", "/llms-txt-checker.html"]
 //   （或等效的 true）。未配置前，静态可直出的资源照常由 Assets 服务，行为兼容，
 //   但根路径自定义域名状态页与 compare 别名 301 会被静态层抢先。
 import { Hono } from 'hono';
@@ -24,6 +26,7 @@ import { sessionMiddleware } from './session.js';
 import { jsonBodyParser } from './util.js';
 import { registerApiRoutes } from './api.js';
 import { registerPageRoutes } from './pages.js';
+import { registerPublicAiRoutes } from './public-ai.js';
 import { runCron } from './cron.js';
 import { flushBackgroundTasks } from '../events.js';
 
@@ -44,6 +47,10 @@ app.use('*', async (c, next) => {
 
 // 动态页面路由（先于 API/静态，与 server.js 中段路由次序一致）
 registerPageRoutes(app);
+
+// 公开 AI Readability 检查端点（D43）。必须早于 registerApiRoutes：
+// api.js 末尾的 app.all('/api/*', 404) 会吞掉之后注册的任何 /api/* 路由。
+registerPublicAiRoutes(app);
 
 // 会话中间件仅挂 /api/*（express-session 全局挂载，但静态请求经 Assets 兜底后本就不进 Worker；
 // 仅挂 /api/* 还省掉了静态路径上的无谓会话查询）

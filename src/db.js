@@ -106,7 +106,7 @@ const INIT_RETRY_DELAYS_MS = [2000, 4000, 8000, 16000, 30000]; // 5 次重试，
 //     （且 monitors.user_id 已补 ON DELETE CASCADE 外键，此后新产生的孤儿会随用户删除自动清理）
 // 简化模型：DDL 全部幂等（IF NOT EXISTS / ADD COLUMN IF NOT EXISTS），
 // 因此「迁移」= 重跑一遍幂等基线 + 记录版本号；中途失败后重跑是安全的（不会重复生效）。
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const MIGRATION_LOCK_KEY = 8675309;   // 本应用专用常量，仅用于串行化迁移
 const MIGRATION_LOCK_WAIT_MS = 30000; // 抢不到锁时的最长等待（每 1s 重试一次）
 
@@ -407,6 +407,22 @@ const SCHEMA_DDL = `
       UNIQUE (email)
     );
     CREATE INDEX IF NOT EXISTS idx_waitlist_confirmed ON waitlist(confirmed_at) WHERE confirmed_at IS NOT NULL;
+
+    -- ===== 公开 AI Readability 检查限流（v3 / 2026-10-24，D43）=====
+    -- 背景：GET /api/public/ai-check 每次替第三方抓 4 个 URL（首页 / robots / llms / sitemap），
+    -- Worker 多 isolate + 边缘节点使内存版 makeRateLimiter 的实际配额 = N × max，
+    -- 对「分布式刷接口烧上游成本」几乎零防护，故配额必须落库。
+    --   ip_hash      客户端 IP 的 SHA-256(ip + 盐)，不存原始 IP；全局日预算用 '__global__'
+    --   window_start 固定窗口起点（单 IP 10 分钟 / 全局 24 小时），由 SQL 计算，避免时钟漂移分桶
+    --   hits         INSERT ... ON CONFLICT DO UPDATE 原子自增
+    -- 索引用于按时间批量清理过期窗口。
+    CREATE TABLE IF NOT EXISTS ai_check_rate (
+      ip_hash      TEXT        NOT NULL,
+      window_start TIMESTAMPTZ NOT NULL,
+      hits         INTEGER     NOT NULL DEFAULT 0,
+      PRIMARY KEY (ip_hash, window_start)
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_check_rate_window_start ON ai_check_rate (window_start);
 `;
 
 // 迁移期一次性数据迁移：孤儿监控清理。

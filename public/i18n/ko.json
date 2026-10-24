@@ -648,6 +648,7 @@
   "monerr.ssl_expiring": "SSL 인증서가 {detail}일 후에 만료됩니다",
   "monerr.domain_expiring": "도메인이 {detail}일 후에 만료됩니다",
   "nav.compare": "UptimeRobot과 비교 →",
+  "nav.llmsChecker": "llms.txt 검사기",
   "footer.compare": "비교",
   "footer.compareBs": "Better Stack 비교",
   "footer.comparePd": "Pingdom 비교",

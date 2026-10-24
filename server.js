@@ -15,6 +15,9 @@ import { recordUserEvent, listUserEvents, getUserEventSummary, getUserActivityRa
 import { registerUser, loginUser, getUserById, getUserByEmail, updatePlan, updateStatusPage, createEmailVerification, verifyEmailToken, seedAdmin, setRole, addSubscriber, listSubscribers, removeSubscriber, createMaintenanceWindow, listMaintenanceWindows, deleteMaintenanceWindow, ensureApiKey, regenerateApiKey, getUserByApiKey, createTeam, inviteTeamMember, listTeam, leaveTeam, verifyPagePassword, recordReferralConversion, createOAuthUser, recordBillingEvent, changePassword, setPassword, updateProfileName, requestEmailChange, confirmEmailChange, requestPasswordReset, resetPassword, getAlertChannels, saveAlertChannels } from './src/auth.js';
 import { sendVerificationEmail, sendFeedbackNotification, sendPasswordResetEmail, sendChangeEmailVerification, sendWaitlistConfirmEmail, sendWaitlistAnnounce } from './src/email.js';
 import { PLAN_LIMITS, planHasType, planHasChannel, planHasStatusPage, planHasStats, planFeatures, planMinInterval, TYPE_LABELS, CHANNEL_LABELS, EMAIL_VERIFY_MONITOR_CAP } from './src/plans.js';
+import { checkAiVisibility } from './src/ai-visibility.js';
+// 自托管复用 Worker 的公开 payload 构造（纯函数，无 Hono 依赖），保证两条路径返回一致
+import { toPublicPayload, strictPublicDomain } from './src/cf-worker/public-ai.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -330,6 +333,13 @@ app.get('/api/paddle-config', (req, res) => {
     proAnnualPriceId: process.env.PRO_ANNUAL_PRICE_ID,
   });
 });
+
+// ===== llms.txt 检查器页面（D43，自托管路径）=====
+// 必须早于 express.static：静态层默认不做 /x → /x.html 的扩展名解析，
+// 而 .html 直链又要 301 到规范 URL，避免同一内容两个地址。
+app.get('/llms-txt-checker', (_req, res) => res.sendFile('llms-txt-checker.html', { root: 'public' }));
+app.get('/llms-txt-checker/', (_req, res) => res.redirect(301, '/llms-txt-checker'));
+app.get('/llms-txt-checker.html', (_req, res) => res.redirect(301, '/llms-txt-checker'));
 
 // ===== 静态托管前端 =====
 app.use(express.static('public'));
@@ -2088,6 +2098,36 @@ app.get('/health', (_req, res) => {
       creem_ready: !!(process.env.CREEM_API_KEY && process.env.CREEM_WEBHOOK_SECRET),
     },
   });
+});
+
+// ===== 公开 AI Readability 检查（D43，自托管路径）=====
+// 与 Worker 的 GET /api/public/ai-check 同契约、同 payload（复用 toPublicPayload，
+// 避免两套实现漂移）。差异只有限流：Worker 用落库配额防分布式刷，自托管是单进程，
+// 内存版计数本就准确，故这里不建表、不依赖 Worker 的 ai_check_rate。
+const publicAiHits = new Map(); // ip -> [ts]
+app.get('/api/public/ai-check', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const domain = strictPublicDomain(req.query.domain);
+  if (!domain) return res.status(400).json({ ok: false, error: { code: 'invalid_domain' } });
+
+  const now = Date.now();
+  const ip = String(req.ip || 'unknown');
+  const recent = (publicAiHits.get(ip) || []).filter((t) => now - t < 10 * 60 * 1000);
+  if (recent.length >= 10) {
+    res.set('Retry-After', String(Math.max(1, Math.ceil((10 * 60 * 1000 - (now - recent[0])) / 1000))));
+    return res.status(429).json({ ok: false, error: { code: 'rate_limited' } });
+  }
+  recent.push(now);
+  publicAiHits.set(ip, recent);
+  if (publicAiHits.size > 10000) publicAiHits.clear(); // 异常保护
+
+  try {
+    const result = await checkAiVisibility(domain);
+    return res.json(toPublicPayload(domain, result));
+  } catch (err) {
+    console.error('[public-ai-check] 检查失败:', domain, err && err.message);
+    return res.status(502).json({ ok: false, error: { code: 'check_failed' } });
+  }
 });
 
 // ===== 未匹配的 /api/* 统一兜底（P1-11）=====

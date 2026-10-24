@@ -648,6 +648,7 @@
   "monerr.ssl_expiring": "O certificado SSL expira em {detail} dias",
   "monerr.domain_expiring": "O domínio expira em {detail} dias",
   "nav.compare": "Comparar com o UptimeRobot →",
+  "nav.llmsChecker": "Verificador de llms.txt",
   "footer.compare": "Comparar",
   "footer.compareBs": "vs Better Stack",
   "footer.comparePd": "vs Pingdom",

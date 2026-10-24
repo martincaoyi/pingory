@@ -648,6 +648,7 @@
   "monerr.ssl_expiring": "SSL certificate expires in {detail} days",
   "monerr.domain_expiring": "Domain expires in {detail} days",
   "nav.compare": "Compare with UptimeRobot →",
+  "nav.llmsChecker": "llms.txt Checker",
   "footer.compare": "Compare",
   "footer.compareBs": "vs Better Stack",
   "footer.comparePd": "vs Pingdom",

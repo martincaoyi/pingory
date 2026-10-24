@@ -648,6 +648,7 @@
   "monerr.ssl_expiring": "El certificado SSL caduca en {detail} días",
   "monerr.domain_expiring": "El dominio caduca en {detail} días",
   "nav.compare": "Comparar con UptimeRobot →",
+  "nav.llmsChecker": "Comprobador de llms.txt",
   "footer.compare": "Comparar",
   "footer.compareBs": "vs Better Stack",
   "footer.comparePd": "vs Pingdom",

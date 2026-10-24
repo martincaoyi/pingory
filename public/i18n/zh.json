@@ -648,6 +648,7 @@
   "monerr.ssl_expiring": "SSL 证书将在 {detail} 天后到期",
   "monerr.domain_expiring": "域名将在 {detail} 天后到期",
   "nav.compare": "与 UptimeRobot 对比 →",
+  "nav.llmsChecker": "llms.txt 检查器",
   "footer.compare": "对比",
   "footer.compareBs": "对比 Better Stack",
   "footer.comparePd": "对比 Pingdom",

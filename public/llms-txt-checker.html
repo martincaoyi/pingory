@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<!--
+  llms.txt Checker（D43）—— 免费工具页（v1 仅英文）
+  路由：/llms-txt-checker（/llms-txt-checker.html 由 Worker 301 到规范路径）
+  数据源：GET /api/public/ai-check?domain=example.com
+  约束：正文全部服务端直出（不依赖 JS 渲染），只有工具区结果由 JS 注入；
+        无外部字体 / CDN / 图片；全页统一用 AI Readability 这一表述。
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>llms.txt Checker — Test Any Site in 10 Seconds | Pingory</title>
+  <meta name="description" content="Free llms.txt checker: test any site in 10 seconds and see whether llms.txt, robots.txt, sitemap and AI crawlers are ready for AI Readability." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://pingory.com/llms-txt-checker" />
+  <link rel="alternate" hreflang="en" href="https://pingory.com/llms-txt-checker" />
+  <link rel="alternate" hreflang="x-default" href="https://pingory.com/llms-txt-checker" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Pingory" />
+  <meta property="og:title" content="llms.txt Checker — Test Any Site in 10 Seconds" />
+  <meta property="og:description" content="Free llms.txt checker: test any site in 10 seconds and see whether llms.txt, robots.txt, sitemap and AI crawlers are ready for AI Readability." />
+  <meta property="og:url" content="https://pingory.com/llms-txt-checker" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Pingory — uptime and AI Readability monitoring" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="llms.txt Checker — Test Any Site in 10 Seconds" />
+  <meta name="twitter:description" content="Free llms.txt checker: test any site in 10 seconds and see whether llms.txt, robots.txt, sitemap and AI crawlers are ready for AI Readability." />
+  <meta name="twitter:image" content="https://pingory.com/icon-512.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "llms.txt Checker",
+        "url": "https://pingory.com/llms-txt-checker",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript for the interactive check",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "description": "A free checker that inspects a public domain's llms.txt, robots.txt, sitemap and HTML to report whether AI crawlers can read the site.",
+        "publisher": { "@type": "Organization", "name": "Pingory", "url": "https://pingory.com/" }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is llms.txt an official standard?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Jeremy Howard of Answer.AI proposed it in September 2024 as a community convention. There is no W3C recommendation, IETF RFC, or vendor mandate behind it, and no AI company is obliged to read it." }
+          },
+          {
+            "@type": "Question",
+            "name": "Where should I put llms.txt?",
+            "acceptedAnswer": { "@type": "Answer", "text": "At the root of the domain: https://example.com/llms.txt. This checker only inspects that exact root path, so a copy under a subpath or on a subdomain is not evaluated here." }
+          },
+          {
+            "@type": "Question",
+            "name": "What Content-Type should llms.txt use?",
+            "acceptedAnswer": { "@type": "Answer", "text": "text/plain is the safe choice, and text/markdown is also reasonable. Serve it as UTF-8. If your server returns text/html, you are probably serving the single-page-app fallback instead of the file." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does llms.txt replace robots.txt?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. robots.txt controls crawling and is the mechanism crawlers are documented to obey under RFC 9309. llms.txt is a content map with no enforcement. Keep robots.txt as your access-control layer and treat llms.txt as a summary." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does OpenAI's ChatGPT read llms.txt?",
+            "acceptedAnswer": { "@type": "Answer", "text": "OpenAI has not publicly committed to reading llms.txt. Its documented crawl controls are robots.txt and its own user-agent rules. Treat llms.txt as a hint, not a guarantee." }
+          },
+          {
+            "@type": "Question",
+            "name": "Do AI crawlers respect robots.txt?",
+            "acceptedAnswer": { "@type": "Answer", "text": "The major crawlers document that they do, and RFC 9309 is the convention they follow. Enforcement is voluntary in practice, so a crawler can ignore it, but robots.txt is still the only mechanism with broad, documented support." }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does the checker say \"Unknown\"?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Some sites sit behind a firewall or bot challenge that blocks our checker. When that happens we cannot inspect the page, so the score is unknown, not zero. Check your firewall logs or allow the Pingory-AIReadability user agent." }
+          },
+          {
+            "@type": "Question",
+            "name": "Is this llms.txt checker free?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. A single check is free and needs no account. To keep it available for everyone we limit each network to 10 checks per 10 minutes." }
+          },
+          {
+            "@type": "Question",
+            "name": "How often should I check my llms.txt?",
+            "acceptedAnswer": { "@type": "Answer", "text": "After any deploy that changes robots.txt, the sitemap, or your key pages. A monthly spot check catches slow drift, such as a stale link or a CMS plugin rewriting the file." }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I monitor llms.txt automatically?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pingory's AI monitor type re-runs this check on a schedule and alerts you when the result changes. AI monitors are included in the Pro plan ($6/month), not in Starter." }
+          }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://pingory.com/" },
+          { "@type": "ListItem", "position": 2, "name": "llms.txt Checker", "item": "https://pingory.com/llms-txt-checker" }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    :root { --bg:#f5f8f6; --bg-2:#eef3f0; --card:#ffffff; --border:#dbe4df; --accent:#1faa6b; --accent-soft:rgba(31,170,107,0.10); --text:#16241d; --muted:#5d6b63; --nav-bg:rgba(245,248,246,0.92);
+            --ok:#136c43; --ok-bg:#e6f7ee; --warn:#7a5200; --warn-bg:#fdf3da; --bad:#9c2329; --bad-bg:#fdeaea; --skip:#5d6b63; --skip-bg:#eef3f0; }
+    [data-theme="dark"] { --bg:#0e1310; --bg-2:#151b17; --card:#161d18; --border:#2a322c; --text:#e6efe9; --muted:#9fb0a6; --accent:#2bd585; --accent-soft:rgba(43,213,133,0.14); --nav-bg:rgba(14,19,16,0.92);
+            --ok:#2bd585; --ok-bg:rgba(43,213,133,0.14); --warn:#f0c060; --warn-bg:rgba(240,192,96,0.14); --bad:#ff8b8b; --bad-bg:rgba(255,139,139,0.14); --skip:#9fb0a6; --skip-bg:rgba(159,176,166,0.14); }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); line-height:1.7;
+           font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+    a { color:var(--accent); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .topnav { position:sticky; top:0; z-index:20; background:var(--nav-bg); backdrop-filter:blur(8px);
+              border-bottom:1px solid var(--border); padding:12px 20px; display:flex; align-items:center; gap:12px; }
+    .brand { display:inline-flex; align-items:center; gap:8px; font-weight:700; font-size:1.15rem; color:var(--accent); }
+    .spacer { margin-left:auto; }
+    .btn { border:1px solid var(--border); border-radius:7px; padding:7px 14px; font-size:.88rem; color:var(--text); white-space:nowrap; }
+    .btn-primary { border-color:var(--accent); color:var(--accent); font-weight:600; }
+    #themeToggle { border:1px solid var(--border); background:transparent; color:var(--text); cursor:pointer;
+                   font-size:1rem; border-radius:7px; padding:5px 9px; }
+    .doc { max-width:920px; margin:0 auto; padding:38px 20px 72px; }
+    h1 { font-size:2.05rem; line-height:1.28; margin:0 0 10px; }
+    .verified { color:var(--muted); font-size:.88rem; margin:0 0 26px; }
+    h2, .h2like { font-size:1.32rem; margin:40px 0 12px; border-left:3px solid var(--accent); padding-left:12px; font-weight:700; }
+    h3 { font-size:1rem; margin:22px 0 6px; }
+    p, li { margin:0 0 12px; }
+    ul, ol { padding-left:22px; }
+    .lead { font-size:1.06rem; }
+    .note { color:var(--muted); font-size:.85rem; margin:10px 0 0; }
+    .tablewrap { overflow-x:auto; border:1px solid var(--border); border-radius:12px; background:var(--card); }
+    table { border-collapse:collapse; width:100%; min-width:660px; font-size:.9rem; }
+    caption { text-align:left; padding:14px 16px 0; color:var(--muted); font-size:.85rem; }
+    th, td { text-align:left; padding:11px 14px; border-bottom:1px solid var(--border); vertical-align:top; }
+    thead th { background:var(--accent-soft); color:var(--text); font-weight:700; white-space:nowrap; }
+    tbody tr:last-child td { border-bottom:0; }
+    tbody th { font-weight:600; color:var(--text); }
+    pre { background:var(--bg-2); border:1px solid var(--border); border-radius:10px; padding:16px 18px; overflow-x:auto; font-size:.86rem; line-height:1.6; }
+    code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+    .checker { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 20px; }
+    .checker label { display:block; font-weight:600; margin-bottom:6px; }
+    .checker-row { display:flex; gap:10px; flex-wrap:wrap; }
+    .checker input { flex:1 1 260px; min-width:0; padding:11px 13px; border-radius:8px; border:1px solid var(--border);
+                     background:var(--bg-2); color:var(--text); font-size:1rem; font-family:inherit; }
+    .checker input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+    .checker button { padding:11px 22px; border:0; border-radius:8px; background:var(--accent); color:#fff;
+                      font-size:.95rem; font-weight:600; cursor:pointer; white-space:nowrap; font-family:inherit; }
+    .checker button:disabled { opacity:.65; cursor:default; }
+    .result { margin-top:16px; }
+    .result:empty { display:none; }
+    .panel { border:1px solid var(--border); border-radius:12px; background:var(--card); padding:16px 18px; }
+    .panel + .panel { margin-top:10px; }
+    .state-bad { border-color:var(--bad); background:var(--bad-bg); }
+    .state-info { border-color:var(--border); }
+    .scoreline { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .scorenum { font-size:2.5rem; font-weight:700; line-height:1; }
+    .grade { font-size:1rem; font-weight:700; border:1px solid var(--border); border-radius:8px; padding:3px 9px; }
+    .badge { display:inline-block; border:1px solid var(--border); border-radius:999px; padding:2px 10px; font-size:.8rem; font-weight:700; white-space:nowrap; }
+    .b-pass { color:var(--ok); background:var(--ok-bg); border-color:currentColor; }
+    .b-warn { color:var(--warn); background:var(--warn-bg); border-color:currentColor; }
+    .b-fail { color:var(--bad); background:var(--bad-bg); border-color:currentColor; }
+    .b-skip, .b-unknown { color:var(--skip); background:var(--skip-bg); border-color:currentColor; }
+    .muted { color:var(--muted); }
+    .small { font-size:.86rem; }
+    .hint { color:var(--muted); font-size:.84rem; margin:0; }
+    .itm td { vertical-align:top; }
+    .itm .name { font-weight:600; }
+    .loading { color:var(--muted); margin:0; }
+    .meter { height:8px; border-radius:999px; background:var(--bg-2); overflow:hidden; margin-top:10px; }
+    .meter span { display:block; height:100%; background:var(--accent); width:0; }
+    .cta { background:var(--card); border:1px solid var(--accent); border-radius:14px; padding:24px 22px; margin:24px 0 0; text-align:center; }
+    .cta p { color:var(--muted); }
+    .cta a.btn-primary { display:inline-block; padding:11px 26px; font-size:1rem; margin-top:6px; color:#fff; background:var(--accent); border-radius:8px; font-weight:600; }
+    .src { color:var(--muted); font-size:.83rem; margin-top:34px; }
+    details.faq-item { border:1px solid var(--border); border-radius:10px; background:var(--card); margin:0 0 10px; padding:0 16px; }
+    details.faq-item summary { cursor:pointer; font-weight:600; padding:14px 0; list-style:none; }
+    details.faq-item summary::-webkit-details-marker { display:none; }
+    details.faq-item summary::after { content:'+'; float:right; color:var(--accent); font-weight:700; }
+    details.faq-item[open] summary::after { content:'−'; }
+    details.faq-item p { padding-bottom:4px; color:var(--text); }
+    .site-footer { border-top:1px solid var(--border); margin-top:56px; padding:26px 20px; text-align:center;
+                   color:var(--muted); font-size:.88rem; }
+    .site-footer nav { display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin-bottom:10px; }
+    @media (max-width:560px) { h1 { font-size:1.62rem; } .scorenum { font-size:2rem; } }
+  </style>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+  <span class="spacer"></span>
+  <button id="themeToggle" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+  <a class="btn" href="/signin.html">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+</nav>
+
+<main class="doc">
+  <h1>llms.txt Checker</h1>
+  <p class="verified">Free, no account required. Last reviewed: October 2026.</p>
+  <p class="lead">This checker inspects a public domain and tells you whether an AI crawler can actually read it. It fetches the files and markup a crawler receives — <code>/llms.txt</code>, <code>/robots.txt</code>, <code>/sitemap.xml</code> and the homepage HTML exactly as it is served without running JavaScript — and reports what is missing. We call the result <strong>AI Readability</strong>: a measurement of whether the door is open and the sign is legible. It is not a ranking, a citation forecast, or a promise that any AI product will quote you.</p>
+
+  <h2>What is llms.txt?</h2>
+  <p><code>llms.txt</code> is a plain-Markdown file at <code>/llms.txt</code> that gives AI systems a curated map of a site: what the site is, which pages matter, and where to find them. <strong>Jeremy Howard of Answer.AI proposed it in September 2024</strong> as a community convention. It is not a W3C recommendation, an IETF standard, or a vendor requirement, and nothing enforces it.</p>
+  <p>The format is intentionally small: one H1 with the site or product name, an optional one-line summary as a blockquote, then H2 sections that group ordinary Markdown links. Because it is plain text, it is cheap to serve and easy to diff between deploys.</p>
+  <p>What it is not: a crawl blocker, a substitute for <code>robots.txt</code>, or a guarantee of inclusion in any model. Those distinctions matter, and the rest of this page keeps them explicit.</p>
+
+  <h2>Check your llms.txt</h2>
+  <p>Enter a bare domain. One free check takes about ten seconds and looks at the files above plus the crawler rules that apply to eight named AI crawlers.</p>
+  <form id="checkForm" class="checker" novalidate>
+    <label for="domainInput">Domain to check</label>
+    <div class="checker-row">
+      <input id="domainInput" name="domain" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="example.com" aria-describedby="domainHelp" />
+      <button id="checkBtn" type="submit">Run free check</button>
+    </div>
+    <p id="domainHelp" class="note">Use a bare hostname such as <code>example.com</code>. Full URLs, ports, paths, IP addresses and <code>localhost</code> are rejected.</p>
+  </form>
+  <div id="result" class="result" aria-live="polite" aria-busy="false"></div>
+
+  <h2>What this checker actually verifies</h2>
+  <p>Twelve checks run against the public site. Eight are core: if any core check fails, the overall status becomes <strong>down</strong>. The other four are enhancements — they never change the status, only the score. Weights add up to 100.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Weights and scope of each check.</caption>
+      <thead>
+        <tr><th scope="col">Check</th><th scope="col">Weight</th><th scope="col">What it verifies</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>robots.txt</td><td>8</td><td>The file is reachable as plain text, parses as RFC 9309 groups and rules, and is not an HTML fallback page.</td></tr>
+        <tr><td>AI crawler matrix</td><td>22</td><td>Eight named AI crawler tokens are allowed on both the homepage and a deeper path. Training group: GPTBot, ClaudeBot, Google-Extended, CCBot. Retrieval group: OAI-SearchBot, ChatGPT-User, Claude-User, PerplexityBot. Google-Extended and CCBot are control tokens the operator acts on rather than standalone fetchers, so they are evaluated as policy, not as traffic.</td></tr>
+        <tr><td>llms.txt</td><td>6</td><td>The file exists, is not empty, and has at least one H1 and one Markdown link. Presence alone is not treated as a pass.</td></tr>
+        <tr><td>JSON-LD</td><td>12</td><td>Every structured-data block parses, carries <code>@context</code>, and declares at least one <code>@type</code> (including inside <code>@graph</code>).</td></tr>
+        <tr><td>First-screen text</td><td>12</td><td>How much text is present in the raw HTML before JavaScript runs. A JavaScript-only shell is reported as such.</td></tr>
+        <tr><td>sitemap.xml</td><td>6</td><td>A valid <code>urlset</code> or <code>sitemapindex</code> with at least one entry, or one declared in robots.txt.</td></tr>
+        <tr><td>noindex</td><td>18</td><td>Meta robots and <code>X-Robots-Tag</code> are parsed token by token. <code>noindex</code> is a failure; narrower restrictions are warnings.</td></tr>
+        <tr><td>canonical</td><td>4</td><td>The canonical URL resolves to this page, on the same host and protocol.</td></tr>
+        <tr><td>Meta title &amp; description</td><td>5</td><td>Title and description exist and fall inside sane length ranges. Enhancement only.</td></tr>
+        <tr><td>Open Graph</td><td>3</td><td><code>og:title</code>, <code>og:description</code> and <code>og:image</code> are present. Enhancement only.</td></tr>
+        <tr><td>H1</td><td>2</td><td>Exactly one non-empty H1. Enhancement only.</td></tr>
+        <tr><td>Image alt text</td><td>2</td><td>Images that are not explicitly decorative carry an alt attribute. Enhancement only; skipped when a page has no images.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">The checker never impersonates an AI crawler. Cloudflare and similar networks verify bots by source IP, so a forged <code>GPTBot</code> user agent would be blocked and produce a false negative. Everything here is derived from the publicly served files and HTML.</p>
+
+  <h2>llms.txt vs robots.txt vs sitemap.xml</h2>
+  <p>These three files are often confused. Only one of them can actually stop a crawler.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Different jobs, different levels of enforcement.</caption>
+      <thead>
+        <tr><th scope="col">Aspect</th><th scope="col">llms.txt</th><th scope="col">robots.txt</th><th scope="col">sitemap.xml</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Purpose</th><td>A curated Markdown map of the pages worth reading.</td><td>Rules for which paths a crawler may fetch.</td><td>An inventory of URLs with optional last-modified dates.</td></tr>
+        <tr><th scope="row">Status</th><td>Community proposal, September 2024. Not a standard.</td><td>RFC 9309. The convention every major crawler documents.</td><td>Sitemaps.org protocol. Widely supported.</td></tr>
+        <tr><th scope="row">Location</th><td><code>/llms.txt</code></td><td><code>/robots.txt</code></td><td><code>/sitemap.xml</code></td></tr>
+        <tr><th scope="row">Can it block crawling?</th><td>No.</td><td>Yes — this is the only layer crawlers are documented to obey.</td><td>No.</td></tr>
+        <tr><th scope="row">Who acts on it</th><td>No major AI vendor has publicly committed to reading it.</td><td>Search and AI crawlers, by documented convention.</td><td>Search engines and some AI crawlers, for discovery.</td></tr>
+        <tr><th scope="row">Failure mode</th><td>Ignored silently.</td><td>Misconfigured rules block the wrong agent.</td><td>Stale URLs waste crawl budget.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>How to write a valid llms.txt</h2>
+  <p>Keep it short and curated. The checker requires an H1 and at least one Markdown link; everything else is judgement.</p>
+  <ul>
+    <li>Serve it at <code>https://your-domain/llms.txt</code> as <code>text/plain; charset=utf-8</code>.</li>
+    <li>Start with one H1 naming the site or product.</li>
+    <li>Add a one-line blockquote summary so a reader knows what the site is before following links.</li>
+    <li>Group links under H2 headings. Use absolute URLs with a short description after each link.</li>
+    <li>Link the pages that matter — docs, pricing, API reference, changelog — not every URL in your sitemap.</li>
+    <li>Re-check the file after a deploy. A CMS or SPA fallback route can quietly replace it with HTML.</li>
+  </ul>
+  <h3>Example</h3>
+  <pre><code># Example Site
+
+&gt; Example Site helps developers ship faster. Docs, API reference and changelog.
+
+## Documentation
+- [Getting started](https://example.com/docs/start): Install and send your first request
+- [API reference](https://example.com/docs/api): Every endpoint and response shape
+
+## Product
+- [Pricing](https://example.com/pricing): Plans, limits and what is included
+- [Changelog](https://example.com/changelog): Release notes, newest first
+
+## Optional
+- [Status page](https://example.com/status): Current availability</code></pre>
+
+  <h2>The five mistakes we see most</h2>
+  <ol>
+    <li><strong>Serving the app shell instead of the file.</strong> A catch-all route answers <code>/llms.txt</code> with <code>200 text/html</code> and the SPA's index page. The checker flags this as an HTML response or invalid format.</li>
+    <li><strong>No H1 or no links.</strong> A paragraph of prose is not a map. Without a heading and at least one link there is nothing for a reader to follow.</li>
+    <li><strong>Dumping the whole sitemap.</strong> Ten thousand URLs is not curation. A useful file points at the pages that represent the site.</li>
+    <li><strong>Treating llms.txt as access control.</strong> It cannot block anything. If you need a crawler to stay out, the rule belongs in <code>robots.txt</code>.</li>
+    <li><strong>Writing it once.</strong> Pages move, products get renamed, and the file silently rots. Re-check it after structural changes.</li>
+  </ol>
+
+  <h2>Do AI crawlers actually read llms.txt in 2026?</h2>
+  <p><strong>No major AI vendor has publicly committed to reading llms.txt as of 2026.</strong> OpenAI, Anthropic, Google and Perplexity document <code>robots.txt</code> and their own user-agent behaviour; none of them documents llms.txt as a requirement or a supported control. So the honest answer is narrower than the marketing: no vendor documentation promises to read it, and we do not publish numbers we cannot verify.</p>
+  <p>The mechanism crawlers are documented to obey remains <code>robots.txt</code> under RFC 9309. That is why this page talks about AI Readability: it measures whether your content is readable and your policy is legible, not whether an answer engine chose to cite you. A valid llms.txt is a cheap, honest signal. It is not a lever.</p>
+  <p>One more distinction the checker keeps: <strong>training crawlers and retrieval crawlers are not the same audience</strong>. Training crawlers are GPTBot, ClaudeBot, Google-Extended and CCBot. Retrieval crawlers are OAI-SearchBot, ChatGPT-User, Claude-User and PerplexityBot. Blocking the training group while allowing the retrieval group is a mainstream, defensible policy in 2026 — it limits future model training without removing you from answers today. This checker reports that combination as a policy note, not a failure.</p>
+
+  <h2>Monitor llms.txt over time</h2>
+  <p>A single check is a snapshot. The failures that hurt are the quiet ones: a deploy replaces <code>robots.txt</code>, a plugin starts answering <code>/llms.txt</code> with HTML, or a retrieval crawler gets caught by a new firewall rule.</p>
+  <p>Pingory's AI monitor type re-runs this check on your schedule and alerts you when the result changes, alongside uptime, TLS expiry and keyword checks. AI monitors are included in the Pro plan at $6/month; Starter ($4/month) covers uptime, keyword, DNS and TLS checks.</p>
+  <div class="cta">
+    <p><strong>Watch llms.txt, robots.txt and AI crawler access automatically.</strong></p>
+    <p>Create an account, add an AI monitor on the Pro plan, and get an email the moment readability changes.</p>
+    <a class="btn-primary" href="/signup.html">Start free</a>
+  </div>
+
+  <h2 class="h2like">Frequently asked questions</h2>
+  <details class="faq-item">
+    <summary>Is llms.txt an official standard?</summary>
+    <p>No. Jeremy Howard of Answer.AI proposed it in September 2024 as a community convention. There is no W3C recommendation, IETF RFC, or vendor mandate behind it, and no AI company is obliged to read it.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Where should I put llms.txt?</summary>
+    <p>At the root of the domain: https://example.com/llms.txt. This checker only inspects that exact root path, so a copy under a subpath or on a subdomain is not evaluated here.</p>
+  </details>
+  <details class="faq-item">
+    <summary>What Content-Type should llms.txt use?</summary>
+    <p>text/plain is the safe choice, and text/markdown is also reasonable. Serve it as UTF-8. If your server returns text/html, you are probably serving the single-page-app fallback instead of the file.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Does llms.txt replace robots.txt?</summary>
+    <p>No. robots.txt controls crawling and is the mechanism crawlers are documented to obey under RFC 9309. llms.txt is a content map with no enforcement. Keep robots.txt as your access-control layer and treat llms.txt as a summary.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Does OpenAI's ChatGPT read llms.txt?</summary>
+    <p>OpenAI has not publicly committed to reading llms.txt. Its documented crawl controls are robots.txt and its own user-agent rules. Treat llms.txt as a hint, not a guarantee.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Do AI crawlers respect robots.txt?</summary>
+    <p>The major crawlers document that they do, and RFC 9309 is the convention they follow. Enforcement is voluntary in practice, so a crawler can ignore it, but robots.txt is still the only mechanism with broad, documented support.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Why does the checker say "Unknown"?</summary>
+    <p>Some sites sit behind a firewall or bot challenge that blocks our checker. When that happens we cannot inspect the page, so the score is unknown, not zero. Check your firewall logs or allow the Pingory-AIReadability user agent.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Is this llms.txt checker free?</summary>
+    <p>Yes. A single check is free and needs no account. To keep it available for everyone we limit each network to 10 checks per 10 minutes.</p>
+  </details>
+  <details class="faq-item">
+    <summary>How often should I check my llms.txt?</summary>
+    <p>After any deploy that changes robots.txt, the sitemap, or your key pages. A monthly spot check catches slow drift, such as a stale link or a CMS plugin rewriting the file.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Can I monitor llms.txt automatically?</summary>
+    <p>Yes. Pingory's AI monitor type re-runs this check on a schedule and alerts you when the result changes. AI monitors are included in the Pro plan ($6/month), not in Starter.</p>
+  </details>
+
+  <p class="src">Method: each check issues up to five HTTP GET requests to the public site (homepage, robots.txt, llms.txt, sitemap.xml, plus any sitemap declared in robots.txt) with our own identifying user agent, follows up to five redirects with an SSRF guard on every hop, and parses only what is returned without executing JavaScript. Limits: this is a single-region check; a firewall that blocks our crawler produces an unknown result, not a failure.</p>
+</main>
+
+<footer class="site-footer">
+  <nav>
+    <a href="/compare/uptimerobot">Compare</a>
+    <a href="/compare/betterstack">vs Better Stack</a>
+    <a href="/compare/pingdom">vs Pingdom</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/refund.html">Refund</a>
+    <a href="/#plans">Pricing</a>
+    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+  </nav>
+  <p style="margin:0 0 8px;">Contact: <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p style="margin:0;">© 2026 Pingory. All rights reserved.</p>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var form = document.getElementById('checkForm');
+  var input = document.getElementById('domainInput');
+  var btn = document.getElementById('checkBtn');
+  var out = document.getElementById('result');
+
+  var GROUPS = {
+    'GPTBot': 'Training',
+    'ClaudeBot': 'Training',
+    'Google-Extended': 'Training',
+    'CCBot': 'Training',
+    'OAI-SearchBot': 'Retrieval',
+    'ChatGPT-User': 'Retrieval',
+    'Claude-User': 'Retrieval',
+    'PerplexityBot': 'Retrieval'
+  };
+
+  var STATUS_LABEL = {
+    ok: 'Readable',
+    warn: 'Readable with warnings',
+    down: 'Blocked or unreachable',
+    unknown: 'Unknown'
+  };
+
+  var ITEM_LABEL = { pass: 'Pass', warn: 'Warning', fail: 'Fail', skip: 'Not checked' };
+  var ITEM_ICON = { pass: '✓', warn: '!', fail: '✕', skip: '–' };
+  var ITEM_CLASS = { pass: 'b-pass', warn: 'b-warn', fail: 'b-fail', skip: 'b-skip' };
+  var KEY_LABEL = {
+    robots_txt: 'robots.txt',
+    crawler_matrix: 'AI crawler access',
+    llms_txt: 'llms.txt',
+    json_ld: 'JSON-LD',
+    text_content: 'Text without JavaScript',
+    sitemap: 'sitemap.xml',
+    noindex: 'Indexing allowed',
+    canonical: 'Canonical URL',
+    meta: 'Title & description',
+    open_graph: 'Open Graph',
+    h1: 'H1 heading',
+    alt_text: 'Image alt text'
+  };
+  var CRAWLER_LABEL = { allow: 'Allowed', block: 'Blocked', unknown: 'Unknown' };
+  var CRAWLER_CLASS = { allow: 'b-pass', block: 'b-fail', unknown: 'b-unknown' };
+
+  function esc(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function setBusy(busy) {
+    out.setAttribute('aria-busy', busy ? 'true' : 'false');
+    btn.disabled = busy;
+    btn.textContent = busy ? 'Checking…' : 'Run free check';
+  }
+
+  function panel(kind, html) {
+    out.innerHTML = '<div class="panel ' + kind + '">' + html + '</div>';
+  }
+
+  function message(text) {
+    panel('state-bad', '<p style="margin:0;">' + esc(text) + '</p>');
+  }
+
+  function retrySeconds(res) {
+    var raw = res.headers.get('Retry-After');
+    var n = parseInt(raw, 10);
+    return isFinite(n) && n > 0 ? n : 0;
+  }
+
+  function renderError(res, data) {
+    var code = data && data.error && data.error.code ? data.error.code : '';
+    if (res.status === 400 || code === 'invalid_domain') {
+      message('That does not look like a domain. Use a bare hostname such as example.com — no https://, no path, no port, and no IP address.');
+      return;
+    }
+    if (res.status === 429 || code === 'rate_limited') {
+      var wait = retrySeconds(res);
+      message(wait
+        ? 'Too many checks from your network. Try again in ' + wait + ' seconds.'
+        : 'Too many checks from your network. Please wait a few minutes and try again.');
+      return;
+    }
+    if (res.status === 503 || code === 'capacity') {
+      message('The free checker is at capacity right now. Please try again in a few minutes.');
+      return;
+    }
+    if (res.status === 502 || code === 'check_failed') {
+      message('The check could not finish. The site may be slow or unreachable. Please try again in a moment.');
+      return;
+    }
+    message('Something went wrong (HTTP ' + res.status + '). Please try again.');
+  }
+
+  function itemRows(items) {
+    var rows = '';
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var label = ITEM_LABEL[it.status] || it.status;
+      var icon = ITEM_ICON[it.status] || '?';
+      var cls = ITEM_CLASS[it.status] || 'b-skip';
+      rows += '<tr class="itm">'
+        + '<td class="name">' + esc(KEY_LABEL[it.key] || it.key.replace(/_/g, ' ')) + '</td>'
+        + '<td><span class="badge ' + cls + '">' + icon + ' ' + esc(label) + '</span></td>'
+        + '<td>' + esc(it.weight) + '</td>'
+        + '<td><p class="hint">' + esc(it.hint || '') + '</p></td>'
+        + '</tr>';
+    }
+    return '<div class="tablewrap" style="margin-top:10px;"><table>'
+      + '<thead><tr><th scope="col">Check</th><th scope="col">Result</th><th scope="col">Weight</th><th scope="col">What to do</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody></table></div>';
+  }
+
+  function crawlerRows(crawlers) {
+    var rows = '';
+    var names = Object.keys(crawlers);
+    for (var i = 0; i < names.length; i++) {
+      var ua = names[i];
+      var v = crawlers[ua];
+      var cls = CRAWLER_CLASS[v] || 'b-unknown';
+      rows += '<tr>'
+        + '<td class="name">' + esc(ua) + '</td>'
+        + '<td>' + esc(GROUPS[ua] || 'AI') + '</td>'
+        + '<td><span class="badge ' + cls + '">' + esc(CRAWLER_LABEL[v] || 'Unknown') + '</span></td>'
+        + '</tr>';
+    }
+    return '<div class="tablewrap" style="margin-top:10px;"><table>'
+      + '<thead><tr><th scope="col">User agent</th><th scope="col">Group</th><th scope="col">Access</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody></table></div>';
+  }
+
+  function renderUnknown(data) {
+    panel('state-info',
+      '<p style="margin:0 0 6px;"><strong>Unknown — the site blocked our checker.</strong></p>'
+      + '<p class="small" style="margin:0 0 6px;">A firewall or bot challenge answered instead of the page, so no checks could run. This is not a score of zero, and it does not mean the site is down.</p>'
+      + '<p class="small muted" style="margin:0;">If you own this site, allow the Pingory-AIReadability user agent or check your WAF logs. Crawlers such as GPTBot and OAI-SearchBot are often caught by the same rules.</p>');
+  }
+
+  function renderDown(data) {
+    panel('state-bad',
+      '<p style="margin:0 0 6px;"><strong>No usable page was returned.</strong></p>'
+      + '<p class="small" style="margin:0;">The homepage did not answer with HTML, so the twelve checks could not run. Verify the domain, then try again.</p>');
+  }
+
+  function render(data) {
+    if (data.status === 'unknown') { renderUnknown(data); return; }
+    var hasItems = !!(data.items && data.items.length);
+    // items 为空 = 首页没返回可用内容，检查根本没跑；有 items 的 down 是「核心项失败」，照常展示明细
+    if (data.status === 'down' && !hasItems) { renderDown(data); return; }
+
+    var scoreText = data.score == null ? '—' : String(data.score);
+    var gradeText = data.grade || '?';
+    var statusText = data.status === 'down' ? 'Blocked' : (STATUS_LABEL[data.status] || data.status);
+    var badgeClass = data.status === 'ok' ? 'b-pass' : (data.status === 'warn' ? 'b-warn' : 'b-fail');
+    var pct = data.score == null ? 0 : Math.max(0, Math.min(100, data.score));
+
+    var meta = 'Checked ' + esc(data.domain) + ' at ' + esc(new Date(data.checkedAt).toLocaleString())
+      + (data.cached ? ' · cached result' : '');
+
+    var html = '<div class="panel">'
+      + '<div class="scoreline">'
+      + '<span class="scorenum">' + esc(scoreText) + '</span>'
+      + '<span class="muted">/ 100</span>'
+      + '<span class="grade">Grade ' + esc(gradeText) + '</span>'
+      + '<span class="badge ' + badgeClass + '">' + esc(statusText) + '</span>'
+      + '</div>'
+      + '<div class="meter" aria-hidden="true"><span style="width:' + pct + '%"></span></div>'
+      + '<p class="note">' + meta + '</p>'
+      + '<p class="note" style="margin-top:6px;">llms.txt: '
+      + (data.llms && data.llms.found
+        ? 'found, ' + esc(data.llms.bytes) + ' bytes'
+        : (function () {
+            var li = (data.items || []).filter(function (i) { return i.key === 'llms_txt'; })[0];
+            return (li && li.reason === 'unreachable')
+              ? 'could not be fetched — the site blocked or timed out, so this is unknown rather than missing'
+              : 'not found';
+          })())
+      + '.</p>'
+      + (data.status === 'down'
+        ? ((data.items && data.items.length)
+          ? '<p class="note" style="color:var(--bad);">At least one core check failed. Fix those rows first — the score stays capped while they remain.</p>'
+          : '<p class="note" style="color:var(--bad);">We could not reach this domain from our checker — it timed out or refused the request. That is not a verdict on your site: retry in a minute, and if it keeps happening your firewall is probably blocking our crawler.</p>')
+        : '')
+      + '</div>';
+
+    if (data.items && data.items.length) {
+      html += '<div class="panel"><p style="margin:0;"><strong>Twelve checks</strong></p>' + itemRows(data.items) + '</div>';
+    } else if (data.status === 'down') {
+      html += '<div class="panel"><p style="margin:0;"><strong>No checks ran</strong></p>'
+        + '<p class="small muted" style="margin:6px 0 0;">Nothing was inspected, so there is no score and no per-item detail. A domain we cannot fetch produces this result.</p></div>';
+    }
+    if (data.crawlers && Object.keys(data.crawlers).length) {
+      html += '<div class="panel"><p style="margin:0;"><strong>AI crawler access</strong></p>'
+        + '<p class="small muted" style="margin:6px 0 0;">Rules are evaluated on the homepage and a deeper path. Blocking training crawlers while allowing retrieval crawlers is a valid policy.</p>'
+        + crawlerRows(data.crawlers) + '</div>';
+    }
+
+    html += '<p class="note">Technical prerequisites only — not a ranking, citation forecast, or traffic estimate.</p>';
+    out.innerHTML = html;
+  }
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    var raw = input.value.trim();
+    if (!raw) {
+      message('Enter a domain first, for example example.com.');
+      return;
+    }
+
+    setBusy(true);
+    panel('state-info', '<p class="loading">Checking ' + esc(raw) + '… this usually takes a few seconds.</p>');
+
+    fetch('/api/public/ai-check?domain=' + encodeURIComponent(raw), {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    }).then(function (res) {
+      return res.json().catch(function () { return null; }).then(function (data) {
+        if (!res.ok || !data || data.ok !== true) { renderError(res, data); return; }
+        render(data);
+      });
+    }).catch(function () {
+      message('Network error. Check your connection and try again.');
+    }).then(function () {
+      setBusy(false);
+    });
+  });
+
+  var tt = document.getElementById('themeToggle');
+  function syncThemeIcon() {
+    if (!tt) return;
+    tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙';
+  }
+  if (tt) {
+    tt.addEventListener('click', function () {
+      var dark = document.documentElement.dataset.theme === 'dark';
+      if (dark) document.documentElement.removeAttribute('data-theme');
+      else document.documentElement.dataset.theme = 'dark';
+      try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch (e) {}
+      syncThemeIcon();
+    });
+  }
+  syncThemeIcon();
+})();
+</script>
+<script src="/analytics.js"></script>
+</body>
+</html>

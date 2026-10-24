@@ -8,6 +8,26 @@
 
 ---
 
+## 2026-10-24 · D43/D44 公开 AI Readability 检查端点 + `/llms-txt-checker` 免费页（增长转化）
+
+> 一句话：把 D39–D42 做的 12 项 AI 可读性引擎**开一个免费入口**，用一次免费检查换一个注册意向。承接「关键词全量实测」的结论——工具意图词只有约 200 个、12 项检测已全部承接，所以这一批**不再加检测项**，只做「让搜索引擎和用户都能进来的门」。
+
+- **新端点 `GET /api/public/ai-check?domain=`**（`src/cf-worker/public-ai.js` + `server.js` 双路径同构）：
+  - 只回公开白名单字段（`domain/status/score/grade/checkedAt/cached/items/crawlers/llms`），`fingerprint`、`snapshot`、内部 `reason` 原文、`diff` 一律不出门；未知内部 reason 降级为状态值。
+  - **限流落库**（`ai_check_rate`，`SCHEMA_VERSION` 2→3）：单 IP 10 次/10 分钟 + 全局 3000 次/天，SQL 侧算窗口起点、`ON CONFLICT DO UPDATE` 原子自增。原因：Worker 多 isolate 下内存版 `makeRateLimiter` 配额 = N × max，对本端点等于没有防护，而它每次请求都会替第三方抓 4–5 个 URL。**配额表不可用时失败关闭**（503），不放行。
+  - **5 分钟 Cache API 缓存**：命中不消耗配额、不碰 DB；`down` / `unknown` 不入缓存（瞬时故障与 WAF 误判，缓存会放大误导）。
+  - 域名严格校验只收裸域名（拒 scheme / 路径 / 端口 / userinfo / IP 字面量 / localhost）。
+- **新页面 `/llms-txt-checker`**（`public/llms-txt-checker.html`，8 组 H2 + 10 条 FAQ）：主词押 `llms.txt checker`（11 个工具意图词，无官方工具，蓝海）；`.html` 与尾斜杠 301 到规范 URL；sitemap 25→26；首页顶栏（>760px）与全站 footer 加入口；8 语新增 `nav.llmsChecker` 键（原位插入，净 diff 每文件 +1/−0）。
+- **文案真实性约束（写进页面的红线）**：明示 llms.txt 是 2024-09 Jeremy Howard 的**社区提案**、非 W3C/IETF 标准；明示**截至 2026 无主流 AI 厂商公开承诺读取**；明示强制层是 robots.txt（RFC 9309）；明示**单区域检查**；明示「训练类禁 + 检索类放行」是**正确策略而非故障**；不写任何无法核实的统计数字；全站口径统一为 **AI Readability**（不用 AI Visibility）。
+- **D44 独立审阅（写/审分离）**：7 个 P1 + 14 个 P2，已修 7 P1 + 9 P2。其中两条值得记住：
+  1. **付费口径漂移**：页面写「Paid plans start at $4/month」并让用户「add an AI monitor」，但 `ai` 类型只在 **Pro（$6）**。已改为明示 Pro，并同步 FAQ 与 JSON-LD。
+  2. **训练组降级不一致**：引擎把 `training_opt_out` 标 warn（只是「与默认不同」），公开层若照搬，会出现「文案说不是失败、徽章显示 warn」的自相矛盾 ⇒ 公开层降级为 `pass` 并保留 reason 供 UI 标注。
+  3. 另有：`bytes` 用 `body.length`（UTF-16 长度）而非真字节 → 改 `TextEncoder`；`server.js` 缺路由（自托管免费页会 404）→ 补页面 + 端点；缺表时部署文档无前置说明 → 新增 `DEPLOYMENT.md §14`。
+- **常驻回归**：新增 `tools/test-public-ai.mjs`（133 条，覆盖域名校验 30 例、payload 白名单、training_opt_out 降级、empty/unknown 状态、429/503 限流、缓存不耗配额、页面 title/desc/H1/H2/FAQ 与 JSON-LD 逐字一致、不写 aggregateRating、sitemap 26 条、8 语键、`bytes` 真实性）。`dev_gate` 11 项全绿。
+- **部署前置**：`ai_check_rate` 表必须在部署**前**建好（Worker 不跑 DDL），否则端点返回 503；`AI_CHECK_SALT` 作为 secret 配置。
+
+---
+
 ## 2026-09-24 · P2 对比页多语补全：betterstack / pingdom 升级为 8 语模板注入（SEO）
 
 > 承接「P2 betterstack/pingdom 多语重写」待办：两页从英文静态直出升级为与 uptimerobot 同款「模板 + 服务端按语种注入」机制。上线后 `/{lang}/compare/{betterstack,pingdom}`（7 语）直接被爬虫按正确语言抓取。

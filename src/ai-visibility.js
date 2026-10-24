@@ -875,24 +875,28 @@ function checkLlmsTxt(res) {
   if (!res || !res.ok) {
     return item('llms_txt', 'llms.txt', 'core', 'warn',
       'llms.txt could not be fetched.',
-      { reason: 'fetch_failed', error: res && res.error, exists: false });
+      { reason: 'fetch_failed', error: res && res.error, exists: false, bytes: 0 });
   }
   if (res.status === 404) {
     return item('llms_txt', 'llms.txt', 'core', 'warn',
       'No llms.txt. It is still a proposal, not a requirement — but AI engines use it as a curated summary.',
-      { reason: 'missing', httpStatus: 404, exists: false });
+      { reason: 'missing', httpStatus: 404, exists: false, bytes: 0 });
   }
   if (res.status !== 200) {
     return item('llms_txt', 'llms.txt', 'core', 'warn',
       `llms.txt returned HTTP ${res.status}.`,
-      { reason: 'http_error', httpStatus: res.status, exists: false });
+      { reason: 'http_error', httpStatus: res.status, exists: false, bytes: 0 });
   }
 
   const body = String(res.body || '');
+  // D44 审阅修复：字段名是 bytes 就必须是字节数。body.length 是 UTF-16 code unit 数，
+  // 对含中文/emoji 的 llms.txt 会明显偏小（emoji 差 4 倍）。TextEncoder 一遍扫过，
+  // llms.txt 已受 MAX_BODY_CHARS 限制，最坏 512K 字符，开销可忽略。
+  const bytes = new TextEncoder().encode(body).length;
   if (!body.trim()) {
     return item('llms_txt', 'llms.txt', 'core', 'warn',
       'llms.txt is empty.',
-      { reason: 'empty', exists: true });
+      { reason: 'empty', exists: true, bytes: 0 });
   }
 
   const hasH1 = /^#\s+\S/m.test(body);
@@ -906,12 +910,12 @@ function checkLlmsTxt(res) {
     if (linkCount === 0) missing.push('Markdown link');
     return item('llms_txt', 'llms.txt', 'core', 'warn',
       `llms.txt exists but is missing ${missing.join(' and ')}.`,
-      { reason: 'invalid_format', exists: true, hasH1, linkCount, hasSummary, contentTypeOk });
+      { reason: 'invalid_format', exists: true, hasH1, linkCount, hasSummary, contentTypeOk, bytes });
   }
 
   return item('llms_txt', 'llms.txt', 'core', 'pass',
     `llms.txt is valid (${linkCount} link(s)${hasSummary ? ', with summary' : ''}).`,
-    { reason: 'ok', exists: true, hasH1, linkCount, hasSummary, contentTypeOk });
+    { reason: 'ok', exists: true, hasH1, linkCount, hasSummary, contentTypeOk, bytes });
 }
 
 /** 判据：首页 JSON-LD 可解析且含 @context + @type */

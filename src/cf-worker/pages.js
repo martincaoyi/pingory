@@ -141,6 +141,12 @@ export function registerPageRoutes(app) {
 
   // 公开状态页 HTML（G5/G7，无需登录；slug 不存在也返回壳页面，由前端按数据接口渲染）
   app.get('/status/:slug', (c) => c.env.ASSETS.fetch(new URL('/status.html', c.req.url)));
+
+  // llms.txt 检查器（D43）——英文规范路由 + .html 301，避免重复内容。
+  // 静态文件本身在 public/llms-txt-checker.html，由 ASSETS 绑定直出（不经过模板渲染）。
+  app.get('/llms-txt-checker', (c) => c.env.ASSETS.fetch(new URL('/llms-txt-checker.html', c.req.url)));
+  app.get('/llms-txt-checker/', (c) => c.redirect('/llms-txt-checker', 301));
+  app.get('/llms-txt-checker.html', (c) => c.redirect('/llms-txt-checker', 301));
 }
 
 function hostnameSafe(c) {

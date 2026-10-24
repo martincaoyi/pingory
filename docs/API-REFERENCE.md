@@ -4,9 +4,9 @@
 >
 > **迁移期说明（2026-10-02，ADR-0001）**：`src/cf-worker/*`（Hono Worker 入口）正在把本文档描述的全部端点逐条迁移为 Cloudflare Worker 形态。迁移期间：① 端点路径 / 方法 / 请求响应形状 / 错误码与本文档**完全一致**，不新增不删除端点；② 每端点的迁移对账（源 server.js 行号 / 状态 / 验证方式）见 `src/cf-worker/PORT-CHECKLIST.md`；③ Worker 专属差异仅限实现层（自研 DB-backed 会话中间件、邮件走 Resend HTTP、cron 每 tick 限量、db.js Worker 池 `maxUses:1` 防死连接复用、monitors.js 顶层 crypto 惰性化、DB 超时经 `PG_*_TIMEOUT_MS` vars 放宽容忍 Hyperdrive 冷启动、jsonBodyParser 显式挂载、cookie 经 `hono/cookie` setCookie、Worker 侧 `SMTP_FROM` 须为无外层引号的 `Name <email>` 格式否则 Resend 422），不影响本契约；④ **2026-10-02 已部署上线并金丝雀验证通过**：`pingory.com/*` 已切至 Worker（`pingory.u-martin-cao.workers.dev` 为直连预览），Fly 版同日转为热备直至停机。
 >
-> **版本**：v2.9（2026-10-13 webhook 鲁棒性：`POST /api/creem/webhook` 响应语义收紧——**400 仅限验签失败**，验签通过后即使内部处理异常也返回 `200 ok`（此前内部异常同样返 400，会让 Creem 重试 5 次耗尽后**永久丢弃该事件**；触发场景＝DB 抖动导致 `updatePlan` 抛错）。同步改动：`server.js` 与 `src/cf-worker/api.js` 双路径同构；`grant()/revoke()` 内 `updatePlan` 加 try/catch，防单点失败中断后续记账步骤。**端点无增删、错误码数量不变**——v2.8（2026-10-13 迁移收尾：`/health` 新增 `payment{provider,creem_ready}` 回归守卫字段——背景：Fly→Cloudflare 迁移漏搬 Creem 密钥致主通道静默失效两周无人察觉；**端点无增删**——v2.7：2026-10-05 `/health` 新增 `last_check_at`——v2.6：2026-09-29 出海获客前置：新增邮件订阅列表 waitlist 4 端点 + 2 错误码 + 8 语 wl.* 字典键——v2.5：2026-09-23 P1/P2 稳定性：探针改增量取数 + 总并发上限、启动期 DDL 改版本化迁移、数据保留清理、对比页渲染缓存；**端点无增删、错误码仍 37 个、8 语字典零改动**——v2.4 为 P0-2「全局异常兜底与 5xx 语义」；v2.3：2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
-> **最后更新**：2026-10-13（迁移收尾：/health 加 payment 守卫字段 + Creem active 判定加凭证校验；同日 webhook 响应语义收紧——400 仅限验签失败）
-> **关联代码**：`server.js`（路由，共 84 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）；**Cloudflare 迁移新增 `src/cf-worker/index.js`（Worker 入口，ADR-0001）——迁移期 `/health` 与 `/api/*` 将由 Fly 版与 Worker 版并行提供，端点契约与本文档一致，全部端点迁移完成前 Worker 版仅做预览验证，不接生产流量**
+> **版本**：v3.0（2026-10-24 D43 公开 AI Readability 检查：新增 `GET /api/public/ai-check`（公开信封 `{ok,error:{code}}`，落库限流 10 次/10 分钟/IP + 3000 次/天全局，5 分钟 Cache API 缓存）、错误码 40→43、`SCHEMA_VERSION` 2→3 新增 `ai_check_rate` 表、新增免费页 `/llms-txt-checker`（`.html` 301 到规范路径）——v2.9（2026-10-13 webhook 鲁棒性：`POST /api/creem/webhook` 响应语义收紧——**400 仅限验签失败**，验签通过后即使内部处理异常也返回 `200 ok`（此前内部异常同样返 400，会让 Creem 重试 5 次耗尽后**永久丢弃该事件**；触发场景＝DB 抖动导致 `updatePlan` 抛错）。同步改动：`server.js` 与 `src/cf-worker/api.js` 双路径同构；`grant()/revoke()` 内 `updatePlan` 加 try/catch，防单点失败中断后续记账步骤。**端点无增删、错误码数量不变**——v2.8（2026-10-13 迁移收尾：`/health` 新增 `payment{provider,creem_ready}` 回归守卫字段——背景：Fly→Cloudflare 迁移漏搬 Creem 密钥致主通道静默失效两周无人察觉；**端点无增删**——v2.7：2026-10-05 `/health` 新增 `last_check_at`——v2.6：2026-09-29 出海获客前置：新增邮件订阅列表 waitlist 4 端点 + 2 错误码 + 8 语 wl.* 字典键——v2.5：2026-09-23 P1/P2 稳定性：探针改增量取数 + 总并发上限、启动期 DDL 改版本化迁移、数据保留清理、对比页渲染缓存；**端点无增删、错误码仍 37 个、8 语字典零改动**——v2.4 为 P0-2「全局异常兜底与 5xx 语义」；v2.3：2026-09-16 P1-11：未匹配 `/api/*` 统一 JSON 兜底，错误码 36→37；v2.2：安全响应头加固 P1-10；v2.1 更正：删除从未实现的 `GET /api/monitors/:id`，此前 v2.0 新增 SEO 对比页路由 `/compare/uptimerobot` 与 7 语路径）
+> **最后更新**：2026-10-24（D43 新增公开端点 `GET /api/public/ai-check` 与免费页 `/llms-txt-checker`；`SCHEMA_VERSION` 2→3）
+> **关联代码**：`server.js`（路由，共 84 个端点）、`src/cf-worker/public-ai.js`（公开 AI Readability 检查端点，D43 新增，计入后 85 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）；**Cloudflare 迁移新增 `src/cf-worker/index.js`（Worker 入口，ADR-0001）——迁移期 `/health` 与 `/api/*` 将由 Fly 版与 Worker 版并行提供，端点契约与本文档一致，全部端点迁移完成前 Worker 版仅做预览验证，不接生产流量**
 >
 > **2026-09-19 探针可靠性**：本地检查与多区域 `/probe` 均经 `runLocalCheckRetry` 执行——单次检查遇超时 / 网络抖动类错误会重试一次（间隔 1.5s）后再判定 down，消除东京探针偶发抖动造成的假故障；单点 HTTP/Keyword 超时从硬编码 10s 提至 15s（可经 `CHECK_TIMEOUT_MS` 环境变量调参，无需重新部署）。
 
@@ -26,7 +26,7 @@
 ▸ 字典缺键时回退显示原始错误码（便于定位）
 ▸ 内容自由文本（如监控历史时间线的 `error` 字段记录 HTTP 错误原文）不走错误码，保持原样
 
-### 错误码清单（40）
+### 错误码清单（43）
 
 | 错误码 | HTTP | 含义 / 占位符 |
 |---|---|---|
@@ -70,6 +70,9 @@
 | `target_blocked` | 400 | 监控目标地址被拒绝（SSRF 守卫：内网 / 环回 / 链路本地 / 云元数据 / 保留段，2026-09-23 P0-1 新增） |
 | `waitlist_email_invalid` | 400 | 订阅邮箱格式不合法或超长（2026-09-29 新增） |
 | `waitlist_token_invalid` | 400 | 订阅确认 / 退订令牌缺失或无效（2026-09-29 新增） |
+| `invalid_domain` | 400 | 公开检查端点的域名非法 / 不是裸域名（2026-10-24 D43 新增） |
+| `capacity` | 503 | 公开检查端点全局日预算耗尽或配额表不可用（2026-10-24 D43 新增） |
+| `check_failed` | 502 | 公开检查端点上游抓取异常 / 超时（不透出异常原文，2026-10-24 D43 新增） |
 
 ### 未匹配路由的统一兜底（2026-09-16 P1-11 新增）
 
@@ -243,6 +246,67 @@ Creem 订阅事件通知。签名用 `creem-signature` 头，HMAC-SHA256 原始 
 
 - 令牌缺失/无效 → `400` `waitlist_token_invalid`
 - 响应恒为 `{ "ok": true }`（无论令牌真假，防枚举探测哪些令牌真实存在）
+
+## 1.8 公开 AI Readability 检查（无需登录，D43 / 2026-10-24）
+
+免费页 `GET /llms-txt-checker` 的数据源。**只回公开字段**：不透出内部指纹（fingerprint）、快照（snapshot）、内部 `detail.reason` 原文、变更列表（diff），也不返回逐个抓取请求的诊断信息。
+
+> 响应信封与本项目其它端点不同：公开端点用 `{ ok, error: { code } }`，不带 `ep` 占位符 —— 内部参数不得出现在公网响应里。
+
+### GET /api/public/ai-check
+
+**Query** `domain`（必填）：裸域名，如 `example.com`。拒绝完整 URL（含 scheme / 路径 / 查询串 / 端口）、userinfo、IP 字面量、`localhost` 与 `.local` / `.internal`。域名经 `normalizeDomain()` 归一化后再检查。
+
+**200 成功**
+
+```json
+{
+  "ok": true,
+  "domain": "example.com",
+  "status": "ok",
+  "score": 87,
+  "grade": "B",
+  "checkedAt": "2026-10-24T13:00:00.000Z",
+  "cached": false,
+  "items": [
+    { "key": "robots_txt", "status": "pass", "weight": 8, "reason": "ok", "hint": "robots.txt is served as plain text. Keep your AI crawler rules explicit." }
+  ],
+  "crawlers": { "GPTBot": "allow", "ClaudeBot": "block" },
+  "llms": { "found": true, "bytes": 1234 }
+}
+```
+
+- `status`：`ok` | `warn` | `down` | `unknown`
+- `score`：0–100；**为 `null` 时表示无法判定**（站点不可达或被 WAF 拦截），前端必须显示「未知」而不是 0 分
+- `grade`：`A`(≥90) | `B`(≥80) | `C`(≥70) | `D`(<70) | `?`(无分数)
+- `items[].status`：`pass` | `warn` | `fail` | `skip`；`reason` 为公开短码（白名单映射，非内部原文）；`hint` 为一句英文建议
+- `crawlers`：固定 8 个 UA，值为 `allow` | `block` | `unknown`（训练类 GPTBot / ClaudeBot / Google-Extended / CCBot；检索类 OAI-SearchBot / ChatGPT-User / Claude-User / PerplexityBot）
+- `cached`：命中 5 分钟缓存时为 `true`
+- 响应头固定 `Cache-Control: no-store`（缓存由服务端 Cache API 控制，避免 CDN 缓存 429/错误）；不设 `Access-Control-Allow-Origin`（仅同源页面使用）
+
+**限流**
+
+- 单 IP：**10 次 / 10 分钟**（固定窗口，落库 `ai_check_rate`），超限 → `429` `rate_limited` + `Retry-After`（到窗口结束的秒数）
+- 全局：**3000 次 / 天**（`ip_hash = '__global__'`），超限 → `503` `capacity`
+- 命中缓存**不消耗**配额（先查缓存，未命中才计数）
+- 客户端 IP 只以 `SHA-256(ip + AI_CHECK_SALT)` 形式落库，不存原始 IP；盐缺省为常量 `pingory-ai-check-v1`
+- 配额表不可用时**失败关闭**（`503 capacity`）：本端点每请求都会替第三方抓 4 个 URL，无配额的失败开放等于敞开办成本
+
+**错误**
+
+| HTTP | code | 场景 |
+|---|---|---|
+| 400 | `invalid_domain` | 域名缺失或非法（含完整 URL / IP / localhost / userinfo） |
+| 429 | `rate_limited` | 单 IP 超 10 次/10 分钟 |
+| 503 | `capacity` | 全局日预算耗尽，或配额表不可用 |
+| 502 | `check_failed` | 上游抓取异常 / 12 秒总超时（不返回异常原文） |
+
+**实现约束**
+
+- 仅 `GET`；不接受请求体
+- 整体 12 秒上限（`checkAiVisibility` 内部已有 10 秒预算，外层再兜一层）
+- 逐跳 SSRF 守卫（`safeFetch`，最多 5 跳）
+- 只缓存 `ok` / `warn`：`down` / `unknown` 多为瞬时故障或 WAF 误判，缓存 5 分钟会放大误导
 
 ## 2. 认证
 

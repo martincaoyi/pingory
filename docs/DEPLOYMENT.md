@@ -298,3 +298,63 @@ journalctl -u pingory -f
 4. `SESSION_SECRET` / `STATUS_PAGE_SECRET` 为生产随机值（不要沿用 dev）。
 5. webhook 时间容差：Paddle 通道的验签容差已放宽到 300s（防 CDN 延迟）；若安全要求高可在 `server.js` 对应常量调回更小值（注意留出 CDN 延迟余量，过小会导致正常回调被拒）。
 6. 存量用户上线前执行 `UPDATE users SET email_verified=true;` 一次性放行。
+
+## 14. Cloudflare Worker 部署顺序（含数据库前置）
+
+> 适用于生产 `pingory.com`（Worker + Hyperdrive + Supabase）。自托管 VPS 走第 2–13 节，不适用本节。
+
+### 14.1 为什么需要「先建表再部署」
+
+Worker **不执行 DDL**（`src/db.js` 的 `ensureSchema()` 只在 `server.js` 启动时调用）。
+新版本如果依赖一张生产库还不存在的表，代码一上线就会在运行时炸——而炸的位置是
+「请求进来之后」，不是部署时，所以 `wrangler deploy` 会显示成功。
+
+`GET /api/public/ai-check` 依赖 `ai_check_rate`。**缺表时端点返回 503 `capacity`**
+（配额不可用 ⇒ 失败关闭，不放行免费检查），而不是 500 或静默放行。
+
+### 14.2 标准顺序
+
+1. **建表**（幂等，可重复执行）：
+   ```bash
+   # 用生产 DATABASE_URL（Supabase Session Pooler，端口 5432）
+   psql "$DATABASE_URL" -f docs/sql/2026-10-24-ai-check-rate.sql
+   ```
+   或在 SQL 编辑器里执行同一文件内容。两种方式都是 `CREATE TABLE IF NOT EXISTS`，不删不改既有数据。
+2. **验证表存在**：
+   ```sql
+   SELECT table_name FROM information_schema.tables WHERE table_name = 'ai_check_rate';
+   ```
+3. **设置盐值**（限流桶的 IP 哈希盐；不设则退回源码里的公开默认值，
+   等于任何人都能离线枚举出你的 IP→桶映射）：
+   ```bash
+   npx wrangler secret put AI_CHECK_SALT
+   ```
+   只在首次需要；换盐会让所有窗口内的计数失效（当作重置配额，无数据损坏）。
+4. **跑门禁与回归**：
+   ```bash
+   node tools/dev_gate.js
+   node tools/test-public-ai.mjs      # 133 条，必须 0 FAIL
+   ```
+5. **部署**：
+   ```bash
+   npx wrangler deploy
+   ```
+6. **冒烟**（部署后必须做，见 14.3）。
+
+### 14.3 部署后冒烟清单
+
+| 检查 | 命令 / 期望 |
+|---|---|
+| Worker 活着 | `curl -s https://pingory.com/health` → `ok: true` |
+| 新页面 200 | `curl -sI https://pingory.com/llms-txt-checker` → 200 |
+| 别名 301 | `curl -sI https://pingory.com/llms-txt-checker.html` → 301 → `/llms-txt-checker` |
+| 端点可用 | `curl -s "https://pingory.com/api/public/ai-check?domain=pingory.com"` → `ok:true` + `score` 数值 |
+| 参数校验 | 同上 `domain=https://x.com/y` → 400 `invalid_domain` |
+| 限流生效 | 连发 12 次 → 第 11 次起 429 `rate_limited` |
+| 缓存生效 | 同一域名第二次请求 → `cached: true` |
+| 既有监控未扰动 | 查 `monitors` 表：`last_checked` 仍在推进、`last_error` 为空 |
+
+### 14.4 回滚
+
+代码回滚：`npx wrangler rollback`（或重新部署上一个 commit）。
+`ai_check_rate` 表与 `AI_CHECK_SALT` 可保留（旧版本不读它，无副作用）。

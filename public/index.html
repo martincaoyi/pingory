@@ -291,6 +291,9 @@
     .topnav-login:hover { border-color:var(--accent); color:var(--accent); }
     .topnav-signup { margin-left:8px; border-color:var(--accent); color:var(--accent); }
     .topnav-actions { display:flex; align-items:center; gap:10px; flex-wrap:nowrap; }
+    .topnav-link-checker { font-size:.88rem; color:var(--muted); text-decoration:none; white-space:nowrap; padding:6px 2px; }
+    .topnav-link-checker:hover { color:var(--accent); }
+    @media (max-width:760px){ .topnav-link-checker { display:none; } }
     #topnavRight { display:flex; align-items:center; gap:8px; }
     .topnav-login { white-space:nowrap; }
     .topnav.nav-float { left:50%; right:auto; transform:translateX(-50%); top:12px; width:min(780px,94vw); border-radius:999px; border-color:var(--accent-line); box-shadow:0 6px 24px rgba(0,0,0,.45); padding:10px 20px; }
@@ -382,6 +385,7 @@
   <nav class="topnav">
     <a href="/" class="topnav-brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
       <div class="topnav-actions">
+        <a class="topnav-link-checker" href="/llms-txt-checker" data-i18n="nav.llmsChecker">llms.txt Checker</a>
         <button id="themeToggle" title="Toggle dark mode" data-i18n-title="theme.toggle">🌙</button>
         <span id="langMount"></span>
         <div id="topnavRight"></div>
@@ -2247,6 +2251,7 @@ docker compose up -d</code></pre>
     <a href="/compare/uptimerobot" style="color:var(--accent,#34d399); text-decoration:none;" data-i18n="footer.compare">Compare</a>
     <a href="/compare/betterstack" style="color:var(--accent,#34d399); text-decoration:none;" data-i18n="footer.compareBs">vs Better Stack</a>
     <a href="/compare/pingdom" style="color:var(--accent,#34d399); text-decoration:none;" data-i18n="footer.comparePd">vs Pingdom</a>
+    <a href="/llms-txt-checker" style="color:var(--accent,#34d399); text-decoration:none;" data-i18n="nav.llmsChecker">llms.txt Checker</a>
     <a href="/terms.html" style="color:var(--accent,#34d399); text-decoration:none;" data-i18n="footer.terms">Terms</a>
     <a href="/privacy.html" style="color:var(--accent,#34d399); text-decoration:none;" data-i18n="footer.privacy">Privacy</a>
     <a href="/refund.html" style="color:var(--accent,#34d399); text-decoration:none;" data-i18n="footer.refund">Refund</a>
