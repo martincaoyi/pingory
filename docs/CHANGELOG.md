@@ -8,6 +8,20 @@
 
 ---
 
+## 2026-10-25 · D46 内容页响应头：浏览器缓存 + CSP（性能/安全）
+
+> 一句话：SEO/GEO 页面本来就是纯静态 HTML，这次不动渲染，只补上 ASSETS 直出时缺的缓存头与安全头。
+
+- **先澄清一个容易误判的事实**：`/blog`、三篇指南、`/ai-readability`、`/llms-txt-checker` 都是 `public/` 下的静态文件，Worker 只做「路径 → 文件」映射与别名 301，**不做模板渲染**（真正运行时拼装的只有 `/compare/*` 对比页与状态页壳）。正文 100% 在 HTML 源码里：关掉 JS 后抓 raw HTML，可见文本仍有约 2,345 词，JSON-LD 与 H1 都在。
+- **缓存**：ASSETS 直出默认给 `Cache-Control: public, max-age=0, must-revalidate` ⇒ 每个访客、每个爬虫、每次访问都要回源验证一次，白付一个 RTT。内容页变更频率极低，改为 `public, max-age=600, stale-while-revalidate=86400`。
+- **不用 `s-maxage`**：Worker 响应一旦被边缘按 `s-maxage` 缓存，部署新版本最长要等缓存过期才对访客生效；而边缘缓存对静态资产本来就是重复的（ASSETS 自己有缓存，`CF-Cache-Status: HIT` 来自内层 fetch）。
+- **安全头**：全站此前**没有任何** CSP / `X-Frame-Options` / `X-Content-Type-Options` / `Referrer-Policy`。这批页面零外部资源（已核查：无 CDN、无外部字体、无外链 JS，站内只有 `<a>` 外链，而 CSP 不限制导航），因此 CSP 可收到 `default-src 'self'`；`script-src` 仍保留 `'unsafe-inline'`，因为主题初始化脚本与 JSON-LD 是内联的。**只作用于内容页**，首页、对比页、状态页行为不变。
+- **两条部署路径同构**：`src/cf-worker/pages.js` 新增 `serveContentAsset()`（转发 ASSETS 的 body，只覆盖响应头），`server.js` 新增 `sendContentFile()`；两边共享同一组 `CONTENT_CACHE` / `CONTENT_CSP` 值，测试断言两者**逐字一致**，避免「自托管比托管更安全/更慢」这类隐性分叉。
+- **常驻回归**：`tools/test-blog-pages.mjs` 315 → **323 条**。`--url` 模式新增 6 个 URL × 6 项头断言（`max-age ≥ 300`、`CSP default-src 'self'`、不含 `unsafe-eval`、`nosniff`、`X-Frame-Options`、`Referrer-Policy`、仍以 `text/html` 直出）；静态模式断言路由确实走 `serveContentAsset` / `sendContentFile`。
+- **明确没做的事**：① 不把内容页改成绕开 Worker 的纯资产路径——Workers 静态资源虽支持 `_redirects`，但 `html_handling: "none"` 下 `/blog` → `/blog.html` 需要额外 5 条 proxy 200 规则，且 `/blog/*` 的 404 白名单会失去；实测 Worker 路径与纯静态资产路径 TTFB 无差异（均 0.96–1.70s，差异在噪声内），收益为 0 而路由复杂度上升。② `/blog.css` 与 `/analytics.js` 仍由 ASSETS 直出、仍是 `max-age=0`；给它们加长缓存要走 `_headers`，会引入「改完 CSS 访客最长一天看不到新样式」的坑，本次不做。
+
+---
+
 ## 2026-10-24 · D45 B1 内容集群：4 篇 AI 可读性指南 + 索引 + 定位页（增长/SEO）
 
 > 一句话：用 5 个静态页面把「AI 可读性」这个语义位占住，全部内链回 `/llms-txt-checker` 与 `/#plans`；页面只写静态可验证项，明确写出「测不了什么」。

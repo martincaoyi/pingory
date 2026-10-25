@@ -811,7 +811,7 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 
 ▸ **白名单映射**：`src/cf-worker/pages.js` 的 `BLOG_PAGES` 与 `server.js` 同名常量逐条对应，不用动态 `:slug` 读任意文件；Worker 侧未匹配的 `/blog/*` 显式 `c.notFound()`（404），自托管侧落到 `express.static` 的 404，两条路径都不会把未知 slug 兜成 200。
 ▸ **`run_worker_first`**：`wrangler.jsonc` 增加 `/blog`、`/blog/*`、`/ai-readability`、`/ai-readability.html`，否则静态层会抢先处理 `/blog.html` 的别名请求。
-▸ **回归**：`node tools/test-blog-pages.mjs`（本地静态 315 条）与 `node tools/test-blog-pages.mjs --url https://pingory.com`（部署后线上断言，含 301 与 404）。
+▸ **回归**：`node tools/test-blog-pages.mjs`（本地静态 323 条）与 `node tools/test-blog-pages.mjs --url https://pingory.com`（部署后线上断言，含 301、404 与内容页响应头）。
 
 ---
 

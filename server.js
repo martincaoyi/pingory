@@ -334,10 +334,29 @@ app.get('/api/paddle-config', (req, res) => {
   });
 });
 
+// ===== 内容页响应头（D46）=====
+// 与 src/cf-worker/pages.js 的 CONTENT_CACHE / CONTENT_CSP 逐字一致：自托管与 Worker
+// 两条部署路径对同一 URL 必须给同一套头，否则「自托管更安全」这类差异会变成隐性坑。
+const CONTENT_CACHE = 'public, max-age=600, stale-while-revalidate=86400';
+const CONTENT_CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+  + "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; "
+  + "connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'";
+
+function sendContentFile(res, file) {
+  res.set({
+    'Cache-Control': CONTENT_CACHE,
+    'Content-Security-Policy': CONTENT_CSP,
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'X-Frame-Options': 'SAMEORIGIN',
+  });
+  return res.sendFile(file, { root: 'public' });
+}
+
 // ===== llms.txt 检查器页面（D43，自托管路径）=====
 // 必须早于 express.static：静态层默认不做 /x → /x.html 的扩展名解析，
 // 而 .html 直链又要 301 到规范 URL，避免同一内容两个地址。
-app.get('/llms-txt-checker', (_req, res) => res.sendFile('llms-txt-checker.html', { root: 'public' }));
+app.get('/llms-txt-checker', (_req, res) => sendContentFile(res, 'llms-txt-checker.html'));
 app.get('/llms-txt-checker/', (_req, res) => res.redirect(301, '/llms-txt-checker'));
 app.get('/llms-txt-checker.html', (_req, res) => res.redirect(301, '/llms-txt-checker'));
 
@@ -354,17 +373,17 @@ const BLOG_PAGES = {
 app.get('/blog.html', (_req, res) => res.redirect(301, '/blog'));
 app.get('/blog', (req, res) => (req.path.endsWith('/')
   ? res.redirect(301, '/blog')
-  : res.sendFile('blog.html', { root: 'public' })));
+  : sendContentFile(res, 'blog.html')));
 for (const [routePath, file] of Object.entries(BLOG_PAGES)) {
   app.get(routePath + '.html', (_req, res) => res.redirect(301, routePath));
   app.get(routePath, (req, res) => (req.path.endsWith('/')
     ? res.redirect(301, routePath)
-    : res.sendFile(file, { root: 'public' })));
+    : sendContentFile(res, file)));
 }
 app.get('/ai-readability.html', (_req, res) => res.redirect(301, '/ai-readability'));
 app.get('/ai-readability', (req, res) => (req.path.endsWith('/')
   ? res.redirect(301, '/ai-readability')
-  : res.sendFile('ai-readability.html', { root: 'public' })));
+  : sendContentFile(res, 'ai-readability.html')));
 
 // ===== 静态托管前端 =====
 app.use(express.static('public'));

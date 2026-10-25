@@ -31,6 +31,35 @@ const BLOG_PAGES = {
 // 只预载本页用到的键，避免整包拖慢首屏（与 server.js 同款正则）
 const CMP_I18N_KEY = /^(cmp\.|cmpbs\.|cmppd\.|nav\.|footer\.|landing\.ctaFree$)/;
 
+// 内容页响应头（D46）。
+// 这几个页面是 public/ 下的纯静态 HTML，但 ASSETS 直出只给
+// `Cache-Control: public, max-age=0, must-revalidate`——每次访问（含每个爬虫）都要
+// 回源做一次验证，白等一个 RTT。内容页变更频率极低，改成浏览器缓存 10 分钟、
+// 边缘 1 小时、过期后先给旧副本再后台刷新。
+// 同时补上全站一直缺的安全头：这批页面零外部资源（无 CDN / 无外部字体 / 无外链 JS），
+// 所以 CSP 可以收紧到 'self' —— 只对内容页生效，不影响首页、对比页、状态页。
+const CONTENT_CACHE = 'public, max-age=600, stale-while-revalidate=86400';
+const CONTENT_CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+  + "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; "
+  + "connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'";
+
+// 静态内容页直出：不渲染、不解析模板，只转发 ASSETS 的 body 并覆盖响应头。
+function serveContentAsset(c, assetPath) {
+  return c.env.ASSETS.fetch(new URL(assetPath, c.req.url)).then((res) => {
+    const out = new Response(res.body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: res.headers,
+    });
+    out.headers.set('Cache-Control', CONTENT_CACHE);
+    out.headers.set('Content-Security-Policy', CONTENT_CSP);
+    out.headers.set('X-Content-Type-Options', 'nosniff');
+    out.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    out.headers.set('X-Frame-Options', 'SAMEORIGIN');
+    return out;
+  });
+}
+
 const cmpCache = new Map();
 const CMP_CACHE_MAX = 64;
 
@@ -153,24 +182,24 @@ export function registerPageRoutes(app) {
 
   // llms.txt 检查器（D43）——英文规范路由 + .html 301，避免重复内容。
   // 静态文件本身在 public/llms-txt-checker.html，由 ASSETS 绑定直出（不经过模板渲染）。
-  app.get('/llms-txt-checker', (c) => c.env.ASSETS.fetch(new URL('/llms-txt-checker.html', c.req.url)));
+  app.get('/llms-txt-checker', (c) => serveContentAsset(c, '/llms-txt-checker.html'));
   app.get('/llms-txt-checker/', (c) => c.redirect('/llms-txt-checker', 301));
   app.get('/llms-txt-checker.html', (c) => c.redirect('/llms-txt-checker', 301));
 
   // 内容集群 B1（D45）——白名单映射，不用 /blog/:slug 动态读任意文件名。
   // 未匹配的 /blog/* 显式 404：静态兜底会把未知路径当资产请求处理，必须在这里截断。
-  app.get('/blog', (c) => c.env.ASSETS.fetch(new URL('/blog.html', c.req.url)));
+  app.get('/blog', (c) => serveContentAsset(c, '/blog.html'));
   app.get('/blog/', (c) => c.redirect('/blog', 301));
   app.get('/blog.html', (c) => c.redirect('/blog', 301));
 
   for (const [path, asset] of Object.entries(BLOG_PAGES)) {
-    app.get(path, (c) => c.env.ASSETS.fetch(new URL(asset, c.req.url)));
+    app.get(path, (c) => serveContentAsset(c, asset));
     app.get(path + '/', (c) => c.redirect(path, 301));
     app.get(path + '.html', (c) => c.redirect(path, 301));
   }
   app.get('/blog/*', (c) => c.notFound());
 
-  app.get('/ai-readability', (c) => c.env.ASSETS.fetch(new URL('/ai-readability.html', c.req.url)));
+  app.get('/ai-readability', (c) => serveContentAsset(c, '/ai-readability.html'));
   app.get('/ai-readability/', (c) => c.redirect('/ai-readability', 301));
   app.get('/ai-readability.html', (c) => c.redirect('/ai-readability', 301));
 }

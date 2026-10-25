@@ -462,6 +462,27 @@ async function checkRedirects() {
   eq(missing.status, 404, '/blog/does-not-exist 落到 404');
 }
 
+// 内容页响应头（D46）：静态直出 + 可缓存 + 安全头。
+// 这三件事任一退化都会静默发生（页面照常打开），所以必须在线上逐条断言。
+async function checkContentHeaders() {
+  console.log('\n── 内容页响应头 ──');
+  const urls = ['/blog', '/blog/what-is-llms-txt', '/blog/ai-crawlers-list',
+    '/blog/block-ai-crawlers', '/ai-readability', '/llms-txt-checker'];
+  for (const url of urls) {
+    const res = await fetch(BASE + url, { redirect: 'manual' });
+    const cc = res.headers.get('cache-control') || '';
+    const csp = res.headers.get('content-security-policy') || '';
+    const maxAge = Number((cc.match(/max-age=(\d+)/) || [])[1]);
+    ok(maxAge >= 300, url + ' 浏览器缓存 ≥300s（max-age=0 会让每个访客都回源验证）', cc);
+    ok(/default-src 'self'/.test(csp), url + ' CSP 的 default-src 限制为 self', csp.slice(0, 48));
+    ok(!/unsafe-eval/.test(csp), url + ' CSP 不含 unsafe-eval');
+    eq(res.headers.get('x-content-type-options'), 'nosniff', url + ' X-Content-Type-Options');
+    eq(res.headers.get('x-frame-options'), 'SAMEORIGIN', url + ' X-Frame-Options');
+    eq(res.headers.get('referrer-policy'), 'strict-origin-when-cross-origin', url + ' Referrer-Policy');
+    ok((res.headers.get('content-type') || '').includes('text/html'), url + ' 仍以 text/html 直出');
+  }
+}
+
 // ============================================================
 // Static-only: routes and shared stylesheet
 // ============================================================
@@ -491,14 +512,27 @@ function checkRoutes() {
   ok(pages.includes("app.get('/ai-readability',"), 'pages.js 注册 GET /ai-readability');
   ok(pages.includes("app.get('/ai-readability.html',"), 'pages.js 注册 /ai-readability.html');
 
-  ok(server.includes("res.sendFile('blog.html', { root: 'public' })"), 'server.js 直出 blog.html');
+  ok(server.includes("sendContentFile(res, 'blog.html')"), 'server.js 直出 blog.html');
   ok(server.includes("req.path.endsWith('/')"), 'server.js 在 handler 内区分尾斜杠（Express 非严格路由）');
   ok(server.includes("res.redirect(301, '/blog')"), 'server.js /blog/ 301 到 /blog');
   for (const page of PAGES.filter((p) => p.url.startsWith('/blog/'))) {
     ok(server.includes("'" + page.url + "'"), 'server.js 含路由 ' + page.url);
     ok(server.includes("'" + page.url.slice(1) + ".html'"), 'server.js 含文件 ' + page.url + '.html');
   }
-  ok(server.includes("res.sendFile('ai-readability.html', { root: 'public' })"), 'server.js 直出 ai-readability.html');
+  ok(server.includes("sendContentFile(res, 'ai-readability.html')"), 'server.js 直出 ai-readability.html');
+
+  // D46：内容页响应头（缓存 + 安全）——两条部署路径必须给同一套，否则行为分叉
+  const wCache = (pages.match(/CONTENT_CACHE = '([^']+)'/) || [])[1] || '';
+  const sCache = (server.match(/CONTENT_CACHE = '([^']+)'/) || [])[1] || '';
+  ok(wCache.length > 0 && wCache === sCache, 'Worker 与自托管的 CONTENT_CACHE 逐字一致', wCache);
+  const wMaxAge = Number((wCache.match(/max-age=(\d+)/) || [])[1]);
+  ok(wMaxAge >= 300, 'CONTENT_CACHE 浏览器缓存 ≥300s', 'max-age=' + wMaxAge);
+  ok(/stale-while-revalidate=/.test(wCache), 'CONTENT_CACHE 含 stale-while-revalidate');
+  ok(pages.includes('CONTENT_CSP') && server.includes('CONTENT_CSP'), '两条路径都输出 CSP');
+  ok(/default-src 'self'/.test(pages) && /default-src 'self'/.test(server), "CSP 的 default-src 为 'self'");
+  ok(pages.includes("serveContentAsset(c, '/blog.html')"), 'pages.js /blog 走 serveContentAsset');
+  ok(pages.includes("serveContentAsset(c, '/ai-readability.html')"), 'pages.js /ai-readability 走 serveContentAsset');
+  ok(pages.includes("serveContentAsset(c, '/llms-txt-checker.html')"), 'pages.js /llms-txt-checker 走 serveContentAsset');
 
   const rwf = (wrangler.match(/"run_worker_first":\s*\[[\s\S]*?\]/) || [''])[0];
   for (const entry of ['"/blog"', '"/blog.html"', '"/blog/*"', '"/ai-readability"', '"/ai-readability.html"']) {
@@ -527,6 +561,7 @@ checkLinks(loaded);
 await checkSitemap();
 if (LIVE) {
   await checkRedirects();
+  await checkContentHeaders();
 } else {
   checkRoutes();
 }
