@@ -269,7 +269,7 @@
     .step-t { font-weight:600; margin-bottom:2px; }
     .step-d { font-size:.85rem; color:var(--muted); }
     @media(max-width:760px){ .plans{ grid-template-columns:1fr; } .trust-strip,.how{ grid-template-columns:1fr 1fr; } }
-    .monitor-types { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; margin:40px 0; }
+    .monitor-types { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); grid-auto-flow:dense; gap:16px; margin:40px 0; }
     .mt-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; text-align:center; transition:transform .15s ease, border-color .15s ease; }
     .mt-card.wide { grid-column:span 2; }
     .mt-card:hover { transform:translateY(-4px); border-color:var(--accent-line); box-shadow:0 12px 28px var(--accent-soft); }
@@ -398,7 +398,7 @@
     <div id="landing">
     <p class="eyebrow" data-i18n="landing.eyebrow">Open source · AGPL-3.0 · Self-host in one command</p>
     <h1 data-i18n="landing.title">Know your site is down before your users do.</h1>
-    <p class="sub" data-i18n="landing.sub">Pingory watches your sites, APIs and servers around the clock and alerts you the moment something breaks. Self-host it free from GitHub — or let us run it for you from $4/month.</p>
+    <p class="sub" data-i18n="landing.sub">Pingory watches your sites, APIs and servers around the clock and alerts you the moment something breaks. The AI Readability monitor shows whether the AI crawlers behind ChatGPT, Claude and Gemini can actually read your pages. Self-host it free from GitHub — or let us run it for you from $4/month.</p>
 
     <div class="hero-cta">
       <a class="btn-primary" href="/signup.html" data-i18n="landing.ctaFree">Sign Up Free</a>
@@ -491,7 +491,8 @@ docker compose up -d</code></pre>
       <div class="mt-card"><div class="mt-icon">📡</div><div class="mt-title" data-i18n="landing.type.ping.title">Ping &amp; Port</div><div class="mt-desc" data-i18n="landing.type.ping.desc">ICMP ping and TCP port monitoring for servers</div></div>
       <div class="mt-card"><div class="mt-icon">⚡</div><div class="mt-title" data-i18n="landing.type.api.title">API Monitoring</div><div class="mt-desc" data-i18n="landing.type.api.desc">Validate response headers and JSON assertions</div></div>
       <div class="mt-card"><div class="mt-icon">📋</div><div class="mt-title" data-i18n="landing.type.dns.title">DNS Records</div><div class="mt-desc" data-i18n="landing.type.dns.desc">Detect unauthorized DNS changes early</div></div>
-      <div class="mt-card"><div class="mt-icon">💓</div><div class="mt-title" data-i18n="landing.type.heartbeat.title">Heartbeat / Cron</div><div class="mt-desc" data-i18n="landing.type.heartbeat.desc">Know immediately when scheduled jobs fail</div></div>
+      <div class="mt-card wide"><div class="mt-icon">💓</div><div class="mt-title" data-i18n="landing.type.heartbeat.title">Heartbeat / Cron</div><div class="mt-desc" data-i18n="landing.type.heartbeat.desc">Know immediately when scheduled jobs fail</div></div>
+      <div class="mt-card wide"><div class="mt-icon">🤖</div><div class="mt-title" data-i18n="landing.type.ai.title">AI Readability</div><div class="mt-desc" data-i18n="landing.type.ai.desc">12 checks — robots.txt, AI crawler access, llms.txt, JSON-LD, readable text and more</div></div>
     </div>
 
     <!-- 信任感增强（#269，学 Better Uptime / Hyperping：实时统计 + 三步上手） -->
@@ -535,7 +536,7 @@ docker compose up -d</code></pre>
           <li data-i18n="landing.plan.starter.feature1">100 monitors</li>
           <li data-i18n="landing.plan.starter.feature2">1-minute checks</li>
           <li data-i18n="landing.plan.starter.feature3">90-day history</li>
-          <li data-i18n="landing.plan.starter.feature4">All monitor types</li>
+          <li data-i18n="landing.plan.starter.feature4">All standard monitor types</li>
           <li data-i18n="landing.plan.starter.feature5">Email + Slack alerts</li>
           <li data-i18n="landing.plan.starter.feature6">Public status page</li>
         </ul>
@@ -553,6 +554,7 @@ docker compose up -d</code></pre>
           <li data-i18n="landing.plan.pro.feature5">All alert channels</li>
           <li data-i18n="landing.plan.pro.feature6">Custom domain status page</li>
           <li data-i18n="landing.plan.pro.feature7">Team access (up to 3)</li>
+          <li data-i18n="landing.plan.pro.feature8">AI Readability monitoring</li>
         </ul>
         <button data-plan="pro" data-i18n="landing.plan.pro.btn">Upgrade to Pro</button>
       </div>
