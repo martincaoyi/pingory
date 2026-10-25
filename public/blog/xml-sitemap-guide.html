@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<!--
+  D47 · B2 guide #3 — /blog/xml-sitemap-guide
+  Scope: generation and inclusion rules, hard limits, lastmod, submission.
+  Does not explain what robots.txt parses (see /blog/robots-txt-guide) and does
+  not explain canonical mechanics (see /blog/canonical-tag-guide).
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XML Sitemap: Limits, lastmod and "Discovered – Not Indexed"</title>
+  <meta name="description" content="An XML sitemap guide to the 50,000 URL and 50 MB limits, honest lastmod values, and why Discovered currently not indexed is not a file problem." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://pingory.com/blog/xml-sitemap-guide" />
+  <link rel="alternate" hreflang="en" href="https://pingory.com/blog/xml-sitemap-guide" />
+  <link rel="alternate" hreflang="x-default" href="https://pingory.com/blog/xml-sitemap-guide" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Pingory" />
+  <meta property="og:title" content="XML Sitemap Guide: Limits, lastmod and Submission" />
+  <meta property="og:description" content="An XML sitemap guide to the 50,000 URL and 50 MB limits, honest lastmod values, and why Discovered currently not indexed is not a file problem." />
+  <meta property="og:url" content="https://pingory.com/blog/xml-sitemap-guide" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Pingory — uptime and AI Readability monitoring" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="XML Sitemap Guide: Limits, lastmod and Submission" />
+  <meta name="twitter:description" content="An XML sitemap guide to the 50,000 URL and 50 MB limits, honest lastmod values, and why Discovered currently not indexed is not a file problem." />
+  <meta name="twitter:image" content="https://pingory.com/icon-512.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <link rel="stylesheet" href="/blog.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": "XML Sitemap: What Belongs In It, and Why Yours Isn't Indexed",
+        "description": "An XML sitemap guide to the 50,000 URL and 50 MB limits, honest lastmod values, and why Discovered currently not indexed is not a file problem.",
+        "datePublished": "2026-10-25",
+        "dateModified": "2026-10-25",
+        "inLanguage": "en",
+        "author": { "@type": "Person", "name": "Martin Cao", "url": "https://pingory.com/" },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pingory",
+          "url": "https://pingory.com/",
+          "logo": { "@type": "ImageObject", "url": "https://pingory.com/icon-512.png" }
+        },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": "https://pingory.com/blog/xml-sitemap-guide" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://pingory.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://pingory.com/blog" },
+          { "@type": "ListItem", "position": 3, "name": "XML sitemap guide", "item": "https://pingory.com/blog/xml-sitemap-guide" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Does an XML sitemap guarantee indexing?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. A sitemap helps discovery and recrawl scheduling. Google still decides whether a URL is worth indexing, and a sitemap full of thin pages does not change that decision. Listing a URL is a hint, not a submission for approval." }
+          },
+          {
+            "@type": "Question",
+            "name": "Should I still ping Google when the sitemap changes?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Google deprecated the sitemap ping endpoint in June 2023 and it stopped working about six months later, so requests now fail. Declare the file in robots.txt or submit it once in Search Console, and update lastmod when content really changes." }
+          },
+          {
+            "@type": "Question",
+            "name": "Should a sitemap include noindex pages?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. A sitemap should list URLs you want indexed. Including a noindex URL sends a contradictory instruction and wastes crawl attention, because the page is fetched and then excluded anyway." }
+          },
+          {
+            "@type": "Question",
+            "name": "How many URLs can one sitemap hold?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Up to 50,000 URLs, and the uncompressed file must stay under 50 MB. Beyond either limit, split the inventory into several files and list them in a sitemap index, which itself can reference up to 50,000 sitemaps." }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+  <span class="spacer"></span>
+  <button id="themeToggle" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+  <a class="btn" href="/signin.html">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+</nav>
+
+<main class="wrap">
+<article>
+  <p class="kicker">Guides · Discovery</p>
+  <h1>XML Sitemap: What Belongs In It, and Why Yours Isn't Indexed</h1>
+  <p class="meta">Last verified: October 2026 · About 9 minutes of reading</p>
+  <p class="lede">A sitemap is a list of URLs you want crawled, not a list of URLs that exist. Most sitemap problems come from that gap: the file is technically valid, and still asks Google to spend attention on pages it should never index.</p>
+
+  <h2>What belongs in an XML sitemap</h2>
+  <p class="answer">Only canonical URLs that return 200 and may be indexed, one host per file, with an honest last modification date.</p>
+  <p>That sentence is the filter: a URL that fails any of the three conditions does not belong in the file. A sitemap should contain the version of each page you want in search results, which means the URL that wins canonicalisation, not the parameterised variants that point at it. If a URL redirects, returns an error, or carries a noindex directive, it does not belong in the file.</p>
+  <p>The format also imposes a scope: all URLs in one sitemap must be on the same host, and unless the file is submitted through Search Console or declared in robots.txt, it only affects URLs below its own directory. That is why the conventional location is the site root: <code>https://example.com/sitemap.xml</code> covers everything.</p>
+  <p>A sitemap earns its keep in a narrow set of situations: a new site with few inbound links, a large catalogue where some pages sit many clicks from the homepage, or an inventory with orphan pages that nothing links to. On a small, well-linked site it changes little. That is not a reason to skip it, but it is a reason not to expect a ranking effect from adding one.</p>
+
+  <h2>The hard limits</h2>
+  <p class="answer">50,000 URLs or 50 MB uncompressed per file, and 50,000 sitemaps per index file.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Limits from the sitemaps protocol and Google's documentation.</caption>
+      <thead>
+        <tr><th scope="col">Item</th><th scope="col">Limit</th><th scope="col">What happens at the limit</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>URLs per sitemap</td><td>50,000</td><td>Split into another sitemap file</td></tr>
+        <tr><td>Sitemap file size</td><td>50 MB (52,428,800 bytes), uncompressed</td><td>Split or trim the file; Google measures uncompressed</td></tr>
+        <tr><td>Sitemaps per index</td><td>50,000</td><td>Split the index, and submit each part</td></tr>
+        <tr><td>Index file size</td><td>50 MB, uncompressed</td><td>Split the index</td></tr>
+        <tr><td>Length of one <code>&lt;loc&gt;</code></td><td>Fewer than 2,048 characters</td><td>The URL must be shortened or served another way</td></tr>
+        <tr><td>Encoding</td><td>UTF-8</td><td>A non-UTF-8 file may fail to parse</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The size limit is measured before compression, so gzipping a 60 MB file does not make it valid. The protocol requires entity escaping for every value, which in practice means <code>&amp;</code> becomes <code>&amp;amp;</code> inside a query string. A single unescaped ampersand makes the XML invalid and the whole file unreadable, not just that URL.</p>
+
+  <h2>A minimal correct file</h2>
+  <p class="answer">Four required pieces: the XML declaration, the urlset namespace, one url element per page, and a loc inside each.</p>
+  <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"&gt;
+  &lt;url&gt;
+    &lt;loc&gt;https://example.com/&lt;/loc&gt;
+    &lt;lastmod&gt;2026-10-25&lt;/lastmod&gt;
+  &lt;/url&gt;
+  &lt;url&gt;
+    &lt;loc&gt;https://example.com/pricing&lt;/loc&gt;
+    &lt;lastmod&gt;2026-09-30&lt;/lastmod&gt;
+  &lt;/url&gt;
+  &lt;url&gt;
+    &lt;loc&gt;https://example.com/search?q=plan&amp;amp;page=2&lt;/loc&gt;
+  &lt;/url&gt;
+&lt;/urlset&gt;</code></pre>
+  <p>Note what is missing. There is no <code>changefreq</code>, no <code>priority</code>, and no trailing element to close the last URL. The namespace string still uses <code>http://</code> even though the sitemap itself is served over HTTPS; that URI identifies the schema, it is not a link to fetch.</p>
+
+  <h2>lastmod: what Google actually uses</h2>
+  <p class="answer">lastmod should be the date the page's main content last changed, in W3C datetime form, and only if that stays accurate.</p>
+  <p>W3C datetime allows a date alone (<code>2026-10-25</code>) or a full timestamp with an offset (<code>2026-10-25T09:30:00+00:00</code>). Google's guidance adds a condition that matters more than the format: it uses the value when it is consistently and verifiably accurate, and stops trusting a site that stamps every URL with today's date. A footer wording change does not require a new lastmod; a rewritten section, new structured data or changed internal links does.</p>
+  <p>Google also states that it ignores <code>priority</code> and <code>changefreq</code> entirely. They remain valid in the protocol and harmless in the file, but writing them changes nothing. If your generator emits them, leave them alone or remove them; neither choice affects crawling.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Optional elements and whether Google uses them.</caption>
+      <thead>
+        <tr><th scope="col">Element</th><th scope="col">Format</th><th scope="col">Used by Google</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>lastmod</code></td><td>W3C datetime</td><td>Yes, when accurate</td></tr>
+        <tr><td><code>changefreq</code></td><td>always, hourly, daily, weekly, monthly, yearly, never</td><td>No</td></tr>
+        <tr><td><code>priority</code></td><td>0.0 to 1.0</td><td>No</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>What to leave out</h2>
+  <p class="answer">Leave out redirects, errors, noindex pages, duplicates, session IDs and anything on another host.</p>
+  <ul>
+    <li><strong>Redirecting URLs.</strong> List the destination, not the 301 that points at it. A sitemap full of redirects trains a crawler to distrust the file.</li>
+    <li><strong>404 and 410 pages.</strong> Remove them when they disappear. A dead URL left in the file is a permanent error report.</li>
+    <li><strong>noindex pages.</strong> Listing a page you have told Google not to index is contradictory, and the fetch is wasted.</li>
+    <li><strong>Duplicate variants.</strong> One URL per piece of content. Tracking parameters, sort orders and print versions belong to the canonical, not to the sitemap.</li>
+    <li><strong>Other hosts.</strong> A sitemap at example.com cannot list blog.example.com; that host needs its own file.</li>
+  </ul>
+  <p>The canonical question is separate from the sitemap question: the sitemap should list whichever URL the page declares, but the tag itself is covered in <a href="/blog/canonical-tag-guide">the canonical guide</a>.</p>
+
+  <h2>Submitting it: robots.txt, Search Console, and a retired endpoint</h2>
+  <p class="answer">There are two working routes: a Sitemap line in robots.txt, and a one-time submission in Search Console.</p>
+  <p>Google deprecated the sitemap ping endpoint on 26 June 2023 and said it would stop functioning six months later; requests to it now fail. Any plugin, cron job or deploy script still firing that request is doing nothing, and the failure is silent unless something logs the response. Removing it is safe.</p>
+  <pre><code># robots.txt — announces the sitemap to every crawler that reads the file
+Sitemap: https://example.com/sitemap.xml</code></pre>
+  <p>The <code>Sitemap</code> line takes an absolute URL and can appear anywhere in the file, including between groups, because it must not terminate a group. Declaring it costs nothing and covers crawlers that never see your Search Console account. Search Console adds what robots.txt cannot: fetch status, parse errors and a per-sitemap indexed count. Submit the index file once if you use one; Google follows it to the children.</p>
+
+  <h2>Sitemap index for large sites</h2>
+  <p class="answer">An index lists sitemap files rather than pages, and it is the only supported way past 50,000 URLs.</p>
+  <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"&gt;
+  &lt;sitemap&gt;
+    &lt;loc&gt;https://example.com/sitemaps/blog.xml&lt;/loc&gt;
+    &lt;lastmod&gt;2026-10-25&lt;/lastmod&gt;
+  &lt;/sitemap&gt;
+  &lt;sitemap&gt;
+    &lt;loc&gt;https://example.com/sitemaps/docs.xml&lt;/loc&gt;
+    &lt;lastmod&gt;2026-10-01&lt;/lastmod&gt;
+  &lt;/sitemap&gt;
+&lt;/sitemapindex&gt;</code></pre>
+  <p>Splitting by section is usually better than splitting by count. A blog sitemap and a docs sitemap can be regenerated on different schedules, and the Search Console report then tells you which section has the problem. Every child file must still obey the per-file limits, and every URL must still be on the same host as the index.</p>
+
+  <h2>Why URLs stay "Discovered – currently not indexed"</h2>
+  <p class="answer">The status means Google found the URL, judged it low priority, and chose not to crawl or index it yet.</p>
+  <p>This is the status that generates the most confusion, so a concrete example helps. This site's sitemap currently lists 25 URLs; 23 of them sit in "Discovered – currently not indexed". The file is valid, submitted, and fetched without errors — every technical check in this guide passes. The status persists because indexing is a quality and demand decision, not a file format decision: Google saw the URLs, and decided its crawl budget was better spent elsewhere.</p>
+  <p>That is also why the usual fixes do not apply. Resubmitting the sitemap changes nothing, because Google already has it. Removing and re-adding URLs changes nothing. What moves the status over time is the thing no sitemap controls: internal links from indexed pages, external links, and pages that answer a query someone actually types. A sitemap tells Google what exists; it cannot tell Google what matters.</p>
+
+  <h2>How to verify a sitemap</h2>
+  <p class="answer">Fetch the file, parse it as XML, and confirm the URLs inside return 200 without a noindex directive.</p>
+  <ol>
+    <li><strong>Fetch it.</strong> The response should be 200 with an XML content type, and the body should start with the XML declaration rather than an HTML error page.</li>
+    <li><strong>Parse it.</strong> Any XML parser will reject unescaped ampersands and stray tags. Search Console does the same check and reports the line.</li>
+    <li><strong>Sample the URLs.</strong> Pick ten entries and check status, canonical and robots meta. A sitemap that lists redirects or noindex pages is telling you the generator is wrong.</li>
+    <li><strong>Compare counts.</strong> The number of URLs in the file should roughly match the number of indexable pages you believe you have. A large gap is a generator problem, not an indexing problem.</li>
+  </ol>
+
+  <h2>When Search Console says "Couldn't fetch"</h2>
+  <p class="answer">"Couldn't fetch" means the file was never retrieved; it is a fetch problem, not a content problem.</p>
+  <p>The usual causes are a firewall or bot rule blocking Google's fetcher, a login or cookie redirect in front of the file, or a hostname mismatch — submitting <code>www.example.com/sitemap.xml</code> when the canonical host is <code>example.com</code>. Test by fetching the exact submitted URL yourself, following redirects, from outside your network. A status of "Success" with zero discovered URLs is a different problem: the file was retrieved and parsed, and the URLs inside it are the ones that need checking.</p>
+
+  <div class="boundary">
+    <p><strong>What a valid sitemap cannot prove:</strong> it does not show that Google accepted, crawled or indexed any URL in it. "Discovered, currently not indexed" is a quality and demand decision, not a file format problem, and no sitemap edit changes it.</p>
+  </div>
+
+  <div class="sources">
+    <h3>Sources checked</h3>
+    <ul>
+      <li>sitemaps.org protocol and FAQ — limits, encoding, entity escaping, 2,048-character loc. Checked 2026-10-25.</li>
+      <li>Google Search Central, "Build and submit a sitemap" — 50 MB uncompressed, UTF-8, priority and changefreq ignored. Checked 2026-10-25.</li>
+      <li>Google Search Central blog, 2023-06-26 — sitemap ping deprecation and lastmod guidance. Checked 2026-10-25.</li>
+    </ul>
+  </div>
+
+  <div class="related">
+    <h3>Keep reading</h3>
+    <ul>
+      <li><a href="/blog/robots-txt-guide">robots.txt guide</a> — how the Sitemap line interacts with the rest of the file.</li>
+      <li><a href="/blog/canonical-tag-guide">Canonical tag guide</a> — which URL should be in the sitemap in the first place.</li>
+      <li><a href="/blog/json-ld-structured-data">JSON-LD structured data</a> — the markup that travels with each URL you list.</li>
+    </ul>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <p class="answer">Four questions cover indexing expectations, the retired ping, noindex pages and the size limit.</p>
+  <details class="faq-item">
+    <summary>Does an XML sitemap guarantee indexing?</summary>
+    <p>No. A sitemap helps discovery and recrawl scheduling. Google still decides whether a URL is worth indexing, and a sitemap full of thin pages does not change that decision. Listing a URL is a hint, not a submission for approval.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Should I still ping Google when the sitemap changes?</summary>
+    <p>No. Google deprecated the sitemap ping endpoint in June 2023 and it stopped working about six months later, so requests now fail. Declare the file in robots.txt or submit it once in Search Console, and update lastmod when content really changes.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Should a sitemap include noindex pages?</summary>
+    <p>No. A sitemap should list URLs you want indexed. Including a noindex URL sends a contradictory instruction and wastes crawl attention, because the page is fetched and then excluded anyway.</p>
+  </details>
+  <details class="faq-item">
+    <summary>How many URLs can one sitemap hold?</summary>
+    <p>Up to 50,000 URLs, and the uncompressed file must stay under 50 MB. Beyond either limit, split the inventory into several files and list them in a sitemap index, which itself can reference up to 50,000 sitemaps.</p>
+  </details>
+
+  <div class="cta">
+    <h2>Check any site free</h2>
+    <p class="answer">See whether the sitemap is reachable, parses, and agrees with robots.txt, canonical and noindex on the page.</p>
+    <div class="cta-actions">
+      <a class="cta-main" href="/llms-txt-checker">Check any site free</a>
+      <a class="cta-alt" href="/#plans">See plans</a>
+    </div>
+  </div>
+
+  <p class="meta meta-end">Last verified: October 2026. Limits and deprecations were checked against sitemaps.org and Google Search Central on 2026-10-25; other search engines may still support the ping endpoint, but Google does not.</p>
+</article>
+</main>
+
+<footer class="site-footer">
+  <nav>
+    <a href="/blog">Guides</a>
+    <a href="/compare/uptimerobot">Compare</a>
+    <a href="/compare/betterstack">vs Better Stack</a>
+    <a href="/compare/pingdom">vs Pingdom</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/refund.html">Refund</a>
+    <a href="/#plans">Pricing</a>
+    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+  </nav>
+  <p>Contact: <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p>© 2026 Pingory. All rights reserved.</p>
+</footer>
+
+<script>
+(function () {
+  var tt = document.getElementById('themeToggle');
+  function sync() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+  if (tt) tt.addEventListener('click', function () {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    if (dark) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme = 'dark';
+    try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
+<script src="/analytics.js"></script>
+</body>
+</html>

@@ -14,11 +14,16 @@ Pingory monitors URLs, ports, SSL certificates, domains, DNS records and cron jo
 - [Terms of service](https://pingory.com/terms.html): Legal terms.
 
 ## Guides (AI Readability)
-- [Guide index](https://pingory.com/blog): All four guides, with reading times and a one-line summary of each.
+- [Guide index](https://pingory.com/blog): All nine pages, with reading times and a one-line summary of each.
 - [What is llms.txt](https://pingory.com/blog/what-is-llms-txt): The format field by field, where to serve it, and why a correct file can still be ignored.
 - [AI crawlers list](https://pingory.com/blog/ai-crawlers-list): The eight user-agent tokens in training and search groups, with documented robots.txt behaviour.
 - [Block AI crawlers](https://pingory.com/blog/block-ai-crawlers): robots.txt, Cloudflare, Vercel and nginx rules, plus the wildcard mistake that blocks Googlebot.
 - [AI readability vs AI visibility](https://pingory.com/ai-readability): Which questions a technical check can answer, and which are outcomes nobody can query.
+- [robots.txt guide](https://pingory.com/blog/robots-txt-guide): RFC 9309 rules, longest match, wildcards, and what 404, 403 and 500 do to a crawl.
+- [Schema validation errors](https://pingory.com/blog/schema-validation-errors): The error messages Google actually returns, what each one means, and why two validators disagree.
+- [XML sitemap guide](https://pingory.com/blog/xml-sitemap-guide): What belongs in a sitemap, the 50,000 URL and 50 MB limits, lastmod, and the retired ping endpoint.
+- [Canonical tag guide](https://pingory.com/blog/canonical-tag-guide): Hint versus directive, self-referencing canonicals, cross-domain targets and the noindex conflict.
+- [JSON-LD structured data](https://pingory.com/blog/json-ld-structured-data): @context, @type, @graph, nesting, placement, and how JSON-LD compares with microdata.
 
 ## Comparisons (independently useful, honestly states where competitors win)
 - [Pingory vs UptimeRobot](https://pingory.com/compare/uptimerobot): Detailed 2026 comparison of pricing per monitor, check types and limits. Also available in [zh](https://pingory.com/zh/compare/uptimerobot), [es](https://pingory.com/es/compare/uptimerobot), [pt](https://pingory.com/pt/compare/uptimerobot), [de](https://pingory.com/de/compare/uptimerobot), [fr](https://pingory.com/fr/compare/uptimerobot), [ja](https://pingory.com/ja/compare/uptimerobot), [ko](https://pingory.com/ko/compare/uptimerobot).

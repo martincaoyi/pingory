@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<!--
+  D47 · B2 guide #5 — /blog/json-ld-structured-data
+  Scope: the format itself — context, type, graph, nesting, placement, formats.
+  Deliberately contains no error-message catalogue; that lives at
+  /blog/schema-validation-errors.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JSON-LD vs Microdata vs RDFa: Which One Google Reads</title>
+  <meta name="description" content="JSON-LD compared with microdata and RDFa field by field: what @context, @type and @graph do, when to nest nodes, and where the script belongs." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://pingory.com/blog/json-ld-structured-data" />
+  <link rel="alternate" hreflang="en" href="https://pingory.com/blog/json-ld-structured-data" />
+  <link rel="alternate" hreflang="x-default" href="https://pingory.com/blog/json-ld-structured-data" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Pingory" />
+  <meta property="og:title" content="JSON-LD Structured Data: A Field-by-Field Guide" />
+  <meta property="og:description" content="JSON-LD compared with microdata and RDFa field by field: what @context, @type and @graph do, when to nest nodes, and where the script belongs." />
+  <meta property="og:url" content="https://pingory.com/blog/json-ld-structured-data" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Pingory — uptime and AI Readability monitoring" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="JSON-LD Structured Data: A Field-by-Field Guide" />
+  <meta name="twitter:description" content="JSON-LD compared with microdata and RDFa field by field: what @context, @type and @graph do, when to nest nodes, and where the script belongs." />
+  <meta name="twitter:image" content="https://pingory.com/icon-512.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <link rel="stylesheet" href="/blog.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": "JSON-LD vs Microdata vs RDFa: Which Format Google Reads",
+        "description": "JSON-LD compared with microdata and RDFa field by field: what @context, @type and @graph do, when to nest nodes, and where the script belongs.",
+        "datePublished": "2026-10-25",
+        "dateModified": "2026-10-25",
+        "inLanguage": "en",
+        "author": { "@type": "Person", "name": "Martin Cao", "url": "https://pingory.com/" },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pingory",
+          "url": "https://pingory.com/",
+          "logo": { "@type": "ImageObject", "url": "https://pingory.com/icon-512.png" }
+        },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": "https://pingory.com/blog/json-ld-structured-data" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://pingory.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://pingory.com/blog" },
+          { "@type": "ListItem", "position": 3, "name": "JSON-LD structured data", "item": "https://pingory.com/blog/json-ld-structured-data" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Does JSON-LD have to be in the head?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Google reads the script anywhere in the document, head or body. The head is conventional because it keeps markup out of the visible layout, but the requirement that matters is that the block is present in the server response." }
+          },
+          {
+            "@type": "Question",
+            "name": "Should I use one graph or several script blocks?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Either works. One block with an @graph array keeps a single @context and lets nodes reference each other by @id. Several blocks are easier to generate from different components, but they cannot share an @id graph as cleanly." }
+          },
+          {
+            "@type": "Question",
+            "name": "Is JSON-LD better than microdata?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Usually yes, particularly on a template-driven site. JSON-LD lives outside the markup that renders the page, so a template change does not break it and one block can describe several entities. Google documents JSON-LD as its recommended format, and both formats describe the same vocabulary." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does JSON-LD improve rankings?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Not directly. It makes a page eligible for certain search features and gives other consumers a machine-readable description. Eligibility is not display, and neither is a ranking factor you can isolate and measure." }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+  <span class="spacer"></span>
+  <button id="themeToggle" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+  <a class="btn" href="/signin.html">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+</nav>
+
+<main class="wrap">
+<article>
+  <p class="kicker">Guides · Structured data</p>
+  <h1>JSON-LD vs Microdata vs RDFa: Which Format Google Reads</h1>
+  <p class="meta">Last verified: October 2026 · About 8 minutes of reading</p>
+  <p class="lede">A JSON-LD block is small enough to paste and easy enough to get subtly wrong. This guide goes through the four keys that define a block, then the structural choices that decide whether a consumer can read the result.</p>
+
+  <h2>What JSON-LD is</h2>
+  <p class="answer">JSON-LD is a JSON script block that describes the entities on a page using the schema.org vocabulary.</p>
+  <p>It is a syntax, not a vocabulary: JSON-LD says how to write the data, schema.org says which types and properties exist. Google documents JSON-LD as its recommended format for structured data, and it is the only format that can be added without touching the HTML that renders the page.</p>
+  <pre><code>&lt;script type="application/ld+json"&gt;
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Example Ltd",
+  "url": "https://example.com/"
+}
+&lt;/script&gt;</code></pre>
+
+  <h2>@context, @type and @graph, field by field</h2>
+  <p class="answer">@context names the vocabulary, @type names the entity, @graph holds several entities, and every other key is a property.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>The four keys that determine how a block is read.</caption>
+      <thead>
+        <tr><th scope="col">Key</th><th scope="col">Value</th><th scope="col">Per block</th><th scope="col">What it does</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>@context</code></td><td><code>https://schema.org</code></td><td>1</td><td>Declares which vocabulary the property names come from</td></tr>
+        <tr><td><code>@type</code></td><td>A schema.org type such as <code>Article</code></td><td>1 per entity</td><td>States what the entity is; properties are interpreted against it</td></tr>
+        <tr><td><code>@graph</code></td><td>An array of objects</td><td>2 or more entities</td><td>Describes several entities in one block under one context</td></tr>
+        <tr><td><code>@id</code></td><td>An absolute URL, often with a fragment</td><td>1 per node</td><td>Gives an entity a stable identity so other nodes can point at it</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Only <code>@context</code> and <code>@type</code> are needed for a single simple entity. <code>@graph</code> becomes useful when a page genuinely describes more than one thing: an article, the person who wrote it, the publisher, and the breadcrumb trail. <code>@id</code> is what turns those into a graph rather than a pile of unrelated objects.</p>
+  <pre><code>{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Article",
+      "@id": "https://example.com/guide#article",
+      "headline": "A title that appears on the page",
+      "author": { "@id": "https://example.com/#author" },
+      "publisher": { "@id": "https://example.com/#org" }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://example.com/#author",
+      "name": "Martin Cao",
+      "url": "https://example.com/about"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://example.com/#org",
+      "name": "Pingory",
+      "url": "https://example.com/"
+    }
+  ]
+}</code></pre>
+  <p>The article references the author and publisher by <code>@id</code> instead of repeating them. That is the whole benefit of a graph: one definition, several references, and no chance of two copies drifting apart.</p>
+  <p>Value shapes are the other thing worth learning early. A property accepts a string, a number, an object or an array of those, depending on its definition: <code>headline</code> takes text, <code>author</code> takes a Person or Organization, and multiple authors are an array. A property that expects an object will not accept a plain name string, even though the name is the only part you cared about.</p>
+  <p>One recurring <code>@context</code> question: several script blocks on a page may each carry their own, because Google processes each block as an independent document. What you cannot do is put two <code>@context</code> keys in one object — JSON permits only one member with a given name, and the second one is silently lost.</p>
+
+  <h2>Nesting vs separate blocks</h2>
+  <p class="answer">Nest when the child has no independent identity; use a graph node when several parents need to reference it.</p>
+  <p>A nested object is the simpler choice for a value that belongs to one parent, such as an author on a single article. It keeps the block readable and survives being moved as a unit. A graph node is better when the same entity appears more than once, or when describing it separately makes the block easier to generate: an organization referenced by an article, a logo and a breadcrumb list, for example.</p>
+  <p>Several script blocks are also valid, and common when different components own different entities. The trade-off is that separate blocks cannot share an <code>@id</code> graph unless the ids are written carefully, and duplicate descriptions of the same entity are easy to introduce. Pick one approach per template and keep it consistent.</p>
+
+  <h2>Where to put the script</h2>
+  <p class="answer">Anywhere in the document works; what matters is that the block is in the server response, not injected after load.</p>
+  <p>Google reads <code>application/ld+json</code> in the head or the body. The head is conventional because it keeps structured data out of the rendered layout and easy to find in an audit. Placement matters far less than delivery: if a tag manager or client-side effect injects the block after the page loads, any consumer that does not execute JavaScript sees nothing.</p>
+  <p>That distinction is worth testing directly. View source on the live URL and search for <code>application/ld+json</code>. If the block is there, it ships. If it only exists in the inspector, it does not.</p>
+
+  <h2>JSON-LD vs microdata vs RDFa</h2>
+  <p class="answer">All three express schema.org; JSON-LD separates the data from the markup, which is why it is easier to maintain.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Same vocabulary, different mechanics.</caption>
+      <thead>
+        <tr><th scope="col">Format</th><th scope="col">Lives in</th><th scope="col">Main advantage</th><th scope="col">Main cost</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>JSON-LD</td><td>A script block</td><td>Independent of the rendered HTML; one block can describe several entities</td><td>Can drift from the visible page if generated carelessly</td></tr>
+        <tr><td>Microdata</td><td>Attributes on existing tags</td><td>The markup sits on the content it describes</td><td>Template changes can silently remove it</td></tr>
+        <tr><td>RDFa</td><td>Attributes on existing tags</td><td>Fine-grained annotation of existing markup</td><td>Verbose, and harder to audit at scale</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Mixing formats is allowed but rarely wise. Two descriptions of the same entity in different formats can disagree, and a consumer has no reason to prefer one. Pick a format per entity type and keep the source of truth in one place.</p>
+
+  <h2>What Google actually consumes</h2>
+  <p class="answer">Google reads a subset of schema.org and uses it for specific features; a valid type with no feature attached produces no visible result.</p>
+  <p>Article markup, for example, has no required properties in Google's current documentation: headline, image, datePublished, dateModified and author are recommended, and they influence how a result can be presented rather than whether it ranks. Breadcrumb markup has a documented structure and can change how a URL is displayed. Product, Event and Recipe markup each have their own requirements, and those requirements are Google's, not schema.org's.</p>
+  <p>Two consequences follow. First, the same block can be perfectly valid and produce nothing, because Google does not build a feature for that type. Second, a feature can be withdrawn: since August 2023, FAQ rich results are shown only for well-known, authoritative government and health sites, so FAQPage markup elsewhere is read but not displayed as an expandable result.</p>
+  <p>Breadcrumbs are a useful contrast: the type has a documented shape, it appears in results as the path rather than as a separate block, and it is one of the few places where structured data changes something a searcher sees every day.</p>
+
+  <h2>How to validate JSON-LD</h2>
+  <p class="answer">Check syntax and vocabulary in one tool, then eligibility in Google's, because they answer different questions.</p>
+  <p>Run the block through the Schema Markup Validator at validator.schema.org for syntax and the full vocabulary, then the live URL through Google's Rich Results Test for feature eligibility — and keep the third check that neither tool performs: every marked-up value should be visible to a reader. When a message is unclear, the mapping from each one to its cause is in <a href="/blog/schema-validation-errors">the validation errors guide</a>. It is a separate page because the failure modes are a different problem from the format itself.</p>
+  <div class="boundary">
+    <p><strong>What valid JSON-LD cannot prove:</strong> that a rich result will appear, that rankings will move, or that an AI product will cite the page. Markup describes what is already there; it does not create demand, authority or a display decision.</p>
+  </div>
+
+  <div class="sources">
+    <h3>Sources checked</h3>
+    <ul>
+      <li>Google Search Central, structured data introduction and Article documentation — recommended properties, JSON-LD as the recommended format. Checked 2026-10-25.</li>
+      <li>schema.org — type and property definitions for Article, Person and Organization. Checked 2026-10-25.</li>
+      <li>Google Search Central blog, 2023-08-08 — FAQ rich results limited to government and health sites. Checked 2026-10-25.</li>
+    </ul>
+  </div>
+
+  <div class="related">
+    <h3>Keep reading</h3>
+    <ul>
+      <li><a href="/blog/schema-validation-errors">Schema validation errors</a> — what each validator message means and how to fix it.</li>
+      <li><a href="/blog/canonical-tag-guide">Canonical tag guide</a> — the URL your markup describes should be the one Google indexes.</li>
+      <li><a href="/ai-readability">AI readability vs AI visibility</a> — where structured data fits in a technical check, and where it stops.</li>
+    </ul>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <p class="answer">Four questions cover placement, graph structure, format choice and the effect on rankings.</p>
+  <details class="faq-item">
+    <summary>Does JSON-LD have to be in the head?</summary>
+    <p>No. Google reads the script anywhere in the document, head or body. The head is conventional because it keeps markup out of the visible layout, but the requirement that matters is that the block is present in the server response.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Should I use one graph or several script blocks?</summary>
+    <p>Either works. One block with an @graph array keeps a single @context and lets nodes reference each other by @id. Several blocks are easier to generate from different components, but they cannot share an @id graph as cleanly.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Is JSON-LD better than microdata?</summary>
+    <p>Usually yes, particularly on a template-driven site. JSON-LD lives outside the markup that renders the page, so a template change does not break it and one block can describe several entities. Google documents JSON-LD as its recommended format, and both formats describe the same vocabulary.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Does JSON-LD improve rankings?</summary>
+    <p>Not directly. It makes a page eligible for certain search features and gives other consumers a machine-readable description. Eligibility is not display, and neither is a ranking factor you can isolate and measure.</p>
+  </details>
+
+  <div class="cta">
+    <h2>Check any site free</h2>
+    <p class="answer">See whether every JSON-LD block parses, carries @context and declares at least one @type.</p>
+    <div class="cta-actions">
+      <a class="cta-main" href="/llms-txt-checker">Check any site free</a>
+      <a class="cta-alt" href="/#plans">See plans</a>
+    </div>
+  </div>
+
+  <p class="meta meta-end">Last verified: October 2026. Format and vocabulary details were checked against Google Search Central and schema.org on 2026-10-25; feature eligibility is Google's decision and changes without notice.</p>
+</article>
+</main>
+
+<footer class="site-footer">
+  <nav>
+    <a href="/blog">Guides</a>
+    <a href="/compare/uptimerobot">Compare</a>
+    <a href="/compare/betterstack">vs Better Stack</a>
+    <a href="/compare/pingdom">vs Pingdom</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/refund.html">Refund</a>
+    <a href="/#plans">Pricing</a>
+    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+  </nav>
+  <p>Contact: <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p>© 2026 Pingory. All rights reserved.</p>
+</footer>
+
+<script>
+(function () {
+  var tt = document.getElementById('themeToggle');
+  function sync() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+  if (tt) tt.addEventListener('click', function () {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    if (dark) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme = 'dark';
+    try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
+<script src="/analytics.js"></script>
+</body>
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<!--
+  D47 · B2 guide #2 — /blog/schema-validation-errors
+  Error-first page. Every quoted message comes from Google's published
+  "Rich result error messages" list or the "Unparsable structured data" report
+  types; no invented strings. The basics of JSON-LD live at
+  /blog/json-ld-structured-data and are deliberately not repeated here.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Schema Validation Errors: What Each Message Means</title>
+  <meta name="description" content="Read JSON-LD validator output without guessing: what Missing field, Invalid URL and ISO 8601 errors mean, and why two validators disagree about one page." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://pingory.com/blog/schema-validation-errors" />
+  <link rel="alternate" hreflang="en" href="https://pingory.com/blog/schema-validation-errors" />
+  <link rel="alternate" hreflang="x-default" href="https://pingory.com/blog/schema-validation-errors" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Pingory" />
+  <meta property="og:title" content="Schema Markup Validator Errors and How to Fix Them" />
+  <meta property="og:description" content="Read JSON-LD validator output without guessing: what Missing field, Invalid URL and ISO 8601 errors mean, and why two validators disagree about one page." />
+  <meta property="og:url" content="https://pingory.com/blog/schema-validation-errors" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Pingory — uptime and AI Readability monitoring" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Schema Markup Validator Errors and How to Fix Them" />
+  <meta name="twitter:description" content="Read JSON-LD validator output without guessing: what Missing field, Invalid URL and ISO 8601 errors mean, and why two validators disagree about one page." />
+  <meta name="twitter:image" content="https://pingory.com/icon-512.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <link rel="stylesheet" href="/blog.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": "Schema Validation Errors: What Each Validator Message Means",
+        "description": "Read JSON-LD validator output without guessing: what Missing field, Invalid URL and ISO 8601 errors mean, and why two validators disagree about one page.",
+        "datePublished": "2026-10-25",
+        "dateModified": "2026-10-25",
+        "inLanguage": "en",
+        "author": { "@type": "Person", "name": "Martin Cao", "url": "https://pingory.com/" },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pingory",
+          "url": "https://pingory.com/",
+          "logo": { "@type": "ImageObject", "url": "https://pingory.com/icon-512.png" }
+        },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": "https://pingory.com/blog/schema-validation-errors" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://pingory.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://pingory.com/blog" },
+          { "@type": "ListItem", "position": 3, "name": "Schema validation errors", "item": "https://pingory.com/blog/schema-validation-errors" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why does my structured data pass one validator and fail the other?",
+            "acceptedAnswer": { "@type": "Answer", "text": "The two tools answer different questions. The Schema Markup Validator checks syntax and vocabulary against all of schema.org. Google's Rich Results Test checks only the types Google turns into search features, plus Google's extra requirements. A page can be valid and still be ineligible." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does a missing recommended field block a rich result?",
+            "acceptedAnswer": { "@type": "Answer", "text": "A missing recommended field usually does not block a rich result. Google separates errors from warnings, and the missing field message does not tell you which one you have. Read the feature documentation for that type: required properties block eligibility, recommended ones usually do not." }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I leave a JSON-LD error unfixed if the page still works?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes for the visitor, no for the feature. Broken markup does not change how the page renders. It removes eligibility for the search feature that markup was meant to support, and a parse error hides every other problem behind it." }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does the validator show no items for valid markup?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Because the type you used has no Google rich result. Organization, Person and WebPage are valid schema.org types with no search feature attached. No items detected is an absence of eligibility, not an error." }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+  <span class="spacer"></span>
+  <button id="themeToggle" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+  <a class="btn" href="/signin.html">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+</nav>
+
+<main class="wrap">
+<article>
+  <p class="kicker">Guides · Structured data</p>
+  <h1>Schema Validation Errors: What Each Validator Message Means</h1>
+  <p class="meta">Last verified: October 2026 · About 9 minutes of reading</p>
+  <p class="lede">A validator gives you one sentence and a line number. This guide maps the sentences you will actually see to the mistake behind them, starting with the ones that are not really errors at all.</p>
+
+  <h2>Why valid JSON can still fail validation</h2>
+  <p class="answer">Three different checks share one output box: JSON syntax, schema.org vocabulary, and Google's requirements for a specific feature.</p>
+  <p>Only the first is about whether your code parses. A block can be perfect JSON and still be rejected because a property does not exist, a value has the wrong type, or a field that Google requires for that feature is absent. The message rarely says which layer you are in, so the first job is to identify it.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>What each layer checks, and what a failure there means.</caption>
+      <thead>
+        <tr><th scope="col">Layer</th><th scope="col">Question it answers</th><th scope="col">Typical result</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>JSON syntax</td><td>Does the script parse at all?</td><td>A parsing error; nothing else is evaluated</td></tr>
+        <tr><td>schema.org vocabulary</td><td>Do these types and properties exist, with the right value types?</td><td>Unrecognized field, invalid value type</td></tr>
+        <tr><td>Google feature rules</td><td>Does this page meet the requirements for one search feature?</td><td>Missing field, invalid date format, not eligible</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>A syntax failure is the expensive one. Google's Unparsable structured data report warns that fixing a parse error can reveal further errors that were hidden while the block could not be read, so one clean test is not always the end of the job.</p>
+
+  <h2>The error messages you will actually see</h2>
+  <p class="answer">Nine messages cover the common cases; each names the property at fault, and the fix is usually local.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Messages as published by Google, with the usual cause and fix.</caption>
+      <thead>
+        <tr><th scope="col">Message</th><th scope="col">Why it appears</th><th scope="col">How to fix it</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Missing field "name" (in "author")</code></td><td>The property is absent or an empty string</td><td>Add the value from the visible page; do not invent one</td></tr>
+        <tr><td><code>Invalid object type for field "offers"</code></td><td>The property holds the wrong object type</td><td>Use the type the feature documentation names</td></tr>
+        <tr><td><code>Unrecognized field "openingHour"</code></td><td>A misspelled or invented property</td><td>Correct the spelling; check the term on schema.org</td></tr>
+        <tr><td><code>Invalid URL in field "url"</code></td><td>A relative path or malformed URL</td><td>Use an absolute URL with scheme and host</td></tr>
+        <tr><td><code>Date/time not in ISO 8601 format in field "datePublished"</code></td><td>A human date such as October 25, 2026</td><td>Write 2026-10-25, or a full datetime with an offset</td></tr>
+        <tr><td><code>Invalid value type for field "price"</code></td><td>A number sent as text with a currency symbol</td><td>Send the number only and set the currency separately</td></tr>
+        <tr><td><code>Type object must be nested inside a type object</code></td><td>An object was supplied where a plain string belongs, or the reverse</td><td>Check whether the property expects a Text, URL or object</td></tr>
+        <tr><td><code>Duplicate field "headline"</code></td><td>The same property appears twice in one object</td><td>Keep one value</td></tr>
+        <tr><td><code>Invalid or unsupported @context value</code></td><td>A misspelled or unsupported context</td><td>Use https://schema.org on the top-level object</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Three parse messages are worth memorising: <code>Parsing error: Missing ',' or '}'</code>, <code>Parsing error: Missing '}' or object member name</code>, and <code>Invalid JSON document</code>. In practice they mean a trailing comma, an unescaped quotation mark inside a string, or two objects placed side by side without an array or an <code>@graph</code> wrapper. Smart quotes pasted from a document editor produce the same family of errors and are almost invisible in a code editor.</p>
+
+  <h2>The two validators disagree — here is why</h2>
+  <p class="answer">The Schema Markup Validator checks the whole vocabulary; Google's Rich Results Test checks only features Google may display.</p>
+  <p>They are not two opinions about one question. The Schema Markup Validator at validator.schema.org confirms that the markup is well formed and uses real schema.org terms, and it has no view on whether Google will do anything with it. The Rich Results Test at search.google.com/test/rich-results checks eligibility for a specific Google feature, applies Google's own extra requirements, and renders JavaScript before reading the page. It also only knows the types Google supports.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Same page, two tools, opposite-looking results.</caption>
+      <thead>
+        <tr><th scope="col">Situation</th><th scope="col">Schema Markup Validator</th><th scope="col">Rich Results Test</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Organization</code> markup, correct</td><td>Valid</td><td>No items detected</td></tr>
+        <tr><td><code>Article</code> without <code>image</code></td><td>Valid</td><td>Warning or ineligible for some features</td></tr>
+        <tr><td>Trailing comma in the block</td><td>Parsing error</td><td>Parsing error</td></tr>
+        <tr><td>Custom type Google does not use</td><td>Valid</td><td>No items detected</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>So "no items detected" is not a failure. It means the type on the page has no Google feature attached. The reverse also happens: a page can be ineligible in the Rich Results Test while the validator reports nothing at all, because the missing piece is a Google requirement rather than a schema.org rule.</p>
+
+  <h2>Missing required properties</h2>
+  <p class="answer">Required is defined per feature by Google, not by schema.org, so the same property can be optional on one type and mandatory on another.</p>
+  <p>Google's message names the property and, since March 2022, its parent: <code>Missing field "name" (in "author")</code> tells you the author object exists but has no name. That context matters because a bare <code>Missing field "name"</code> could point at the page, the author or the publisher. An empty string counts as missing, which is why a template that renders <code>"name": ""</code> fails exactly like one that omits the key.</p>
+  <p>The fix is not always "add the field". If the property describes something the page does not show, the honest fix is to remove the object or change the type. Marking up a value that a reader cannot see is a guidelines problem, not a formatting one.</p>
+
+  <h2>Date, URL and value formatting</h2>
+  <p class="answer">Dates must be ISO 8601, URLs absolute, and numbers free of symbols; each of the three has its own message and its own fix.</p>
+  <pre><code>{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "A title that also appears on the page",
+  "datePublished": "2026-10-25",
+  "dateModified": "2026-10-25T09:30:00+00:00",
+  "author": { "@type": "Person", "name": "Martin Cao", "url": "https://example.com/about" },
+  "mainEntityOfPage": { "@type": "WebPage", "@id": "https://example.com/guide" },
+  "image": "https://example.com/cover.png"
+}</code></pre>
+  <p>Three details in that block are deliberate. <code>datePublished</code> uses a date without a time, which ISO 8601 permits; <code>dateModified</code> keeps a full timestamp with an offset, so no timezone is assumed. <code>author</code> is an object with a name and a URL, not a string. And <code>mainEntityOfPage</code> uses <code>@id</code> to point at the page rather than repeating its URL as a bare string.</p>
+  <p>One more: if a time is present without an offset, Google may fall back to the timezone its crawler uses, which is not yours. Add <code>Z</code> or an offset wherever the time matters.</p>
+
+  <h2>@type typos and @graph nesting mistakes</h2>
+  <p class="answer">A mistyped @type produces no error at all; it simply stops matching the feature you were targeting.</p>
+  <p>Google's error list has no entry for a misspelled type, because nothing failed to parse. The Rich Results Test reports no detected items, and the validator marks the term as undefined. If you expected a feature and see nothing, check the spelling of every <code>@type</code> before you change anything else.</p>
+  <p>The structural mistake is more common. Two top-level objects in one script tag are not valid JSON:</p>
+  <pre><code>// Invalid: two objects, no wrapper
+{ "@context": "https://schema.org", "@type": "Article", "headline": "A" }
+{ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [] }</code></pre>
+  <p>Use one object with an <code>@graph</code> array, or two separate script tags. Both are valid; the graph form keeps one <code>@context</code> and lets nodes reference each other by <code>@id</code>.</p>
+  <pre><code>{
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "Article", "@id": "https://example.com/guide#article", "headline": "A" },
+    { "@type": "BreadcrumbList", "@id": "https://example.com/guide#crumbs", "itemListElement": [] }
+  ]
+}</code></pre>
+
+  <h2>How to use a JSON-LD tester in 30 seconds</h2>
+  <p class="answer">Look at the raw source first, then run the same markup through both tools and read which layer failed.</p>
+  <ol>
+    <li><strong>Confirm the block ships in the HTML.</strong> View source and search for <code>application/ld+json</code>. If it only appears in the inspector, a script injected it and a non-rendering consumer will never see it.</li>
+    <li><strong>Paste the block into the Schema Markup Validator.</strong> Fix syntax and vocabulary there first, before reading anything about eligibility.</li>
+    <li><strong>Run the live URL through the Rich Results Test.</strong> This is the only check that reflects Google's requirements and JavaScript rendering.</li>
+    <li><strong>Compare with Search Console after deploy.</strong> The enhancement reports show the same messages at site scale, and a template error will appear on every page built from it.</li>
+  </ol>
+  <div class="boundary">
+    <p><strong>What a clean report cannot prove:</strong> it does not mean a rich result will appear. Eligibility is a threshold, not a promise, and Google decides per query. It also cannot tell you that the markup matches what a reader sees, which is the one rule no validator checks.</p>
+  </div>
+  <p>One current limit is worth knowing before you chase a warning. Since August 2023, Google shows FAQ rich results only for well-known, authoritative government and health sites. FAQPage markup on any other site remains valid but no longer produces the expandable result, and no validator will tell you that. If you want the basics of the format rather than the error list, they are in <a href="/blog/json-ld-structured-data">the JSON-LD guide</a>.</p>
+
+  <div class="sources">
+    <h3>Sources checked</h3>
+    <ul>
+      <li>Google Search Central, "Rich result error messages and solutions" — every quoted message in the table. Checked 2026-10-25.</li>
+      <li>Google Search Central, "Unparsable structured data report" — parse error types. Checked 2026-10-25.</li>
+      <li>Google Search Central blog, 2022-03-28 (message context) and 2023-08-08 (FAQ rich results). Checked 2026-10-25.</li>
+    </ul>
+  </div>
+
+  <div class="related">
+    <h3>Keep reading</h3>
+    <ul>
+      <li><a href="/blog/json-ld-structured-data">JSON-LD structured data</a> — the fields, the graph and where the script goes.</li>
+      <li><a href="/blog/canonical-tag-guide">Canonical tag guide</a> — the other tag that decides which URL a validator result belongs to.</li>
+      <li><a href="/llms-txt-checker">The free checker</a> — parses every JSON-LD block for context and type, alongside seven other checks.</li>
+    </ul>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <p class="answer">Four questions cover the cases where the report looks wrong but the markup is fine.</p>
+  <details class="faq-item">
+    <summary>Why does my structured data pass one validator and fail the other?</summary>
+    <p>The two tools answer different questions. The Schema Markup Validator checks syntax and vocabulary against all of schema.org. Google's Rich Results Test checks only the types Google turns into search features, plus Google's extra requirements. A page can be valid and still be ineligible.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Does a missing recommended field block a rich result?</summary>
+    <p>A missing recommended field usually does not block a rich result. Google separates errors from warnings, and the missing field message does not tell you which one you have. Read the feature documentation for that type: required properties block eligibility, recommended ones usually do not.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Can I leave a JSON-LD error unfixed if the page still works?</summary>
+    <p>Yes for the visitor, no for the feature. Broken markup does not change how the page renders. It removes eligibility for the search feature that markup was meant to support, and a parse error hides every other problem behind it.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Why does the validator show no items for valid markup?</summary>
+    <p>Because the type you used has no Google rich result. Organization, Person and WebPage are valid schema.org types with no search feature attached. No items detected is an absence of eligibility, not an error.</p>
+  </details>
+
+  <div class="cta">
+    <h2>Check any site free</h2>
+    <p class="answer">See whether every JSON-LD block on a page parses, carries @context and declares a type, in one pass.</p>
+    <div class="cta-actions">
+      <a class="cta-main" href="/llms-txt-checker">Check any site free</a>
+      <a class="cta-alt" href="/#plans">See plans</a>
+    </div>
+  </div>
+
+  <p class="meta meta-end">Last verified: October 2026. Messages were checked against Google's published error list on 2026-10-25; Google changes feature requirements without notice, so confirm the type you use in its own documentation.</p>
+</article>
+</main>
+
+<footer class="site-footer">
+  <nav>
+    <a href="/blog">Guides</a>
+    <a href="/compare/uptimerobot">Compare</a>
+    <a href="/compare/betterstack">vs Better Stack</a>
+    <a href="/compare/pingdom">vs Pingdom</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/refund.html">Refund</a>
+    <a href="/#plans">Pricing</a>
+    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+  </nav>
+  <p>Contact: <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p>© 2026 Pingory. All rights reserved.</p>
+</footer>
+
+<script>
+(function () {
+  var tt = document.getElementById('themeToggle');
+  function sync() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+  if (tt) tt.addEventListener('click', function () {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    if (dark) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme = 'dark';
+    try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
+<script src="/analytics.js"></script>
+</body>
+</html>

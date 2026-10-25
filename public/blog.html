@@ -9,7 +9,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pingory Guides: AI Readability, Crawlers and llms.txt</title>
-  <meta name="description" content="Four technical guides on AI readability: llms.txt, the AI crawler list, safe blocking rules, and what a readability score can actually measure." />
+  <meta name="description" content="Nine technical guides on AI readability and crawl mechanics: llms.txt, AI crawlers, robots.txt, schema errors, sitemaps, canonicals and JSON-LD." />
   <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
   <link rel="canonical" href="https://pingory.com/blog" />
   <link rel="alternate" hreflang="en" href="https://pingory.com/blog" />
@@ -17,7 +17,7 @@
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Pingory" />
   <meta property="og:title" content="Pingory Guides: AI Readability, Crawlers and llms.txt" />
-  <meta property="og:description" content="Four technical guides on AI readability: llms.txt, the AI crawler list, safe blocking rules, and what a readability score can actually measure." />
+  <meta property="og:description" content="Nine technical guides on AI readability and crawl mechanics: llms.txt, AI crawlers, robots.txt, schema errors, sitemaps, canonicals and JSON-LD." />
   <meta property="og:url" content="https://pingory.com/blog" />
   <meta property="og:image" content="https://pingory.com/icon-512.png" />
   <meta property="og:image:width" content="512" />
@@ -25,7 +25,7 @@
   <meta property="og:image:alt" content="Pingory — uptime and AI Readability monitoring" />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Pingory Guides: AI Readability, Crawlers and llms.txt" />
-  <meta name="twitter:description" content="Four technical guides on AI readability: llms.txt, the AI crawler list, safe blocking rules, and what a readability score can actually measure." />
+  <meta name="twitter:description" content="Nine technical guides on AI readability and crawl mechanics: llms.txt, AI crawlers, robots.txt, schema errors, sitemaps, canonicals and JSON-LD." />
   <meta name="twitter:image" content="https://pingory.com/icon-512.png" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
@@ -42,9 +42,9 @@
         "@type": "WebPage",
         "name": "Pingory Guides: AI Readability and Crawler Policy",
         "url": "https://pingory.com/blog",
-        "description": "Four technical guides on AI readability: llms.txt, the AI crawler list, safe blocking rules, and what a readability score can actually measure.",
+        "description": "Nine technical guides on AI readability and crawl mechanics: llms.txt, AI crawlers, robots.txt, schema errors, sitemaps, canonicals and JSON-LD.",
         "datePublished": "2026-10-24",
-        "dateModified": "2026-10-24",
+        "dateModified": "2026-10-25",
         "inLanguage": "en",
         "isPartOf": { "@type": "WebSite", "name": "Pingory", "url": "https://pingory.com/" },
         "publisher": {
@@ -68,7 +68,12 @@
           { "@type": "ListItem", "position": 1, "url": "https://pingory.com/blog/what-is-llms-txt" },
           { "@type": "ListItem", "position": 2, "url": "https://pingory.com/blog/ai-crawlers-list" },
           { "@type": "ListItem", "position": 3, "url": "https://pingory.com/blog/block-ai-crawlers" },
-          { "@type": "ListItem", "position": 4, "url": "https://pingory.com/ai-readability" }
+          { "@type": "ListItem", "position": 4, "url": "https://pingory.com/ai-readability" },
+          { "@type": "ListItem", "position": 5, "url": "https://pingory.com/blog/robots-txt-guide" },
+          { "@type": "ListItem", "position": 6, "url": "https://pingory.com/blog/schema-validation-errors" },
+          { "@type": "ListItem", "position": 7, "url": "https://pingory.com/blog/xml-sitemap-guide" },
+          { "@type": "ListItem", "position": 8, "url": "https://pingory.com/blog/canonical-tag-guide" },
+          { "@type": "ListItem", "position": 9, "url": "https://pingory.com/blog/json-ld-structured-data" }
         ]
       }
     ]
@@ -88,41 +93,61 @@
 <article>
   <p class="kicker">Guides</p>
   <h1>Pingory Guides: AI Readability and Crawler Policy</h1>
-  <p class="meta">Last verified: October 2026 · Four guides, about 33 minutes in total</p>
-  <p class="lede">These guides are written for people who own the server: developers, site owners and technical leads who need to know what a crawler receives, not what a vendor would like them to believe. Every page states what it verified, when, and what it cannot prove.</p>
+  <p class="meta">Last verified: October 2026 · Nine pages, about 77 minutes in total</p>
+  <p class="lede">These guides are for people who own the server: developers, site owners and technical leads who need to know what a crawler receives, not what a vendor claims. Every page states what it verified and what it cannot prove.</p>
 
-  <h2>Three guides and one positioning page</h2>
+  <h2>Nine pages, four starting points</h2>
   <p class="answer">Start with the file most sites are missing, then the crawler list, then the blocking rules, then the measurement boundary.</p>
   <div class="tablewrap">
     <table>
-      <caption>Reading order and time. All four were reviewed on the same date.</caption>
+      <caption>Reading order for the AI-readability track. The five mechanic guides follow.</caption>
       <thead>
         <tr><th scope="col">Guide</th><th scope="col">Question it answers</th><th scope="col">Minutes</th></tr>
       </thead>
       <tbody>
-        <tr><td>llms.txt</td><td>What the file is, how to write one, why it can be ignored</td><td>7</td></tr>
-        <tr><td>AI crawlers list</td><td>Which eight user agents exist and what each one fetches</td><td>10</td></tr>
-        <tr><td>Block AI crawlers</td><td>Which rule to deploy, and which one breaks Googlebot</td><td>8</td></tr>
-        <tr><td>AI readability</td><td>What the 12 checks measure, and what they cannot</td><td>6</td></tr>
+        <tr><td>llms.txt</td><td>What the file is and why it can be ignored</td><td>9</td></tr>
+        <tr><td>AI crawlers list</td><td>Which eight user agents exist</td><td>10</td></tr>
+        <tr><td>Block AI crawlers</td><td>Which rule breaks Googlebot</td><td>8</td></tr>
+        <tr><td>AI readability</td><td>What the 12 checks measure</td><td>6</td></tr>
       </tbody>
     </table>
   </div>
   <div class="cards">
     <a class="card" href="/blog/what-is-llms-txt">
       <h3>llms.txt: What It Is and How to Write One</h3>
-      <p>The full format with a copyable example, where to serve it, and why a valid file can still be ignored. 9 minutes.</p>
+      <p>The full format with a copyable example, and why a valid file can still be ignored. 9 minutes.</p>
     </a>
     <a class="card" href="/blog/ai-crawlers-list">
       <h3>AI Crawlers in 2026: The Full List</h3>
-      <p>Eight user-agent tokens, their owners and what each one fetches, including why Google-Extended is not a crawler. 10 minutes.</p>
+      <p>Eight user-agent tokens, their owners and what each one fetches. 10 minutes.</p>
     </a>
     <a class="card" href="/blog/block-ai-crawlers">
       <h3>How to Block AI Crawlers Without Breaking Google</h3>
-      <p>Copyable robots.txt, Cloudflare, Vercel and nginx rules, plus the wildcard edit that takes a site out of Search. 8 minutes.</p>
+      <p>Copyable robots.txt, Cloudflare, Vercel and nginx rules. 8 minutes.</p>
     </a>
     <a class="card" href="/ai-readability">
       <h3>AI Readability vs AI Visibility</h3>
-      <p>The 12 checks behind the score, what each one verifies, and the questions no tool can answer. 6 minutes.</p>
+      <p>The 12 checks behind the score, and the questions no tool can answer. 6 minutes.</p>
+    </a>
+    <a class="card" href="/blog/robots-txt-guide">
+      <h3>robots.txt: The Rules Crawlers Actually Parse</h3>
+      <p>RFC 9309 matching, wildcards, and why a 500 stops a crawl. 10 minutes.</p>
+    </a>
+    <a class="card" href="/blog/schema-validation-errors">
+      <h3>JSON-LD Tester Errors: What Each Message Means</h3>
+      <p>The real validator messages, mapped to a cause and a fix. 9 minutes.</p>
+    </a>
+    <a class="card" href="/blog/xml-sitemap-guide">
+      <h3>XML Sitemap: What Belongs In It</h3>
+      <p>The 50,000 URL limit, honest lastmod, and the retired ping endpoint. 9 minutes.</p>
+    </a>
+    <a class="card" href="/blog/canonical-tag-guide">
+      <h3>Canonical Tag: A Hint Google Can Overrule</h3>
+      <p>Self-referencing tags, cross-domain targets and the noindex conflict. 8 minutes.</p>
+    </a>
+    <a class="card" href="/blog/json-ld-structured-data">
+      <h3>JSON-LD Structured Data: Fields and Nesting</h3>
+      <p>@context, @type and @graph, plus placement and format choice. 8 minutes.</p>
     </a>
   </div>
 
@@ -130,15 +155,15 @@
   <p class="answer">The free checker runs all 12 checks against any public domain in about ten seconds.</p>
   <a class="card" href="/llms-txt-checker">
     <h3>llms.txt Checker</h3>
-    <p>Fetches llms.txt, robots.txt, sitemap.xml and the homepage exactly as served, reports access for eight AI user agents, and never impersonates one. No account required.</p>
+    <p>Fetches llms.txt, robots.txt, sitemap.xml and the homepage, reports access for eight AI user agents, and never impersonates one.</p>
   </a>
 
   <h2>How these guides are written</h2>
   <p class="answer">Claims here are dated and tied to a named source; where a check stops, the page says so.</p>
   <ul>
-    <li><strong>No simulated crawlers.</strong> No page here sends a forged <code>GPTBot</code> user agent and calls it a test, because real verification happens by source IP.</li>
-    <li><strong>Dates and sources.</strong> Each guide carries a verification date and names the specification or vendor document behind a claim.</li>
-    <li><strong>Stated limits.</strong> Where a check stops, the page says so. A readability score is a technical snapshot, not a forecast of citations or traffic.</li>
+    <li><strong>No simulated crawlers.</strong> No page here sends a forged <code>GPTBot</code> user agent and calls it a test; real verification happens by source IP.</li>
+    <li><strong>Dates and sources.</strong> Each guide carries a verification date and names the specification behind a claim.</li>
+    <li><strong>Stated limits.</strong> Where a check stops, the page says so.</li>
   </ul>
   <div class="boundary">
     <p><strong>What none of these guides can tell you:</strong> whether an AI product will mention, cite or recommend your site. That outcome depends on the model, the question and the moment, and no file on your server records it.</p>
@@ -153,7 +178,7 @@
     </div>
   </div>
 
-  <p class="meta meta-end">Last verified: October 2026. All four guides were reviewed on 2026-10-24.</p>
+  <p class="meta meta-end">Last verified: October 2026. All nine pages were reviewed on 2026-10-25.</p>
 </article>
 </main>
 

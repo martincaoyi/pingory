@@ -780,7 +780,7 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 | GET | `/vs/pingdom` | **301** → `/compare/pingdom` |
 | GET | `/compare-pingdom.html` | **301** → `/compare/pingdom` |
 
-▸ **robots.txt / sitemap.xml**（2026-09-15 新增，`public/` 静态直出）：robots 禁 `/admin.html`、`/api/`、`/signin.html` 并声明 sitemap；sitemap 列出首页 + 3 个对比页（三页各含 7 语变体，2026-10-24 起共 31 URL，新增免费检查器、指南索引、3 篇指南与定位页）。
+▸ **robots.txt / sitemap.xml**（2026-09-15 新增，`public/` 静态直出）：robots 禁 `/admin.html`、`/api/`、`/signin.html` 并声明 sitemap；sitemap 列出首页 + 3 个对比页（三页各含 7 语变体，2026-10-25 起共 36 URL，新增免费检查器、指南索引、8 篇指南与定位页）。
 
 ▸ **对比页多语回归验证**：`node tools/verify-cmp-i18n.cjs` —— 渲染占位泄漏 / html lang / canonical / preload / JSON-LD、静态英文 vs en 字典漂移对账、8 语键集一致、sitemap 变体齐全，四项全检。
 
@@ -805,13 +805,18 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 | GET | `/blog/what-is-llms-txt` | 指南（`public/blog/what-is-llms-txt.html`） |
 | GET | `/blog/ai-crawlers-list` | 指南（`public/blog/ai-crawlers-list.html`） |
 | GET | `/blog/block-ai-crawlers` | 指南（`public/blog/block-ai-crawlers.html`） |
-| GET | `/blog/<slug>/`、`/blog/<slug>.html` | **301** → `/blog/<slug>`（仅上述三条白名单） |
+| GET | `/blog/robots-txt-guide` | 指南（B2，`public/blog/robots-txt-guide.html`） |
+| GET | `/blog/schema-validation-errors` | 指南（B2，`public/blog/schema-validation-errors.html`） |
+| GET | `/blog/xml-sitemap-guide` | 指南（B2，`public/blog/xml-sitemap-guide.html`） |
+| GET | `/blog/canonical-tag-guide` | 指南（B2，`public/blog/canonical-tag-guide.html`） |
+| GET | `/blog/json-ld-structured-data` | 指南（B2，`public/blog/json-ld-structured-data.html`） |
+| GET | `/blog/<slug>/`、`/blog/<slug>.html` | **301** → `/blog/<slug>`（仅上述八条白名单） |
 | GET | `/ai-readability` | 定位页（`public/ai-readability.html`） |
 | GET | `/ai-readability/`、`/ai-readability.html` | **301** → `/ai-readability` |
 
 ▸ **白名单映射**：`src/cf-worker/pages.js` 的 `BLOG_PAGES` 与 `server.js` 同名常量逐条对应，不用动态 `:slug` 读任意文件；Worker 侧未匹配的 `/blog/*` 显式 `c.notFound()`（404），自托管侧落到 `express.static` 的 404，两条路径都不会把未知 slug 兜成 200。
 ▸ **`run_worker_first`**：`wrangler.jsonc` 增加 `/blog`、`/blog/*`、`/ai-readability`、`/ai-readability.html`，否则静态层会抢先处理 `/blog.html` 的别名请求。
-▸ **回归**：`node tools/test-blog-pages.mjs`（本地静态 323 条）与 `node tools/test-blog-pages.mjs --url https://pingory.com`（部署后线上断言，含 301、404 与内容页响应头）。
+▸ **回归**：`node tools/test-blog-pages.mjs`（本地静态 643 条）与 `node tools/test-blog-pages.mjs --url https://pingory.com`（部署后线上断言，含 301、404 与内容页响应头）。
 
 ---
 

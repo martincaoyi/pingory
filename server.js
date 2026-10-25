@@ -369,6 +369,12 @@ const BLOG_PAGES = {
   '/blog/what-is-llms-txt': 'blog/what-is-llms-txt.html',
   '/blog/ai-crawlers-list': 'blog/ai-crawlers-list.html',
   '/blog/block-ai-crawlers': 'blog/block-ai-crawlers.html',
+  // B2（D47）
+  '/blog/robots-txt-guide': 'blog/robots-txt-guide.html',
+  '/blog/schema-validation-errors': 'blog/schema-validation-errors.html',
+  '/blog/xml-sitemap-guide': 'blog/xml-sitemap-guide.html',
+  '/blog/canonical-tag-guide': 'blog/canonical-tag-guide.html',
+  '/blog/json-ld-structured-data': 'blog/json-ld-structured-data.html',
 };
 app.get('/blog.html', (_req, res) => res.redirect(301, '/blog'));
 app.get('/blog', (req, res) => (req.path.endsWith('/')

@@ -22,11 +22,17 @@ const CMP_PAGES = {
   betterstack: { path: '/compare/betterstack', template: '/compare-betterstack.html' },
   pingdom:     { path: '/compare/pingdom',     template: '/compare-pingdom.html' },
 };
-// B1 内容集群（D45）：规范路径 → public/ 下的静态文件。显式白名单。
+// B1/B2 内容集群（D45 / D47）：规范路径 → public/ 下的静态文件。显式白名单。
 const BLOG_PAGES = {
-  '/blog/what-is-llms-txt':   '/blog/what-is-llms-txt.html',
-  '/blog/ai-crawlers-list':   '/blog/ai-crawlers-list.html',
-  '/blog/block-ai-crawlers':  '/blog/block-ai-crawlers.html',
+  '/blog/what-is-llms-txt':          '/blog/what-is-llms-txt.html',
+  '/blog/ai-crawlers-list':          '/blog/ai-crawlers-list.html',
+  '/blog/block-ai-crawlers':         '/blog/block-ai-crawlers.html',
+  // B2（D47）：故障意图五篇。仍走白名单，新增页面必须在这里登记。
+  '/blog/robots-txt-guide':          '/blog/robots-txt-guide.html',
+  '/blog/schema-validation-errors':  '/blog/schema-validation-errors.html',
+  '/blog/xml-sitemap-guide':         '/blog/xml-sitemap-guide.html',
+  '/blog/canonical-tag-guide':       '/blog/canonical-tag-guide.html',
+  '/blog/json-ld-structured-data':   '/blog/json-ld-structured-data.html',
 };
 // 只预载本页用到的键，避免整包拖慢首屏（与 server.js 同款正则）
 const CMP_I18N_KEY = /^(cmp\.|cmpbs\.|cmppd\.|nav\.|footer\.|landing\.ctaFree$)/;

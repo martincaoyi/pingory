@@ -159,13 +159,12 @@ Allow: /
 User-agent: *
 Disallow: /admin/
 Disallow: /api/</code></pre>
-  <p>Four details that decide whether this actually works:</p>
+  <p>Two AI-specific details decide whether this actually works:</p>
   <ul>
-    <li><strong>Group semantics.</strong> A blank line ends a group. If you forget it, the next <code>User-agent</code> line is treated as another name for the same group, and your rules leak across agents.</li>
-    <li><strong>Longest match wins.</strong> <code>Allow: /blog/</code> beats <code>Disallow: /</code> for a bot that is otherwise blocked, which is how you keep a public section readable.</li>
-    <li><strong>The file must be 200.</strong> A robots.txt behind a login redirect, or served as HTML by an SPA fallback, is treated as missing or unparseable. Some crawlers then crawl everything.</li>
     <li><strong>Google-Extended blocks nothing.</strong> It is a usage instruction, so it belongs in the same file but does not stop a fetch. Only the other tokens have a fetcher to stop.</li>
+    <li><strong>ChatGPT-User is the one token robots.txt cannot reliably control.</strong> OpenAI documents that the request is user-initiated and robots.txt rules may not apply to it; enforce this group at the edge if blocking it matters.</li>
   </ul>
+  <p>The parsing rules underneath this block — how groups form, why the longest match wins, what happens when the file returns a 404 or a 500 — are the same for every crawler and are covered in <a href="/blog/robots-txt-guide">the robots.txt guide</a>.</p>
 
   <h2>Cloudflare</h2>
   <p class="answer">Since 15 September 2026 Cloudflare enforces three separate AI controls — search, training and agents — and its Block setting also stops Googlebot.</p>
@@ -296,6 +295,7 @@ Allow: /</code></pre>
       <li><a href="/blog/ai-crawlers-list">AI crawlers in 2026</a> — the eight tokens, their owners and what each one fetches.</li>
       <li><a href="/blog/what-is-llms-txt">What llms.txt is</a> — the reading list that sits next to your crawl rules.</li>
       <li><a href="/ai-readability">AI readability vs AI visibility</a> — which of these questions a check can answer.</li>
+      <li><a href="/blog/robots-txt-guide">robots.txt parsing rules</a></li>
     </ul>
   </div>
 

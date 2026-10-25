@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * B1 content cluster regression test (D45).
+ * B1 + B2 content cluster regression test (D45 / D47).
  *
  * Why this file exists: the five new pages carry a lot of claims that are easy to
  * break silently — a title that drifts past 60 characters, a FAQ answer that no
@@ -61,6 +61,7 @@ const PAGES = [
     faq: false,
     minH2: 3,
     words: [300, 500],
+    date: '2026-10-25',
   },
   {
     url: '/blog/what-is-llms-txt',
@@ -97,6 +98,72 @@ const PAGES = [
     faq: true,
     minH2: 6,
     words: [1400, 1800],
+  },
+  // ---- B2 (D47): fault-intent guides -------------------------------------
+  {
+    url: '/blog/robots-txt-guide',
+    file: 'public/blog/robots-txt-guide.html',
+    keyword: 'robots.txt',
+    h1: 'robots.txt: The Rules Crawlers Actually Parse',
+    ogType: 'article',
+    types: ['Article', 'BreadcrumbList', 'FAQPage'],
+    article: true,
+    faq: true,
+    minH2: 7,
+    words: [1600, 2000],
+    date: '2026-10-25',
+  },
+  {
+    url: '/blog/schema-validation-errors',
+    file: 'public/blog/schema-validation-errors.html',
+    keyword: 'schema validation errors',
+    h1: 'Schema Validation Errors: What Each Validator Message Means',
+    ogType: 'article',
+    types: ['Article', 'BreadcrumbList', 'FAQPage'],
+    article: true,
+    faq: true,
+    minH2: 6,
+    words: [1500, 1900],
+    date: '2026-10-25',
+  },
+  {
+    url: '/blog/xml-sitemap-guide',
+    file: 'public/blog/xml-sitemap-guide.html',
+    keyword: 'XML sitemap',
+    h1: "XML Sitemap: What Belongs In It, and Why Yours Isn't Indexed",
+    ogType: 'article',
+    types: ['Article', 'BreadcrumbList', 'FAQPage'],
+    article: true,
+    faq: true,
+    minH2: 8,
+    words: [1500, 1900],
+    date: '2026-10-25',
+  },
+  {
+    url: '/blog/canonical-tag-guide',
+    file: 'public/blog/canonical-tag-guide.html',
+    keyword: 'canonical tag',
+    h1: 'Canonical Tag: A Hint Google Can Overrule',
+    ogType: 'article',
+    types: ['Article', 'BreadcrumbList', 'FAQPage'],
+    article: true,
+    faq: true,
+    minH2: 7,
+    words: [1300, 1700],
+    date: '2026-10-25',
+  },
+  {
+    url: '/blog/json-ld-structured-data',
+    file: 'public/blog/json-ld-structured-data.html',
+    keyword: 'JSON-LD vs Microdata',
+    h1: 'JSON-LD vs Microdata vs RDFa: Which Format Google Reads',
+    ogType: 'article',
+    types: ['Article', 'BreadcrumbList', 'FAQPage'],
+    article: true,
+    faq: true,
+    minH2: 7,
+    words: [1400, 1800],
+    date: '2026-10-25',
   },
   {
     url: '/ai-readability',
@@ -353,8 +420,9 @@ async function checkPage(page) {
     const article = graph.nodes.find((node) => node['@type'] === 'Article');
     if (article) {
       eq(article.headline, textOf(h1s[0] || ''), page.url + ' Article.headline 与 H1 逐字一致');
-      eq(article.datePublished, '2026-10-24', page.url + ' Article.datePublished=2026-10-24');
-      eq(article.dateModified, '2026-10-24', page.url + ' Article.dateModified=2026-10-24');
+      const pageDate = page.date || '2026-10-24';
+      eq(article.datePublished, pageDate, page.url + ' Article.datePublished=' + pageDate);
+      eq(article.dateModified, pageDate, page.url + ' Article.dateModified=' + pageDate);
       ok(Boolean(article.author && article.publisher), page.url + ' Article 含 author 与 publisher');
       ok(Boolean(article.mainEntityOfPage), page.url + ' Article 含 mainEntityOfPage');
     }
@@ -402,6 +470,18 @@ function checkLinks(loaded) {
     ['/blog/ai-crawlers-list', '/blog/block-ai-crawlers'],
     ['/blog/block-ai-crawlers', '/ai-readability'],
     ['/ai-readability', '/blog/what-is-llms-txt'],
+    // B2 (D47): every B1 page links into the fault-intent cluster, and the
+    // five new pages cross-link so no orphan sits at the edge of the graph.
+    ['/blog/what-is-llms-txt', '/blog/robots-txt-guide'],
+    ['/blog/ai-crawlers-list', '/blog/robots-txt-guide'],
+    ['/blog/block-ai-crawlers', '/blog/robots-txt-guide'],
+    ['/ai-readability', '/blog/json-ld-structured-data'],
+    ['/blog/robots-txt-guide', '/blog/block-ai-crawlers'],
+    ['/blog/robots-txt-guide', '/blog/xml-sitemap-guide'],
+    ['/blog/schema-validation-errors', '/blog/json-ld-structured-data'],
+    ['/blog/json-ld-structured-data', '/blog/schema-validation-errors'],
+    ['/blog/xml-sitemap-guide', '/blog/canonical-tag-guide'],
+    ['/blog/canonical-tag-guide', '/blog/xml-sitemap-guide'],
   ];
   for (const [from, to] of edges) {
     ok(at(from).includes('href="' + to + '"'), from + ' → ' + to);
@@ -416,14 +496,15 @@ async function checkSitemap() {
   const sitemap = await loadText('/sitemap.xml', 'public/sitemap.xml');
   eq(sitemap.status, 200, 'sitemap.xml 可访问');
   const locs = [...sitemap.body.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-  eq(locs.length, 31, 'sitemap 恰好 31 条 <loc>');
+  eq(locs.length, 36, 'sitemap 恰好 36 条 <loc>');
   for (const page of PAGES) {
     const loc = 'https://pingory.com' + page.url;
     const index = locs.indexOf(loc);
     ok(index > -1, 'sitemap 含 ' + page.url);
     if (index > -1) {
       const chunk = sitemap.body.slice(sitemap.body.indexOf(loc), sitemap.body.indexOf(loc) + 400);
-      ok(chunk.includes('<lastmod>2026-10-24</lastmod>'), page.url + ' lastmod=2026-10-24');
+      const pageDate = page.date || '2026-10-24';
+      ok(chunk.includes('<lastmod>' + pageDate + '</lastmod>'), page.url + ' lastmod=' + pageDate);
     }
   }
   const priorities = { '/blog': '0.7', '/ai-readability': '0.9' };
@@ -467,7 +548,8 @@ async function checkRedirects() {
 async function checkContentHeaders() {
   console.log('\n── 内容页响应头 ──');
   const urls = ['/blog', '/blog/what-is-llms-txt', '/blog/ai-crawlers-list',
-    '/blog/block-ai-crawlers', '/ai-readability', '/llms-txt-checker'];
+    '/blog/block-ai-crawlers', '/blog/robots-txt-guide', '/blog/xml-sitemap-guide',
+    '/ai-readability', '/llms-txt-checker'];
   for (const url of urls) {
     const res = await fetch(BASE + url, { redirect: 'manual' });
     const cc = res.headers.get('cache-control') || '';
@@ -549,7 +631,7 @@ function checkRoutes() {
 // ============================================================
 // Run
 // ============================================================
-console.log('Pingory B1 content cluster test (D45)');
+console.log('Pingory B1+B2 content cluster test (D45 / D47)');
 console.log(LIVE ? 'Mode: live — ' + BASE : 'Mode: static — ' + ROOT);
 
 const loaded = {};

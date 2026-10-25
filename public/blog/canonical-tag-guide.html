@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<!--
+  D47 · B2 guide #4 — /blog/canonical-tag-guide
+  Scope: what the tag asks for, where it is ignored, and the combinations that
+  cancel it. Sitemap inclusion rules live in /blog/xml-sitemap-guide.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canonical Tag Guide: Hints, Noindex and Mistakes</title>
+  <meta name="description" content="A canonical tag is a hint Google can overrule. What self-referencing and cross-domain canonicals do, and what happens when noindex contradicts one." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://pingory.com/blog/canonical-tag-guide" />
+  <link rel="alternate" hreflang="en" href="https://pingory.com/blog/canonical-tag-guide" />
+  <link rel="alternate" hreflang="x-default" href="https://pingory.com/blog/canonical-tag-guide" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Pingory" />
+  <meta property="og:title" content="Canonical Tag Guide: Hints, Noindex and Mistakes" />
+  <meta property="og:description" content="A canonical tag is a hint Google can overrule. What self-referencing and cross-domain canonicals do, and what happens when noindex contradicts one." />
+  <meta property="og:url" content="https://pingory.com/blog/canonical-tag-guide" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Pingory — uptime and AI Readability monitoring" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Canonical Tag Guide: Hints, Noindex and Mistakes" />
+  <meta name="twitter:description" content="A canonical tag is a hint Google can overrule. What self-referencing and cross-domain canonicals do, and what happens when noindex contradicts one." />
+  <meta name="twitter:image" content="https://pingory.com/icon-512.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <link rel="stylesheet" href="/blog.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": "Canonical Tag: A Hint Google Can Overrule",
+        "description": "A canonical tag is a hint Google can overrule. What self-referencing and cross-domain canonicals do, and what happens when noindex contradicts one.",
+        "datePublished": "2026-10-25",
+        "dateModified": "2026-10-25",
+        "inLanguage": "en",
+        "author": { "@type": "Person", "name": "Martin Cao", "url": "https://pingory.com/" },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pingory",
+          "url": "https://pingory.com/",
+          "logo": { "@type": "ImageObject", "url": "https://pingory.com/icon-512.png" }
+        },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": "https://pingory.com/blog/canonical-tag-guide" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://pingory.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://pingory.com/blog" },
+          { "@type": "ListItem", "position": 3, "name": "Canonical tag guide", "item": "https://pingory.com/blog/canonical-tag-guide" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is rel=canonical a directive?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Google calls it a hint and says it may choose a different canonical for reasons of its own. Redirects and the tag are both strong signals, and sitemap inclusion is weaker. When they disagree, Google decides." }
+          },
+          {
+            "@type": "Question",
+            "name": "Should every page have a self-referencing canonical?",
+            "acceptedAnswer": { "@type": "Answer", "text": "It is the safest default. A page that names itself cannot accidentally nominate a different page, and the tag removes ambiguity for parameter and hostname variants that resolve to the same content." }
+          },
+          {
+            "@type": "Question",
+            "name": "Can a canonical point to another domain?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Google supports cross-domain canonicals, and treats them as the same hint as any other. The pages should be near-duplicates, and the target must be a real, indexable URL rather than a redirect or an error page." }
+          },
+          {
+            "@type": "Question",
+            "name": "What wins when canonical and noindex are on the same page?",
+            "acceptedAnswer": { "@type": "Answer", "text": "The URL usually drops out of the index, so the canonical's consolidation rarely happens. Google publishes no fixed precedence for the combination and advises against it, so noindex alone is the safe way to remove a page." }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+  <span class="spacer"></span>
+  <button id="themeToggle" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+  <a class="btn" href="/signin.html">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+</nav>
+
+<main class="wrap">
+<article>
+  <p class="kicker">Guides · Duplicate content</p>
+  <h1>Canonical Tag: A Hint Google Can Overrule</h1>
+  <p class="meta">Last verified: October 2026 · About 8 minutes of reading</p>
+  <p class="lede">The tag is one line in the head, and it is routinely asked to do more than it can. This guide covers what it actually asks for, the combinations that cancel it, and how to see which URL Google chose instead of assuming.</p>
+
+  <h2>What a canonical tag does</h2>
+  <p class="answer">It names the URL you want treated as the authoritative copy when several URLs serve the same or similar content.</p>
+  <p>Search engines group near-duplicate pages and pick one representative. The canonical tag is your nomination for that representative. It does not merge pages, delete the others, or transfer ranking by itself; it is one input into a decision the search engine makes.</p>
+  <pre><code>&lt;link rel="canonical" href="https://example.com/pricing"&gt;</code></pre>
+  <p>The target should be an absolute URL, should return 200, and should be indexable. A canonical that points at a redirect, an error, or a page carrying noindex is a request that cannot be granted.</p>
+
+  <h2>A hint, not a directive</h2>
+  <p class="answer">Google can ignore the tag and pick another URL, so the declared canonical and the selected one can differ.</p>
+  <p>Google's own wording is that indicating a canonical preference is a hint, not a rule. It weighs several signals: HTTPS over HTTP, redirects, the annotation itself and sitemap inclusion. A redirect is the clearest statement because it removes the duplicate from view. The tag leaves both URLs live and asks Google to choose. When your links, sitemap or redirects point somewhere else, Google may side with them.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Signals Google documents, and how much they settle the question.</caption>
+      <thead>
+        <tr><th scope="col">Signal</th><th scope="col">Strength</th><th scope="col">Why</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>301 or 308 redirect</td><td>Strong</td><td>The duplicate URL no longer serves the content</td></tr>
+        <tr><td><code>rel="canonical"</code></td><td>Strong</td><td>An explicit declaration, still overridable</td></tr>
+        <tr><td>Sitemap inclusion</td><td>Weak</td><td>Says a URL exists, not which copy is primary</td></tr>
+        <tr><td>HTTPS</td><td>Preferred</td><td>Google favours the secure version of a URL</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Self-referencing canonicals</h2>
+  <p class="answer">A page that names itself is the safest default and prevents parameter variants from competing with it.</p>
+  <p>The tag is most useful on the clean URL, pointing at itself. That sounds redundant, and it is the point: it states which form is correct when the same content is reachable with tracking parameters, a trailing slash, a different case, or a session ID. Without it, every variant is an equally plausible representative.</p>
+  <p>Self-referencing does not make a page canonical in Google's index. It only removes ambiguity about which URL the page itself considers correct. If the page is genuinely a duplicate of another, the tag should point at that other page instead, and the two pages should not both claim to be primary.</p>
+
+  <h2>When canonical and noindex disagree</h2>
+  <p class="answer">noindex decides whether the URL is indexed; the canonical's request to consolidate signals into another URL cannot be relied on.</p>
+  <p>These are opposite instructions on one URL: one says "do not index me", the other says "treat my signals as belonging to that page". Google's guidance is unambiguous about the combination: do not use a noindex tag on pages that carry a canonical pointing elsewhere, because the pages are no longer equivalent with respect to indexing. In practice the URL drops out of the index, and the consolidation you wanted does not happen.</p>
+  <p>The exception is a self-referencing canonical next to noindex. Nothing is being consolidated anywhere else, so there is no contradiction; noindex simply decides the outcome. If the goal is removal, use noindex alone. If the goal is consolidation, use the canonical alone. If the old URL should disappear entirely, a 301 is stronger than either.</p>
+
+  <h2>Cross-domain canonicals</h2>
+  <p class="answer">A canonical may point at another domain, and Google treats it as the same hint rather than a guarantee.</p>
+  <p>Google has supported cross-domain canonicals since 2009, which makes them useful when the same content is legitimately published on two domains you control and a redirect is impossible. The pages should be near-identical. Pointing every page of an old site at a new homepage is not a migration strategy; the mapping has to be one URL to one URL.</p>
+  <p>For syndicated copies you do not control, the hint is weaker still, because the partner page usually differs in template and context. Treat a cross-domain canonical as a request that may be declined, and do not use it as a substitute for a redirect you could actually serve.</p>
+
+  <h2>When a redirect beats a canonical</h2>
+  <p class="answer">Use a 301 when the old URL should disappear; use a canonical when both URLs must keep working.</p>
+  <p>A redirect changes which URL is served, so there is no duplicate left to consolidate — that is why it is stronger for migrations and retired pages. A canonical leaves both URLs live and only asks Google to merge their signals, which is the right tool for filtered listings, parameter variants and syndication. A canonical pointing at a URL that returns 404 cannot be honoured: there is no live page to consolidate into, and Google will pick another candidate.</p>
+
+  <h2>Five mistakes worth checking</h2>
+  <p class="answer">Most failures are self-inflicted: the wrong target, a chain, a dead target, a relative URL, or a site that contradicts the tag.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Each mistake, the symptom in Search Console, and the fix.</caption>
+      <thead>
+        <tr><th scope="col">Mistake</th><th scope="col">What you see</th><th scope="col">Fix</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Canonical points at different content</td><td>The page disappears and the target does not gain relevance</td><td>Remove the tag or point it at a true duplicate</td></tr>
+        <tr><td>Canonical chain (A to B, B to C)</td><td>Google may ignore the chain and choose for itself</td><td>Point every duplicate directly at the final URL</td></tr>
+        <tr><td>Target redirects, 404s or is noindexed</td><td>No consolidation; the declaration cannot be honoured</td><td>Use a live, indexable, 200 URL</td></tr>
+        <tr><td>Relative URL in <code>href</code></td><td>The tag may resolve against the wrong host</td><td>Always write the absolute URL</td></tr>
+        <tr><td>Sitemap and internal links disagree</td><td>"Duplicate, Google chose different canonical than user"</td><td>Align links, sitemap and tag on one URL</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The first row is the expensive one. A canonical is not a way to deprecate a page whose content you no longer want; if the content differs, the tag is simply wrong, and Google is likely to ignore it while the page loses its own standing.</p>
+
+  <h2>How to check yours</h2>
+  <p class="answer">Compare the declared canonical with the one Google selected, then look for the signal that disagrees.</p>
+  <ol>
+    <li><strong>Read the raw HTML.</strong> View source, not the inspector, and search for <code>rel="canonical"</code>. Confirm there is exactly one and that the href is absolute.</li>
+    <li><strong>Run URL Inspection.</strong> Search Console shows the user-declared canonical and the Google-selected canonical as separate fields. A mismatch is the answer to "why is the wrong URL indexed".</li>
+    <li><strong>Read the page status.</strong> The Pages report distinguishes "Alternate page with proper canonical tag" (working) from "Duplicate, Google chose different canonical than user" (your declaration was rejected).</li>
+    <li><strong>Check the rest of the signals.</strong> If internal links and the sitemap still point at the variant, fix those before rewriting the tag. The free <a href="/llms-txt-checker">AI readability check</a> reports whether the canonical resolves to the page on the same host and protocol, next to noindex and robots.txt.</li>
+  </ol>
+  <div class="boundary">
+    <p><strong>What a correct canonical cannot prove:</strong> that Google accepted it. The tag cannot make two different pages duplicates, cannot force an index, and cannot repair conflicting links or a sitemap that names another URL.</p>
+  </div>
+
+  <div class="sources">
+    <h3>Sources checked</h3>
+    <ul>
+      <li>Google Search Central, "What is URL canonicalization" — hint wording, signal list, HTTPS preference. Checked 2026-10-25.</li>
+      <li>Google Search Central blog, December 2009 — cross-domain canonical support and the noindex warning. Checked 2026-10-25.</li>
+      <li>Search Console Help, URL Inspection — user-declared versus Google-selected canonical. Checked 2026-10-25.</li>
+    </ul>
+  </div>
+
+  <div class="related">
+    <h3>Keep reading</h3>
+    <ul>
+      <li><a href="/blog/xml-sitemap-guide">XML sitemap guide</a> — which URL should be listed once you have chosen a canonical.</li>
+      <li><a href="/blog/robots-txt-guide">robots.txt guide</a> — why a blocked page cannot have its canonical read.</li>
+      <li><a href="/ai-readability">AI readability vs AI visibility</a> — what a technical check can and cannot measure.</li>
+    </ul>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <p class="answer">Four questions cover the strength of the hint, self-reference, cross-domain use and the noindex conflict.</p>
+  <details class="faq-item">
+    <summary>Is rel=canonical a directive?</summary>
+    <p>No. Google calls it a hint and says it may choose a different canonical for reasons of its own. Redirects and the tag are both strong signals, and sitemap inclusion is weaker. When they disagree, Google decides.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Should every page have a self-referencing canonical?</summary>
+    <p>It is the safest default. A page that names itself cannot accidentally nominate a different page, and the tag removes ambiguity for parameter and hostname variants that resolve to the same content.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Can a canonical point to another domain?</summary>
+    <p>Yes. Google supports cross-domain canonicals, and treats them as the same hint as any other. The pages should be near-duplicates, and the target must be a real, indexable URL rather than a redirect or an error page.</p>
+  </details>
+  <details class="faq-item">
+    <summary>What wins when canonical and noindex are on the same page?</summary>
+    <p>The URL usually drops out of the index, so the canonical's consolidation rarely happens. Google publishes no fixed precedence for the combination and advises against it, so noindex alone is the safe way to remove a page.</p>
+  </details>
+
+  <div class="cta">
+    <h2>Check any site free</h2>
+    <p class="answer">See whether the canonical resolves to the page, and whether noindex, robots.txt or the sitemap contradicts it.</p>
+    <div class="cta-actions">
+      <a class="cta-main" href="/llms-txt-checker">Check any site free</a>
+      <a class="cta-alt" href="/#plans">See plans</a>
+    </div>
+  </div>
+
+  <p class="meta meta-end">Last verified: October 2026. Wording and signal strength were checked against Google Search Central on 2026-10-25; Google does not publish a fixed precedence for conflicting signals, so test the specific combination on your own site.</p>
+</article>
+</main>
+
+<footer class="site-footer">
+  <nav>
+    <a href="/blog">Guides</a>
+    <a href="/compare/uptimerobot">Compare</a>
+    <a href="/compare/betterstack">vs Better Stack</a>
+    <a href="/compare/pingdom">vs Pingdom</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/refund.html">Refund</a>
+    <a href="/#plans">Pricing</a>
+    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+  </nav>
+  <p>Contact: <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p>© 2026 Pingory. All rights reserved.</p>
+</footer>
+
+<script>
+(function () {
+  var tt = document.getElementById('themeToggle');
+  function sync() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+  if (tt) tt.addEventListener('click', function () {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    if (dark) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme = 'dark';
+    try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
+<script src="/analytics.js"></script>
+</body>
+</html>

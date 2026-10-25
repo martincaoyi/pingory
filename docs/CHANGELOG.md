@@ -8,6 +8,24 @@
 
 ---
 
+## 2026-10-25 · D47 B2 内容集群：5 篇「故障意图」指南（增长/SEO）
+
+> 一句话：补上词库实测中最大的一块空白——4,214 个词里 272 个故障类词此前一篇未吃；5 个新 URL 全部押「遇到问题的人」，并与 B1 五页逐条划清分工。
+
+- **新增 5 个页面**（静态直出，无 JS 也有完整正文）：`/blog/robots-txt-guide`（1,994 词）、`/blog/schema-validation-errors`（1,813 词）、`/blog/xml-sitemap-guide`（1,629 词）、`/blog/canonical-tag-guide`（1,444 词）、`/blog/json-ld-structured-data`（1,553 词）。合计约 8,400 词，与 B1 体量相当。
+- **防自我竞争（本批的审阅重点）**：① robots 页只写爬虫无关的机制（RFC 9309 字段、最长匹配、通配符、4xx/5xx、500 KiB、多子域），**不列 AI 爬虫 token 表**、不重讲 Cloudflare/Vercel/nginx，AI 话题一律链回 `/blog/block-ai-crawlers` 与 `/blog/ai-crawlers-list`；② schema 报错页**以官方报错原文为骨架**，不讲 JSON-LD 是什么；③ JSON-LD 基础页只讲 `@context`/`@type`/`@graph`/嵌套/位置/格式对比，**不列报错清单**，报错一律链回报错页；④ sitemap 页只讲收录规则与生成，canonical 机制交给 canonical 页；⑤ canonical 页只讲「提示 vs 指令」与冲突，sitemap 规则交给 sitemap 页。两条硬互链（json-ld ↔ schema、sitemap ↔ canonical）已写进回归断言。
+- **事实核对（逐条联网，页内标 2026-10-25）**：RFC 9309 原文（仅定义 user-agent/allow/disallow；`Sitemap` 属 RFC 之外的 other record；`*`/`$` 为 MUST；不可达 MUST 视为完全禁止；解析上限 MUST ≥ 500 KiB；缓存 SHOULD NOT 超 24 小时）；Google 的状态码行为（4xx 除 429 → 无限制；5xx → 前 12 小时停抓、随后 30 天用最后可用副本、503 特例）；sitemaps.org 与 Google 的 50,000 URL / 50 MB 未压缩、索引 50,000 个子 sitemap、UTF-8 与实体转义、`lastmod` 用 W3C datetime；Google **忽略 `priority` 与 `changefreq`**；sitemap ping 端点 2023-06-26 公告、约 6 个月后停用；canonical 为「hint, not a rule」、支持跨域、与 noindex 并用属自相矛盾（Google 2009 年公告明确不建议）；FAQ 富结果自 2023-08 起仅保留给政府/健康权威站。
+- **纠了一处任务书事实**：原始约定由 Martijn Koster 于 **1994** 年提出（RFC 9309 §1 原文），不是 1996；页面按 RFC 写 1994。另：任务书说「标准指令含 sitemap」，实际 `Sitemap` 在 RFC 9309 中是 MAY 解释的 other record，页面按 RFC 表述并在表格里单列状态。
+- **禁止项自查**：无百分比、无排名/流量承诺、无 `aggregateRating`、无外部字体/CDN/外链 JS/外链图片（CSP 仍为 `default-src 'self'`）、不把 robots.txt 说成安全机制、无 multi-region/global network、无编造的实测数据。
+- **站内资产**：`public/sitemap.xml` 31 → **36** 条（`lastmod` 2026-10-25，五页优先级 0.8）；`public/llms.txt` 在 Guides 区原位补 5 条并把「All four guides」改为「All nine pages」；`public/blog.html` 4 → **9** 张卡片、总时长 33 → **77** 分钟、表格与 `ItemList` 同步到 9 项；B1 三篇 + `/ai-readability` 各补 1 条指向 B2 的内链（只加 `<li>`，正文未改）。
+- **SEO/GEO**：五页 title ≤ 60、description 144–153 字符、canonical 自指 + `hreflang en/x-default`、OG/Twitter 全套、单个 `@graph`（`Article` + `BreadcrumbList` + `FAQPage`，问答与正文逐字一致，`datePublished`/`dateModified` = 2026-10-25）；每个 H2 后第一句 ≤ 25 词；每页 ≥ 1 张带数字的 HTML 表格；正文含 `Last verified: October 2026`；每页一处「这个方法不能证明什么」的反向边界；CTA 文案已对照 `/llms-txt-checker` 的 12 项实际检测能力改写（只承诺 robots.txt / sitemap / canonical / noindex / JSON-LD / 8 个 AI 爬虫可达性）。
+- **路由**：`src/cf-worker/pages.js` 与 `server.js` 的 `BLOG_PAGES` 各加 5 条白名单映射，仍不用 `/blog/:slug` 动态读文件；`wrangler.jsonc` 的 `run_worker_first` **检查后未改**（`"/blog"`、`"/blog/*"` 已存在）。
+- **常驻回归**：`tools/test-blog-pages.mjs` 323 → **643 条**。新增 5 页的全部既有断言（title/description 长度、canonical 自指、唯一 H1、H2 首句、表格、JSON-LD 可解析、FAQ 逐字一致、字数区间、禁用表述、空链），并把文章日期、sitemap 条数与 lastmod 改成按页取值；集群内链断言 4 → 14 条。
+- **明确没做的事**：未改 `public/blog.css`（沿用既有类名）、未改 `src/ai-visibility.js`、`src/plans.js`；未新增 CSS 类；未给新页加任何外部资源。
+- **效果审阅（独立子任务）与修复**：审阅以「零外链新站能不能被搜到」为唯一标准，抓出 4 个 P0 + 8 个 P1 + 5 个 P2，已全部修复——① robots 页 429 后果写错（Google 官方：`temporarily interprets 5xx and 429 … as if the site is fully disallowed`，即整站停抓而非限流信号）② robots 页「无法强制重抓 robots.txt」是错的（Search Console robots.txt 报告有 Request a recrawl）③ schema 页 title/H1/URL 三个信号指向三个不同词且其中两个是工具意图词，统一改押 `schema validation errors` ④ canonical 页 FAQ「noindex decides the outcome」与文末「Google 未公布固定优先级」自相矛盾，FAQ 改为带条件的单句 ⑤ 押词调整：xml 页改押 `Discovered – currently not indexed`（新增专节 + "Couldn't fetch" 专节），json-ld 页头词前 5 全是 W3C/json-ld.org 不可赢，改押 `JSON-LD vs Microdata vs RDFa` ⑥ 防自我竞争：block 页 robots 语法节砍掉与 robots 页重复的三条解析规则（组语义/最长匹配/文件须 200），只留 AI 相关两条并显式指路；json-ld 页 validate 三步与 schema 页四步同义重复，压成两句加内链 ⑦ 五页 Article JSON-LD 补 recommended 的 `image` ⑧ 新增长尾 H2：robots 页「When a rule does not work: five causes」，canonical 页「When a redirect beats a canonical」，sitemap 页两节，`openingHour` 拼错与 2009 日期等 P2 逐条修 ⑨ 测试同步：keyword/H1 配置更新，643 条断言全绿。
+
+---
+
 ## 2026-10-25 · D46 内容页响应头：浏览器缓存 + CSP（性能/安全）
 
 > 一句话：SEO/GEO 页面本来就是纯静态 HTML，这次不动渲染，只补上 ASSETS 直出时缺的缓存头与安全头。

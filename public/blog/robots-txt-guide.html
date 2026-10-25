@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<!--
+  D47 · B2 guide #1 — /blog/robots-txt-guide
+  Scope: crawler-agnostic mechanics and parsing rules only (RFC 9309).
+  Deliberately does NOT list AI crawler tokens or vendor dashboards — that is
+  /blog/block-ai-crawlers. AI crawler identities live in /blog/ai-crawlers-list.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>robots.txt: Rules, Matching and Status Codes Explained</title>
+  <meta name="description" content="robots.txt explained from RFC 9309: where the file must live, how longest-match and wildcards work, and what 404, 403 and 500 really do to a crawler." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://pingory.com/blog/robots-txt-guide" />
+  <link rel="alternate" hreflang="en" href="https://pingory.com/blog/robots-txt-guide" />
+  <link rel="alternate" hreflang="x-default" href="https://pingory.com/blog/robots-txt-guide" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Pingory" />
+  <meta property="og:title" content="robots.txt: Rules, Matching and Status Codes Explained" />
+  <meta property="og:description" content="robots.txt explained from RFC 9309: where the file must live, how longest-match and wildcards work, and what 404, 403 and 500 really do to a crawler." />
+  <meta property="og:url" content="https://pingory.com/blog/robots-txt-guide" />
+  <meta property="og:image" content="https://pingory.com/icon-512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Pingory — uptime and AI Readability monitoring" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="robots.txt: Rules, Matching and Status Codes Explained" />
+  <meta name="twitter:description" content="robots.txt explained from RFC 9309: where the file must live, how longest-match and wildcards work, and what 404, 403 and 500 really do to a crawler." />
+  <meta name="twitter:image" content="https://pingory.com/icon-512.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <script>try{const th=localStorage.getItem('pingory_theme');if(th)document.documentElement.dataset.theme=th;}catch(e){}</script>
+  <link rel="stylesheet" href="/blog.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": "robots.txt: The Rules Crawlers Actually Parse",
+        "description": "robots.txt explained from RFC 9309: where the file must live, how longest-match and wildcards work, and what 404, 403 and 500 really do to a crawler.",
+        "datePublished": "2026-10-25",
+        "dateModified": "2026-10-25",
+        "inLanguage": "en",
+        "author": { "@type": "Person", "name": "Martin Cao", "url": "https://pingory.com/" },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Pingory",
+          "url": "https://pingory.com/",
+          "logo": { "@type": "ImageObject", "url": "https://pingory.com/icon-512.png" }
+        },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": "https://pingory.com/blog/robots-txt-guide" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://pingory.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://pingory.com/blog" },
+          { "@type": "ListItem", "position": 3, "name": "robots.txt guide", "item": "https://pingory.com/blog/robots-txt-guide" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Does Disallow: / remove a page from Google?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Disallow stops the fetch, not the indexing: a blocked URL can still appear without a snippet if other pages link to it. For removal, use noindex and allow the crawl." }
+          },
+          {
+            "@type": "Question",
+            "name": "Is crawl-delay part of the standard?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. RFC 9309 defines user-agent, allow and disallow only. crawl-delay is non-standard: some crawlers read it, Google does not. Use the crawl-rate setting in Search Console instead." }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens if robots.txt returns a 500 error?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Googlebot stops crawling the site for the first 12 hours while it retries, then uses the last good copy for up to 30 days. If the error persists and the site is otherwise reachable, it behaves as if no file exists." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does a subdomain inherit the main domain robots.txt?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Rules apply only to the scheme, host and port that served the file: https://example.com covers neither http://example.com nor https://shop.example.com, so each host needs its own copy." }
+          },
+          {
+            "@type": "Question",
+            "name": "How long does a robots.txt change take effect?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Crawlers may cache the file, and RFC 9309 says a cached copy should not be used for more than 24 hours — expect a change on the next fetch, not at deploy time." }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
+  <span class="spacer"></span>
+  <button id="themeToggle" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+  <a class="btn" href="/signin.html">Sign In</a>
+  <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+</nav>
+
+<main class="wrap">
+<article>
+  <p class="kicker">Guides · Crawl mechanics</p>
+  <h1>robots.txt: The Rules Crawlers Actually Parse</h1>
+  <p class="meta">Last verified: October 2026 · About 10 minutes of reading</p>
+  <p class="lede">Most robots.txt advice is lines to paste. This is the model underneath: which fields the standard defines, why the longest match wins, and why a 500 on one file stops a crawl.</p>
+
+  <h2>What robots.txt is</h2>
+  <p class="answer">robots.txt is a plain-text file at a host's root that states which paths a crawler may fetch; it is a request, not access control.</p>
+  <p>RFC 9309, published in September 2022, formalises a convention Martijn Koster proposed in 1994. It defines the syntax, the matching algorithm and fetch-failure behaviour — not enforcement: a crawler that ignores the file has broken a convention rather than a lock.</p>
+  <p>That distinction decides what the file is good for: it reduces crawl load on valueless paths and states intent in machine-readable form. It does not hide a page, protect a document, or remove a URL from an index.</p>
+
+  <h2>Where the robots.txt file must live</h2>
+  <p class="answer">One file per scheme, host and port, served at /robots.txt; a copy in a subdirectory or on another subdomain is never read.</p>
+  <p>The path is fixed and lowercase: a file at <code>/folder/robots.txt</code> is not a robots.txt file, because crawlers never look in subdirectories. Rules bind to the exact origin that served them, which produces the traps below.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>What a robots.txt file does and does not cover (Google's documented examples).</caption>
+      <thead>
+        <tr><th scope="col">File URL</th><th scope="col">Covers</th><th scope="col">Does not cover</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>https://example.com/robots.txt</code></td><td><code>https://example.com/</code> and all paths below it</td><td><code>http://example.com/</code>, <code>https://www.example.com/</code>, port 8181</td></tr>
+        <tr><td><code>https://www.example.com/robots.txt</code></td><td><code>https://www.example.com/</code> only</td><td><code>https://example.com/</code> and every other subdomain</td></tr>
+        <tr><td><code>https://shop.example.com/robots.txt</code></td><td><code>https://shop.example.com/</code> only</td><td>The apex domain and sibling subdomains</td></tr>
+        <tr><td><code>https://example.com:8181/robots.txt</code></td><td>Content served on port 8181</td><td>Default-port HTTPS on the same host</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Two consequences: a site that moved to HTTPS but left its old HTTP file has two independent policies, and a www-to-apex redirect does not merge files — the target's file applies after the redirect.</p>
+
+  <h2>The four fields, and the one that is not standard</h2>
+  <p class="answer">RFC 9309 defines user-agent, allow and disallow; sitemap is an outside record that crawlers may interpret, and Google does.</p>
+  <p>That vocabulary is the whole language; anything else is an extension or a comment.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Field status under RFC 9309 and Google's parser.</caption>
+      <thead>
+        <tr><th scope="col">Field</th><th scope="col">Status</th><th scope="col">What it does</th><th scope="col">Example</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>user-agent</code></td><td>Defined in RFC 9309</td><td>Opens a group and names the crawler it applies to</td><td><code>User-agent: *</code></td></tr>
+        <tr><td><code>allow</code></td><td>Defined in RFC 9309</td><td>Permits a path that a shorter rule would block</td><td><code>Allow: /blog/</code></td></tr>
+        <tr><td><code>disallow</code></td><td>Defined in RFC 9309</td><td>Requests that a path prefix not be fetched</td><td><code>Disallow: /cart/</code></td></tr>
+        <tr><td><code>sitemap</code></td><td>Outside the RFC; crawlers may read it</td><td>Gives the absolute URL of a sitemap</td><td><code>Sitemap: https://example.com/sitemap.xml</code></td></tr>
+        <tr><td><code>crawl-delay</code></td><td>Not in RFC 9309</td><td>Requests a gap between requests; support varies</td><td><code>Crawl-delay: 10</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Three details matter more than they look: a <code>sitemap</code> line must not terminate a group; a group with no rules allows everything; and <code>Disallow:</code> with an empty value allows every path while <code>Disallow: /</code> blocks every path.</p>
+  <pre><code># A minimal file that states a policy and nothing more
+User-agent: *
+Disallow: /cart/
+Disallow: /search?
+Allow: /search/help
+
+Sitemap: https://example.com/sitemap.xml</code></pre>
+
+  <h2>Matching rules: longest match, wildcards and anchors</h2>
+  <p class="answer">The most specific matching rule wins, measured in characters, so an Allow can override a broader Disallow.</p>
+  <p>Order in the file is irrelevant: RFC 9309 requires the match with the most octets, so the first rule written has no priority. Paths are case-sensitive; matching runs on the percent-encoded URL.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>How one request is resolved when several patterns match.</caption>
+      <thead>
+        <tr><th scope="col">Rule</th><th scope="col">Request</th><th scope="col">Result</th><th scope="col">Why</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Disallow: /docs/</code></td><td><code>/docs/start</code></td><td>Blocked</td><td>7 matching characters, nothing longer</td></tr>
+        <tr><td><code>Disallow: /docs/</code> plus <code>Allow: /docs/public/</code></td><td><code>/docs/public/a</code></td><td>Allowed</td><td>The Allow pattern is 14 characters, longer than 7</td></tr>
+        <tr><td><code>Allow: /page</code> plus <code>Disallow: /page</code></td><td><code>/page</code></td><td>Allowed</td><td>Equal length: RFC 9309 says Allow should win</td></tr>
+        <tr><td><code>Disallow: /*.pdf$</code></td><td><code>/files/report.pdf</code></td><td>Blocked</td><td><code>*</code> matches any run of characters, <code>$</code> anchors the end</td></tr>
+        <tr><td><code>Disallow: /*.pdf$</code></td><td><code>/files/report.pdf?x=1</code></td><td>Allowed</td><td>The URL no longer ends at .pdf, so the anchor fails</td></tr>
+        <tr><td><code>Disallow: /search</code></td><td><code>/searching</code></td><td>Blocked</td><td>Patterns are prefixes, not whole segments</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>RFC 9309 requires support for <code>#</code>, <code>$</code> and <code>*</code>. The comment character needs a warning of its own: everything after <code>#</code> is ignored, so a URL containing a fragment is silently truncated if pasted unescaped.</p>
+  <p>Group selection is separate from path matching: a crawler uses the group whose token matches its own, falls back to <code>*</code> when none does, and combines rules when several groups name it. A blank line ends a group; a missing one merges the next <code>User-agent</code> line into the previous group.</p>
+
+  <h2>What happens on 404, 403 and 500</h2>
+  <p class="answer">A missing file means no restrictions; a server error means a crawler may assume the whole site is disallowed.</p>
+  <p>The status code of <code>/robots.txt</code> is a control signal in its own right. Google documents the behaviour per status class, and the results are not symmetric: the harmless-looking failure is the one that stops a crawl.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Googlebot's documented behaviour by response status.</caption>
+      <thead>
+        <tr><th scope="col">Status</th><th scope="col">Googlebot behaviour</th><th scope="col">What to do</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>200</td><td>Parses the file and applies the rules</td><td>Nothing; confirm the body is the file, not an HTML page</td></tr>
+        <tr><td>3xx</td><td>Follows at least 5 hops, then treats the result as a 404</td><td>Serve the file directly instead of redirecting to it</td></tr>
+        <tr><td>4xx except 429</td><td>Treated as no robots.txt, so no crawl restrictions</td><td>Never use 401 or 403 to slow a crawl</td></tr>
+        <tr><td>429</td><td>Treated like a 5xx: crawling stops and the site is temporarily treated as fully disallowed while Google retries</td><td>A 429 on /robots.txt is a crawl stop, not a throttle — fix the rate limit</td></tr>
+        <tr><td>5xx or timeout</td><td>Stops crawling for 12 hours, then uses the last good copy for up to 30 days</td><td>Restore a 200 as fast as possible; the cached copy is what applies meanwhile</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The 5xx path is the outage that looks like a policy decision. A 503 triggers frequent retries, and without a cached copy Google assumes no restrictions. After the 30 days shown above, a reachable site counts as having no robots.txt, while one with availability problems stops being crawled. RFC 9309 is blunter: an unreachable file means assume complete disallow.</p>
+  <p>Recovery is specific: make <code>/robots.txt</code> return 200 with the correct body, then confirm in Search Console's robots.txt report that Google fetched it. That report has a <strong>Request a recrawl</strong> action (three-dot menu by the file) which queues an earlier fetch — it does not force one.</p>
+
+  <h2>Size, encoding and parsing limits</h2>
+  <p class="answer">The file must be UTF-8 plain text, and Google reads only the first 500 KiB of it.</p>
+  <p>RFC 9309 requires a parsing limit of at least 500 kibibytes; Google enforces exactly 500 KiB and ignores everything after it — a generated rule list past that boundary silently becomes a partial policy.</p>
+  <ul>
+    <li><strong>Encoding.</strong> UTF-8 as <code>text/plain</code>; a BOM is ignored, and non-UTF-8 characters may be dropped in ways that break a rule.</li>
+    <li><strong>Line endings.</strong> CR, LF or CRLF all work; field names are case-insensitive.</li>
+    <li><strong>Parse errors.</strong> Invalid lines are skipped rather than failing the file, so a typo usually removes one rule, not the policy.</li>
+    <li><strong>HTML fallback.</strong> If an SPA answers with its HTML shell, Google extracts whatever rules it can and ignores the rest.</li>
+  </ul>
+
+  <h2>When a rule does not work: five causes</h2>
+  <p class="answer">An ignored rule usually has one of five causes, and none is fixed by rewriting it.</p>
+  <ol>
+    <li><strong>Case sensitivity in paths.</strong> Path matching is case-sensitive: <code>Disallow: /Admin</code> does not cover <code>/admin</code>. Fields are case-insensitive; paths are not.</li>
+    <li><strong>Group merging.</strong> A group is defined only by its <code>user-agent</code> lines, and blank lines do not end it — rules meant for one bot can leak into the group above.</li>
+    <li><strong>Using robots.txt to remove a page.</strong> <code>Disallow</code> stops the fetch, so Googlebot never sees a <code>noindex</code> tag on that URL; the page can still appear without content. Blocking and de-indexing differ.</li>
+    <li><strong>The edge serves a different file.</strong> A CDN, WAF or bot layer can intercept <code>/robots.txt</code> and return its own body — diff the fetched copy against your repository file.</li>
+    <li><strong>The empty <code>Disallow:</code>.</strong> An empty disallow value means <em>allow everything</em>; a blank path from a template silently cancels the restrictions above it.</li>
+  </ol>
+  <p>A sixth failure mode: rules blocking CSS and JavaScript. Googlebot renders pages, so a disallow on asset paths breaks rendering — Search Console reports it as blocked resources. <code>Disallow: /</code> is the extreme case: it stops crawling entirely.</p>
+
+  <h2>How to test robots.txt without waiting for a crawl</h2>
+  <p class="answer">Fetch the file, read the parsed rules back, and treat a 200 as proof of serving, not of obedience.</p>
+  <ol>
+    <li><strong>Fetch it as a client would.</strong> <code>curl -sI https://example.com/robots.txt</code> should show 200 and <code>text/plain</code>, with no bot challenge or login redirect in the way.</li>
+    <li><strong>Read the policy, not the file.</strong> For a few real URLs, work out which rule wins by longest match. The free <a href="/llms-txt-checker">AI readability check</a> reports the allow or block decision for two paths, alongside sitemap, canonical and noindex.</li>
+    <li><strong>Use the engine's own parser.</strong> Search Console's robots.txt report shows the version Google fetched, its parse result and syntax warnings — the closest thing to ground truth for Googlebot.</li>
+    <li><strong>Watch real requests.</strong> Server logs settle what a simulation cannot: whether the crawler arrives, and which paths it asks for afterwards.</li>
+  </ol>
+  <div class="boundary">
+    <p><strong>What this cannot prove:</strong> a 200 proves the file is served, not obeyed; a blocked log line proves one refusal, not compliance at scale; no local test can tell how an uncontacted vendor will treat the file.</p>
+  </div>
+
+  <h2>robots.txt is not a security mechanism</h2>
+  <p class="answer">The file is public and advisory; it cannot protect a document, and listing a private path advertises where it is.</p>
+  <p>RFC 9309 says the rules are not access authorization, and its security section notes that listing paths makes them discoverable — private content belongs behind authentication or a 404. A disallowed URL can still be indexed from external links, and a disallowed page's noindex can never be read, because the fetch never happens.</p>
+  <p>Which AI crawlers to allow is a policy decision, covered in <a href="/blog/block-ai-crawlers">the blocking guide</a> along with <a href="/blog/ai-crawlers-list">the crawler identities</a>; this page stays on the mechanics both rely on.</p>
+
+  <div class="sources">
+    <h3>Sources checked</h3>
+    <ul>
+      <li>RFC 9309, Robots Exclusion Protocol (IETF, September 2022) — fields, longest match, unreachable status, 500 KiB limit.</li>
+      <li>Google Search Central, "How Google interprets the robots.txt specification" — status codes, host scope, size limit. Checked 2026-10-25.</li>
+      <li>Google Search Central, "Build and submit a sitemap" — the Sitemap record is outside the RFC. Checked 2026-10-25.</li>
+    </ul>
+  </div>
+
+  <div class="related">
+    <h3>Keep reading</h3>
+    <ul>
+      <li><a href="/blog/block-ai-crawlers">How to block AI crawlers</a> — the policy decision and the vendor settings, without breaking Googlebot.</li>
+      <li><a href="/blog/ai-crawlers-list">AI crawlers in 2026</a> — the eight tokens, their owners and what each one fetches.</li>
+      <li><a href="/blog/xml-sitemap-guide">XML sitemap guide</a> — the file that pairs with the Sitemap line above.</li>
+    </ul>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <p class="answer">Five questions cover the misunderstandings that cause the most damage: indexing, crawl-delay, server errors, subdomains and timing.</p>
+  <details class="faq-item">
+    <summary>Does Disallow: / remove a page from Google?</summary>
+    <p>No. Disallow stops the fetch, not the indexing: a blocked URL can still appear without a snippet if other pages link to it. For removal, use noindex and allow the crawl.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Is crawl-delay part of the standard?</summary>
+    <p>No. RFC 9309 defines user-agent, allow and disallow only. crawl-delay is non-standard: some crawlers read it, Google does not. Use the crawl-rate setting in Search Console instead.</p>
+  </details>
+  <details class="faq-item">
+    <summary>What happens if robots.txt returns a 500 error?</summary>
+    <p>Googlebot stops crawling the site for the first 12 hours while it retries, then uses the last good copy for up to 30 days. If the error persists and the site is otherwise reachable, it behaves as if no file exists.</p>
+  </details>
+  <details class="faq-item">
+    <summary>Does a subdomain inherit the main domain robots.txt?</summary>
+    <p>No. Rules apply only to the scheme, host and port that served the file: https://example.com covers neither http://example.com nor https://shop.example.com, so each host needs its own copy.</p>
+  </details>
+  <details class="faq-item">
+    <summary>How long does a robots.txt change take effect?</summary>
+    <p>Crawlers may cache the file, and RFC 9309 says a cached copy should not be used for more than 24 hours — expect a change on the next fetch, not at deploy time.</p>
+  </details>
+
+  <div class="cta">
+    <h2>Check any site free</h2>
+    <p class="answer">See how your robots.txt parses, which paths the eight AI crawlers can reach, and whether sitemap and canonical agree.</p>
+    <div class="cta-actions">
+      <a class="cta-main" href="/llms-txt-checker">Check any site free</a>
+      <a class="cta-alt" href="/#plans">See plans</a>
+    </div>
+  </div>
+
+  <p class="meta meta-end">Last verified: October 2026. Parsing rules were checked against RFC 9309 and Google's robots.txt documentation on 2026-10-25; vendor behaviour outside Google is not covered by either source.</p>
+</article>
+</main>
+
+<footer class="site-footer">
+  <nav>
+    <a href="/blog">Guides</a>
+    <a href="/compare/uptimerobot">Compare</a>
+    <a href="/compare/betterstack">vs Better Stack</a>
+    <a href="/compare/pingdom">vs Pingdom</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/refund.html">Refund</a>
+    <a href="/#plans">Pricing</a>
+    <a href="https://github.com/martincaoyi/pingory" target="_blank" rel="noopener">Source code (AGPL-3.0)</a>
+  </nav>
+  <p>Contact: <a href="mailto:martin@pingory.com">martin@pingory.com</a></p>
+  <p>© 2026 Pingory. All rights reserved.</p>
+</footer>
+
+<script>
+(function () {
+  var tt = document.getElementById('themeToggle');
+  function sync() { if (tt) tt.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'; }
+  if (tt) tt.addEventListener('click', function () {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    if (dark) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme = 'dark';
+    try { localStorage.setItem('pingory_theme', dark ? '' : 'dark'); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
+<script src="/analytics.js"></script>
+</body>
+</html>
