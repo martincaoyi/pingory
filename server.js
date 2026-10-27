@@ -32,6 +32,8 @@ const E = {
   URL_INVALID:              'url_invalid',
   PLAN_TYPE_NOT_SUPPORTED:  'plan_type_not_supported',
   PLAN_MIN_INTERVAL:        'plan_min_interval',
+  // 与 Worker 错误码表保持一致（自托管不钳制，此码不会在本进程返回）
+  PLAN_MIN_INTERVAL_HOSTED: 'plan_min_interval_hosted',
   MONITOR_NOT_FOUND:        'monitor_not_found',
   MONITOR_NO_PERM:          'monitor_not_found_or_no_perm',
   TREND_REQUIRES_STARTER:   'trend_requires_starter',
@@ -1360,7 +1362,9 @@ app.get('/api/plan-features', async (req, res) => {
   if (!userId) return res.status(401).json(apiErr(E.AUTH_REQUIRED));
   const user = await getUserById(userId);
   const plan = user?.plan ?? 'free';
-  res.json({ plan, features: planFeatures(plan), typeLabels: TYPE_LABELS, channelLabels: CHANNEL_LABELS, minInterval: planMinInterval(plan) });
+  // 自托管刻意不支持托管侧的间隔覆盖：30 秒真实保留，intervalClamped 恒 false。
+  // （字段必须存在，保持与 Worker 版 /api/plan-features 响应形状一致，前端无需分支。）
+  res.json({ plan, features: planFeatures(plan), typeLabels: TYPE_LABELS, channelLabels: CHANNEL_LABELS, minInterval: planMinInterval(plan), intervalClamped: false });
 });
 
 app.get('/api/monitors', async (req, res) => {

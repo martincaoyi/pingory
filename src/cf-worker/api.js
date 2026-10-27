@@ -26,6 +26,22 @@ function hostnameOf(c) {
   return (new URL(c.req.url).hostname || '').toLowerCase();
 }
 
+// 托管侧间隔下限覆盖（只有托管 Worker 有；自托管 server.js 刻意不支持）。
+// 来源：wrangler.jsonc vars.PLAN_MIN_INTERVAL_OVERRIDE = "{\"pro\":60}"。
+// 解析失败一律视为「无覆盖」——配置写坏不能把全站建监控打挂。
+function planIntervalOverrides(env) {
+  try {
+    const raw = env && env.PLAN_MIN_INTERVAL_OVERRIDE;
+    if (!raw) return null;
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return (parsed && typeof parsed === 'object') ? parsed : null;
+  } catch (e) {
+    // 静默兜底会让托管 Pro 悄悄退回 30 秒（假的承诺），必须留可观测痕迹
+    console.error('[PLAN_MIN_INTERVAL_OVERRIDE] parse failed:', e && e.message);
+    return null;
+  }
+}
+
 // 与 server.js 用的 src/events.js parseJSON(v, null) 完全同语义：
 // pg 对 JSON 列返回对象，JSON.parse(对象) 会因 "[object Object]" 抛错 → 返回 null（现网即此行为），
 // 字符串则正常解析。保持逐字节一致，不做“聪明”的修正。
@@ -123,6 +139,17 @@ async function oauthFinish(c, email, name, state, provider) {
 }
 
 export function registerApiRoutes(app) {
+  // 托管环境的生效间隔下限：基础表 + wrangler.jsonc 的 PLAN_MIN_INTERVAL_OVERRIDE。
+  // 统一走这一个入口，避免 4 处校验里漏掉某一处（创建/导入/更新/plan-features）。
+  const effMinInterval = (c, plan) => planMinInterval(plan, planIntervalOverrides(c.env));
+
+  // 间隔不足的错误：托管被钳制时用专用错误码。
+  // 走通用 PLAN_MIN_INTERVAL 会渲染成「upgrade for faster checks」，而 Pro 已是顶档 —— 那是空头支票（D49 审阅 P0）。
+  const minIntervalErr = (c, plan, minI) => apiErr(
+    minI > planMinInterval(plan) ? E.PLAN_MIN_INTERVAL_HOSTED : E.PLAN_MIN_INTERVAL,
+    { plan, minInterval: minI }
+  );
+
   // ===== 健康检查（与 server.js /health 响应形状一致）=====
   // 追加 last_check_at：最近一次监控检查的 UTC 毫秒时间戳（monitor_checks.ts 为毫秒）。
   // 用途：/health 只反映 Web 层存活，不反映 cron 检查引擎是否在跑；外部/守护监控
@@ -583,10 +610,10 @@ export function registerApiRoutes(app) {
     if (!planHasType(plan, type)) {
       return c.json(apiErr(E.PLAN_TYPE_NOT_SUPPORTED, { plan, type: TYPE_LABELS[type] || type }), 403);
     }
-    const minInterval = planMinInterval(plan);
+    const minInterval = effMinInterval(c, plan);
     const parsedInterval = interval ? Number(interval) : minInterval;
     if (parsedInterval < minInterval) {
-      return c.json(apiErr(E.PLAN_MIN_INTERVAL, { plan, minInterval }), 400);
+      return c.json(minIntervalErr(c, plan, minInterval), 400);
     }
     const nres = normalizeTarget(type, url);
     if (nres.err) return c.json(nres.err, 400);
@@ -637,7 +664,7 @@ export function registerApiRoutes(app) {
     catch (e) { return c.json(apiErr(E.IMPORT_PARSE_FAILED, { msg: e.message }), 400); }
     if (!rows.length) return c.json(apiErr(E.IMPORT_NO_MONITORS), 400);
     const limit = user?.monitorLimit != null ? user.monitorLimit : (PLAN_LIMITS[plan] ?? PLAN_LIMITS.free);
-    const minInterval = planMinInterval(plan);
+    const minInterval = effMinInterval(c, plan);
     let created = 0, skipped = 0; const reasons = new Set();
     for (const r of rows) {
       if ((await listMonitors(userId)).length >= limit) { reasons.add('plan monitor limit reached'); break; }
@@ -680,9 +707,9 @@ export function registerApiRoutes(app) {
         if (prevInternal !== undefined) m.config._ai = prevInternal;
       }
       if (interval !== undefined) {
-        const minI = planMinInterval(plan);
+        const minI = effMinInterval(c, plan);
         const v = Number(interval);
-        if (v < minI) return c.json(apiErr(E.PLAN_MIN_INTERVAL, { plan, minInterval: minI }), 400);
+        if (v < minI) return c.json(minIntervalErr(c, plan, minI), 400);
         m.interval = v;
       }
       if (name !== undefined) m.name = String(name).trim() || m.url;
@@ -917,7 +944,12 @@ export function registerApiRoutes(app) {
     if (!userId) return c.json(apiErr(E.AUTH_REQUIRED), 401);
     const user = await getUserById(userId);
     const plan = user?.plan ?? 'free';
-    return c.json({ plan, features: planFeatures(plan), typeLabels: TYPE_LABELS, channelLabels: CHANNEL_LABELS, minInterval: planMinInterval(plan) });
+    // minInterval = 本环境真正生效的下限（托管 Pro 已被钳到 60）；
+    // intervalClamped 表示"生效值 > 产品基础值"，前端据此显示托管告知文案——
+    // 不能静默钳制：用户选 30 秒必须被告知托管最快只有 60 秒。
+    const minInterval = effMinInterval(c, plan);
+    const intervalClamped = minInterval > planMinInterval(plan);
+    return c.json({ plan, features: planFeatures(plan), typeLabels: TYPE_LABELS, channelLabels: CHANNEL_LABELS, minInterval, intervalClamped });
   });
 
   // ===== 客户反馈 =====
@@ -1619,7 +1651,11 @@ export function registerApiRoutes(app) {
       const { url, name, interval, type = 'http', config = {}, channels = null, statusPublic = false } = c.get('body') || {};
       if (!url) return c.json(apiErr(E.URL_REQUIRED), 400);
       if (!planHasType(plan, type)) return c.json(apiErr(E.API_TYPE_NOT_SUPPORTED, { type }), 403);
-      const mon = createMonitor({ url, name, interval, userId: apiUser.id, type, config, channels });
+      // D49：API Key 建监控同样受套餐下限约束，否则托管 Pro 用 API 就能绕过 60 秒钳制（审阅 P0）
+      const minI = effMinInterval(c, plan);
+      const iv = interval ? Number(interval) : minI;
+      if (!Number.isFinite(iv) || iv < minI) return c.json(minIntervalErr(c, plan, minI), 400);
+      const mon = createMonitor({ url, name, interval: iv, userId: apiUser.id, type, config, channels });
       mon.statusPublic = !!statusPublic && planHasStatusPage(plan);
       mon.teamId = apiUser.teamId || null;
       await saveMonitor(mon);

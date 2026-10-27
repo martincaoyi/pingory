@@ -124,6 +124,8 @@
     .switch input:checked + .slider { background:var(--accent); }
     .switch input:checked + .slider:before { transform:translateX(24px); }
     .plans { display:grid; grid-template-columns: repeat(3,1fr); gap:20px; align-items:stretch; }
+    /* D49：AI 卡点击后 scrollIntoView 到 #plans，顶栏是 fixed（60px）会盖住首行，留出下钻余量 */
+    #plans { scroll-margin-top:80px; }
     .plan { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; display:flex; flex-direction:column;
             position:relative;
             transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
@@ -276,6 +278,24 @@
     .mt-icon { font-size:1.8rem; margin-bottom:8px; }
     .mt-title { font-weight:600; font-size:.98rem; margin-bottom:4px; }
     .mt-desc, .mt-src { color:var(--muted); font-size:.82rem; line-height:1.45; }
+    /* D49：AI Readability 是唯一差异化卖点，网格第一位 + 高亮 + Pro 徽标 + 整卡可点直达定价区 */
+    .mt-featured { position:relative; border:2px solid var(--accent); cursor:pointer;
+                   box-shadow:0 0 0 1px var(--accent-line), 0 14px 34px var(--accent-soft); }
+    .mt-featured:hover { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-line), 0 18px 40px var(--accent-soft); }
+    .mt-featured:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+    .mt-badge { position:absolute; top:10px; right:10px; background:var(--accent); color:#fff;
+                font-size:.7rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+                padding:3px 10px; border-radius:999px; box-shadow:0 4px 12px var(--accent-soft); }
+    .mt-tryfree { display:inline-block; margin-top:8px; font-size:.82rem; font-weight:600;
+                  color:var(--accent); text-decoration:none; }
+    .mt-tryfree:hover { text-decoration:underline; }
+    .plan li.feat-hl { font-weight:700; color:var(--text); }
+    .plan.pulse { animation:planPulse 2s ease; }
+    @keyframes planPulse {
+      0%,100% { box-shadow:0 0 0 1px var(--accent-line), 0 18px 40px var(--accent-soft); transform:none; }
+      20%,60% { box-shadow:0 0 0 4px var(--accent-line), 0 22px 46px var(--accent-soft); transform:translateY(-4px) scale(1.015); }
+    }
+    .add .interval-note { font-size:.82rem; color:var(--muted); line-height:1.5; }
     .faq { margin-top:56px; padding-top:40px; border-top:1px solid var(--border); }
     .faq h2 { font-size:1.4rem; margin:0 0 20px; }
     .faq-item { margin-bottom:16px; }
@@ -291,9 +311,6 @@
     .topnav-login:hover { border-color:var(--accent); color:var(--accent); }
     .topnav-signup { margin-left:8px; border-color:var(--accent); color:var(--accent); }
     .topnav-actions { display:flex; align-items:center; gap:10px; flex-wrap:nowrap; }
-    .topnav-link-checker { font-size:.88rem; color:var(--muted); text-decoration:none; white-space:nowrap; padding:6px 2px; }
-    .topnav-link-checker:hover { color:var(--accent); }
-    @media (max-width:760px){ .topnav-link-checker { display:none; } }
     #topnavRight { display:flex; align-items:center; gap:8px; }
     .topnav-login { white-space:nowrap; }
     .topnav.nav-float { left:50%; right:auto; transform:translateX(-50%); top:12px; width:min(780px,94vw); border-radius:999px; border-color:var(--accent-line); box-shadow:0 6px 24px rgba(0,0,0,.45); padding:10px 20px; }
@@ -385,7 +402,6 @@
   <nav class="topnav">
     <a href="/" class="topnav-brand"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="var(--accent)"/><circle cx="32" cy="32" r="5.5" fill="#fff"/><path d="M32 17.5 a14.5 14.5 0 0 1 14.5 14.5" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M32 8.5 a23.5 23.5 0 0 1 23.5 23.5" stroke="rgba(255,255,255,.5)" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg><span>Pingory</span></a>
       <div class="topnav-actions">
-        <a class="topnav-link-checker" href="/llms-txt-checker" data-i18n="nav.llmsChecker">llms.txt Checker</a>
         <button id="themeToggle" title="Toggle dark mode" data-i18n-title="theme.toggle">🌙</button>
         <span id="langMount"></span>
         <div id="topnavRight"></div>
@@ -484,6 +500,14 @@ docker compose up -d</code></pre>
     </div>
 
     <div class="monitor-types" id="monitorTypes">
+      <!-- D49：AI Readability 是唯一竞品没有的卖点，故放在网格第一位并整卡可点 → 直达定价区 Pro 卡 -->
+      <div class="mt-card wide mt-featured" id="aiTypeCard" role="button" tabindex="0" aria-label="AI Readability" data-i18n-aria="landing.type.ai.title">
+        <span class="mt-badge">Pro</span>
+        <div class="mt-icon">🤖</div>
+        <div class="mt-title" data-i18n="landing.type.ai.title">AI Readability</div>
+        <div class="mt-desc" data-i18n="landing.type.ai.desc">12 checks — robots.txt, AI crawler access, llms.txt, JSON-LD, readable text and more</div>
+        <a class="mt-tryfree" id="aiTypeFreeLink" href="/llms-txt-checker" data-i18n="landing.type.ai.tryFree">Or try the free llms.txt checker →</a>
+      </div>
       <div class="mt-card wide"><div class="mt-icon">🌐</div><div class="mt-title" data-i18n="landing.type.http.title">HTTP/HTTPS</div><div class="mt-desc" data-i18n="landing.type.http.desc">Monitor any web page or API endpoint for availability</div></div>
       <div class="mt-card"><div class="mt-icon">🔒</div><div class="mt-title" data-i18n="landing.type.ssl.title">SSL Certificates</div><div class="mt-desc" data-i18n="landing.type.ssl.desc">Get alerted 30 days before your certificates expire</div></div>
       <div class="mt-card"><div class="mt-icon">📅</div><div class="mt-title" data-i18n="landing.type.domain.title">Domain Expiry</div><div class="mt-desc" data-i18n="landing.type.domain.desc">WHOIS monitoring so you never lose a domain</div></div>
@@ -492,7 +516,6 @@ docker compose up -d</code></pre>
       <div class="mt-card"><div class="mt-icon">⚡</div><div class="mt-title" data-i18n="landing.type.api.title">API Monitoring</div><div class="mt-desc" data-i18n="landing.type.api.desc">Validate response headers and JSON assertions</div></div>
       <div class="mt-card"><div class="mt-icon">📋</div><div class="mt-title" data-i18n="landing.type.dns.title">DNS Records</div><div class="mt-desc" data-i18n="landing.type.dns.desc">Detect unauthorized DNS changes early</div></div>
       <div class="mt-card wide"><div class="mt-icon">💓</div><div class="mt-title" data-i18n="landing.type.heartbeat.title">Heartbeat / Cron</div><div class="mt-desc" data-i18n="landing.type.heartbeat.desc">Know immediately when scheduled jobs fail</div></div>
-      <div class="mt-card wide"><div class="mt-icon">🤖</div><div class="mt-title" data-i18n="landing.type.ai.title">AI Readability</div><div class="mt-desc" data-i18n="landing.type.ai.desc">12 checks — robots.txt, AI crawler access, llms.txt, JSON-LD, readable text and more</div></div>
     </div>
 
     <!-- 信任感增强（#269，学 Better Uptime / Hyperping：实时统计 + 三步上手） -->
@@ -554,7 +577,7 @@ docker compose up -d</code></pre>
           <li data-i18n="landing.plan.pro.feature5">All alert channels</li>
           <li data-i18n="landing.plan.pro.feature6">Custom domain status page</li>
           <li data-i18n="landing.plan.pro.feature7">Team access (up to 3)</li>
-          <li data-i18n="landing.plan.pro.feature8">AI Readability monitoring</li>
+          <li class="feat-hl" data-i18n="landing.plan.pro.feature8">AI Readability monitoring</li>
         </ul>
         <button data-plan="pro" data-i18n="landing.plan.pro.btn">Upgrade to Pro</button>
       </div>
@@ -608,6 +631,9 @@ docker compose up -d</code></pre>
         <input type="text" id="urlInput" class="full" placeholder="Target URL or hostname" required />
         <input type="text" id="nameInput" placeholder="name (optional)" />
         <input type="number" id="intervalInput" placeholder="interval(s)" value="300" min="30" style="max-width:110px" />
+        <!-- D49：托管版 cron 为 1 分钟粒度，Pro 的 30 秒无法兑现 —— 必须明示，不静默钳制。
+             由 loadPlanFeatures() 按 intervalClamped 显示（唯一取数入口，不另起请求）。 -->
+        <div id="intervalNote" class="full interval-note hidden" data-i18n="form.intervalHostedNote">Hosted checks run every 60 seconds at minimum — that's the shortest interval our scheduler supports. 30-second checks are available in the self-hosted version.</div>
         <div id="cfgBox" class="cfg full hidden"></div>
         <div id="chanBox" class="cfg full hidden"></div>
         <button type="submit" class="full" data-i18n="btn.addMonitor">Add monitor</button>
@@ -652,6 +678,9 @@ docker compose up -d</code></pre>
       });
       document.querySelectorAll('[data-i18n-alt]').forEach((el)=>{
         const k = el.getAttribute('data-i18n-alt'); if (I18N[k]) el.alt = I18N[k];
+      });
+      document.querySelectorAll('[data-i18n-aria]').forEach((el)=>{
+        const k = el.getAttribute('data-i18n-aria'); if (I18N[k]) el.setAttribute('aria-label', I18N[k]);
       });
       document.documentElement.lang = (function(){ try { return localStorage.getItem('pingory_lang')||'en'; } catch { return 'en'; } })();
       // 动态区域：反馈/验证横幅等已挂载组件随语言刷新
@@ -1380,6 +1409,7 @@ docker compose up -d</code></pre>
           + li('landing.plan.pro.feature5', 'All alert channels')
           + li('landing.plan.pro.feature6', 'Custom domain status page')
           + li('landing.plan.pro.feature7', 'Team access (up to 3)')
+          + li('landing.plan.pro.feature8', 'AI Readability monitoring')
           + '</ul></div>'
           + '</div>'
           + '<p class="cmp-bill">' + t('upgrade.billNote', 'Choose how you pay \u2014 switch or cancel anytime:') + '</p>';
@@ -1452,6 +1482,9 @@ docker compose up -d</code></pre>
 
     // ===== 套餐能力与动态表单 =====
     let FEATURES = null, TYPE_LABELS = {}, CHANNEL_LABELS = {};
+    // 托管环境的生效间隔下限（来自 /api/plan-features 的 minInterval）。
+    // ⚠️ 它不在 data.features 里——早先写 FEATURES.minInterval 永远取到 300（D49 审阅发现）
+    let PLAN_MIN = 300;
     // ===== 账户级告警渠道凭据（Plan A）：一次配置，表单只勾选 =====
     let ACCOUNT_CHANNELS = {};
     function channelConfigured(c) {
@@ -1485,11 +1518,27 @@ docker compose up -d</code></pre>
           FEATURES = data.features;
           TYPE_LABELS = data.typeLabels || {};
           CHANNEL_LABELS = data.channelLabels || {};
+          PLAN_MIN = Number(data.minInterval) > 0 ? Number(data.minInterval) : 300;
+          applyIntervalClampNotice(data);
         }
       } catch { /* 网络异常也要保证类型下拉可用 */ }
       fillTypeOptions();
       renderCfg();
       await loadAccountChannels();
+    }
+
+    // 托管侧把 Pro 的 30 秒钳到 60 秒时必须明示（D49）：intervalClamped 为后端判定
+    // 「生效下限 > 产品基础下限」。自托管恒为 false ⇒ 提示常隐，30 秒照旧可选。
+    function applyIntervalClampNotice(data) {
+      const note = document.getElementById('intervalNote');
+      const input = document.getElementById('intervalInput');
+      const clamped = !!(data && data.intervalClamped === true && Number(data.minInterval) > 0);
+      // min 无条件对齐生效下限（不只 clamped 时）：否则 Free/Starter 仍看到 min="30"，填了必被后端 400
+      if (input && PLAN_MIN > 0) {
+        input.min = String(PLAN_MIN);
+        if (!input.value || Number(input.value) < PLAN_MIN) input.value = String(PLAN_MIN);
+      }
+      if (note) note.classList.toggle('hidden', !clamped);
     }
 
     function renderCfg() {
@@ -2016,7 +2065,7 @@ docker compose up -d</code></pre>
         const type = document.getElementById('typeInput').value || 'http';
         const config = collectConfig();
         const channels = (FEATURES && FEATURES.channels.length) ? collectChannels() : { email: { enabled: true } };
-        const minInterval = FEATURES ? FEATURES.minInterval || 300 : 300;
+        const minInterval = PLAN_MIN;
         const res = await fetch('/api/monitors', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2230,6 +2279,37 @@ docker compose up -d</code></pre>
       await checkAuth();
     }
     startApp();
+
+    // ===== D49：AI Readability 卡整卡点击 → 平滑滚到定价区 → 高亮 Pro 卡 2 秒 =====
+    // 用 addEventListener（禁止 inline onclick）。键盘 Enter/Space 等价；卡内免费工具链接
+    // 自身导航，必须 stopPropagation，否则点免费工具会被整卡劫持到定价区。
+    (function featuredTypeCard(){
+      const card = document.getElementById('aiTypeCard');
+      const freeLink = document.getElementById('aiTypeFreeLink');
+      if (!card) return;
+      if (freeLink) {
+        freeLink.addEventListener('click', (e) => { e.stopPropagation(); });
+        freeLink.addEventListener('keydown', (e) => { e.stopPropagation(); });
+      }
+      function gotoPro() {
+        const plans = document.getElementById('plans');
+        if (plans) plans.scrollIntoView({ behavior:'smooth', block:'start' });
+        const pro = document.querySelector('.plan.pro');
+        if (!pro) return;
+        pro.classList.remove('pulse');
+        void pro.offsetWidth;                     // 强制重排：连续触发时动画能重播
+        pro.classList.add('pulse');
+        setTimeout(() => pro.classList.remove('pulse'), 2000);
+      }
+      card.addEventListener('click', (e) => {
+        if (e.target && e.target.closest && e.target.closest('a')) return;  // 卡内链接自行处理
+        gotoPro();
+      });
+      card.addEventListener('keydown', (e) => {
+        if (e.target && e.target.closest && e.target.closest('a')) return;
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); gotoPro(); }
+      });
+    })();
 
     // UI-1：导航/反馈随滚动三态切换（参考 qwenwork 交互）
     (function navScrollStates(){

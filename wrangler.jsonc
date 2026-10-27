@@ -30,7 +30,16 @@
   "vars": {
     "PG_CONN_TIMEOUT_MS": "20000",
     "PG_QUERY_TIMEOUT_MS": "30000",
-    "PG_STATEMENT_TIMEOUT_MS": "30000"
+    "PG_STATEMENT_TIMEOUT_MS": "30000",
+    // 托管侧最低检查间隔覆盖（JSON 字符串）：Worker Cron 是 "* * * * *"，1 分钟粒度，
+    // 托管环境最快只能 60 秒 ⇒ 把 Pro 的 30 秒钳到 60，绝不向用户假装 30 秒可用。
+    // 自托管（server.js / .env）不设此变量 ⇒ 30 秒真实保留；/api/plan-features 靠
+    // intervalClamped=true 让前端明确告知用户"托管最快 60 秒"，不是静默钳制。
+    // 旧客户端仍提交 30 时，服务端按生效下限返回 plan_min_interval_hosted（托管专用码：
+    // 通用码的文案会劝顶档用户"升级更快"，那是空头支票）。
+    // ⚠️ 改这个数字必须同步 8 语 form.intervalHostedNote 里的 "60"（文案写死了秒数），
+    //    否则提示与实际下限不一致。tools/test-interval-clamp.mjs 会盯住这个值。
+    "PLAN_MIN_INTERVAL_OVERRIDE": "{\"pro\":60}"
   },
   "observability": {
     "enabled": true

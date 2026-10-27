@@ -40,6 +40,7 @@
 | `plan_monitor_limit` | 403 | 套餐监控数已满 `{plan}` `{limit}` |
 | `plan_type_not_supported` | 403 | 套餐不支持该监控类型 `{plan}` `{type}` |
 | `plan_min_interval` | 400 | 检查间隔低于套餐下限 `{plan}` `{minInterval}` |
+| `plan_min_interval_hosted` | 400 | 托管环境受调度器粒度限制（Pro 30s→60s），非套餐问题 `{plan}` `{minInterval}` |
 | `email_verify_required` | 403 | 未验证邮箱且达到未验证上限 `{cap}` |
 | `trend_requires_starter` | 403 | 趋势图需 Starter 以上 |
 | `status_page_requires_starter` | 403 | 状态页需 Starter 以上 |
@@ -449,7 +450,7 @@ OAuth 回调终点。用 code 换取 token 并获取邮箱，按邮箱找/建用
   "statusPublic": false
 }
 ```
-- `interval`：秒，默认 60（注意：MVP 默认 300，Phase 1 起默认 60），最小 30
+- `interval`：秒，默认 60（注意：MVP 默认 300，Phase 1 起默认 60）。**产品基础下限 30**，但**实际生效下限随部署形态变化**：托管 Pro 被 Worker Cron（1 分钟粒度）钳到 60，自托管保留 30。客户端应以 `GET /api/plan-features` 的 `minInterval` 为准，不要硬编码 30。
 - `type`：默认 `http`，受 `planHasType` 门禁（见上表）
 - `statusPublic`：仅 Starter+ 生效，否则强制 false
 
@@ -592,12 +593,19 @@ Heartbeat 监控的回填端点（G1，**无需登录**，凭监控 id）。
 ### GET /api/plan-features
 返回当前用户套餐的可用能力（前端渲染表单用，需登录）。
 
+`minInterval` 是**当前部署环境真正生效**的最低检查间隔（秒），`intervalClamped` 表示该值是否高于产品基础值：
+
+- 托管版（Cloudflare Worker）：Worker Cron 为 1 分钟粒度，`wrangler.jsonc` 的 `vars.PLAN_MIN_INTERVAL_OVERRIDE = "{\"pro\":60}"` 把 Pro 从 30 秒钳到 60 秒 ⇒ Pro 用户拿到 `minInterval: 60, intervalClamped: true`，前端据此显示「托管最快 60 秒」的告知文案。
+- 自托管（server.js）：不支持该覆盖，30 秒真实保留 ⇒ `intervalClamped: false`。
+
 **响应 200**
 ```json
 { "plan": "starter",
   "features": { "types": ["http","keyword","ping","tcp","ssl","domain","api","dns","heartbeat"], "channels": ["email","slack","webhook","telegram"], "statusPage": true, "multiRegion": true, "stats": true },
   "typeLabels": { "http": "HTTP/HTTPS 状态码", ... },
-  "channelLabels": { "email": "邮件", ... } }
+  "channelLabels": { "email": "邮件", ... },
+  "minInterval": 60,
+  "intervalClamped": false }
 ```
 
 ### POST /api/admin/monthly-report
@@ -836,7 +844,7 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 ### 9.3 团队 + Account API（G9，Pro）
 - **POST /api/team**（`{name}`）创建团队；**POST /api/team/invite**（`{email}`）邀请（按邮箱归入团队，共享监控）；**GET /api/team** 查看成员与共享监控；**POST /api/team/leave** 退出。
 - **POST /api/account/apikey**（`{regenerate?}`）生成/重置 API Key；**GET /api/account/apikey** 查看。
-- **Account API（Bearer 鉴权）**：`GET /api/v1/monitors`（含团队共享）、`POST /api/v1/monitors`（`{url,name,type,interval,config,channels,statusPublic}`）、`GET|DELETE /api/v1/monitors/:id`。
+- **Account API（Bearer 鉴权）**：`GET /api/v1/monitors`（含团队共享）、`POST /api/v1/monitors`（`{url,name,type,interval,config,channels,statusPublic}`；`interval` 与 Web 端同受生效下限约束——低于下限返回 `plan_min_interval` / `plan_min_interval_hosted`，不会静默接受）、`GET|DELETE /api/v1/monitors/:id`。
 
 ### 9.4 i18n（G10）
 - 语言包：`GET /i18n/:lang.json`（en/es/pt/de/fr/ja/ko）；前端 `index.html` 含语言切换器，核心文案经 `data-i18n` 应用。

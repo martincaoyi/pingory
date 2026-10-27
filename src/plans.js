@@ -58,8 +58,18 @@ export function planHasStats(plan) {
   return FLAGS[plan]?.stats ?? false;
 }
 
-export function planMinInterval(plan) {
-  return PLAN_MIN_INTERVAL[plan] ?? PLAN_MIN_INTERVAL.free;
+// 生效下限 = max(基础下限, overrides[该档])。
+// overrides 只由托管侧（Cloudflare Worker）传入：其 cron 粒度为 1 分钟，30 秒无法兑现，
+// 故 wrangler.jsonc 用 PLAN_MIN_INTERVAL_OVERRIDE={"pro":60} 把 Pro 钳到 60。
+// 自托管（server.js）不传第二参 ⇒ 30 秒真实保留。基础表 PLAN_MIN_INTERVAL 仍是产品真值，不改。
+// 纯函数：override 缺失/非法（非数字、≤0、NaN/Infinity）一律退回基础下限，绝不抛错。
+export function planMinInterval(plan, overrides) {
+  const key = Object.prototype.hasOwnProperty.call(PLAN_MIN_INTERVAL, plan) ? plan : 'free';
+  const base = PLAN_MIN_INTERVAL[key];
+  if (!overrides || typeof overrides !== 'object') return base;
+  const ov = overrides[key];
+  if (typeof ov !== 'number' || !Number.isFinite(ov) || ov <= 0) return base;
+  return Math.max(base, ov);
 }
 
 // Display names shown in the UI (English site; zh.json mirrors for Chinese)

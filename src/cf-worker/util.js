@@ -14,6 +14,8 @@ export const E = {
   URL_INVALID:              'url_invalid',
   PLAN_TYPE_NOT_SUPPORTED:  'plan_type_not_supported',
   PLAN_MIN_INTERVAL:        'plan_min_interval',
+  // 托管侧被调度器粒度钳制（Pro 30s→60s）时专用：通用文案会劝顶档用户「升级更快」（D49）
+  PLAN_MIN_INTERVAL_HOSTED: 'plan_min_interval_hosted',
   MONITOR_NOT_FOUND:        'monitor_not_found',
   MONITOR_NO_PERM:          'monitor_not_found_or_no_perm',
   TREND_REQUIRES_STARTER:   'trend_requires_starter',
