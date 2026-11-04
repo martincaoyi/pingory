@@ -107,18 +107,54 @@ export async function sendFeedbackNotification({ email, message, page }) {
 // ===== 邮件订阅名单（v2 / 2026-09-29）=====
 // 双重选择加入的确认信。链接落在首页 ?wl=TOKEN，由首页读参数后调 confirm 接口，
 // 这样确认成功/失败都能按访客当前语言提示。
-export async function sendWaitlistConfirmEmail(email, token) {
-  const link = `${appUrl()}/?wl=${encodeURIComponent(token)}`;
+// ===== up ≠ healthy 自查清单（waitlist 钩子 / 2026-11-04）=====
+// 随双重确认邮件正文一起交付：纯文本、无 PDF、无附件、不单独发送。
+// 唯一真源：方案资料/推广方法论/出海获客/77-up≠healthy自查清单.md（改动须两边同步）。
+// 审阅约束：双重确认邮件里不放推广链接，避免模糊「同意对象」；推广链接移到确认成功页 / 后续通知。
+export const WAITLIST_CHECKLIST = `Ten checks for when "up" doesn't mean "healthy":
+
+1. Open your homepage fresh: is it blank or an error page served with a 200 status?
+2. Time a page load. Is it slow enough to lose visitors even when it does not time out?
+3. Pick a keyword that must appear, then fetch the raw HTML. Is the string really there?
+4. Check your TLS certificate's expiry and full chain with an external SSL check.
+5. Resolve your domain with a public resolver. Are the A/AAAA/CNAME records what you expect?
+6. Read robots.txt line by line: are any AI crawler user agents blocked by accident?
+7. Fetch /llms.txt. Does it exist, describe your key pages, and load without a login?
+8. Validate your structured data. Are the JSON-LD fields present and error-free?
+9. Fetch with curl or disable JavaScript and compare. Do crawlers see an empty page?
+10. Send a test alert. Does it really land in the inbox, phone, or webhook you expect?
+
+A status code alone won't tell you any of this.`;
+
+// 不发信；html 的 logo 仍走 appUrl() 懒读 APP_URL，故非严格纯函数（测试已如实标注）。
+export function buildWaitlistConfirmEmail(link) {
   const subject = 'Confirm your Pingory launch subscription';
-  const text = `You asked to hear from us when Pingory launches.\n\nConfirm your address (this link expires in 7 days):\n${link}\n\nIf this was not you, just ignore this email — nothing else will be sent.`;
+  const intro = `Confirm your email (this link expires in 7 days): ${link}
+
+That one click only signs you up for one email when Pingory ships; you can unsubscribe anytime. The checklist you asked for is below — plain text, no PDF, no attachment, nothing sent separately.`;
+  const outro = 'If this was not you, just ignore this email — nothing else will be sent.';
+  const text = `${intro}\n\n${WAITLIST_CHECKLIST}\n\n${outro}`;
+
+  const checklistHtml = WAITLIST_CHECKLIST
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
   const html = `<div style="padding:14px 0 12px;border-bottom:1px solid #e5e7eb;margin-bottom:16px;">
   <img src="${appUrl()}/logo-email.png" width="40" height="40" alt="" style="vertical-align:middle;border-radius:9px;border:1px solid #e5e7eb;"/>
   <span style="font-size:20px;font-weight:700;color:#1faa6b;vertical-align:middle;margin-left:8px;">Pingory</span>
 </div>
-<p>You asked to hear from us when <b>Pingory</b> launches.</p>
 <p>Confirm your address — this link expires in 7 days:</p>
 <p><a href="${link}" style="background:#1faa6b;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block;font-weight:600;">Confirm my email</a></p>
-<p style="color:#6b7280;font-size:13px;">If this was not you, just ignore this email — nothing else will be sent.</p>`;
+<p style="color:#6b7280;font-size:13px;">That one click only signs you up for one email when Pingory ships; you can unsubscribe anytime.</p>
+<hr style="border:0;border-top:1px solid #e5e7eb;margin:20px 0;"/>
+<p>The checklist you asked for is below — plain text, no PDF, no attachment, nothing sent separately.</p>
+<p>${checklistHtml}</p>
+<p style="color:#6b7280;font-size:13px;">${outro}</p>`;
+  return { subject, text, html };
+}
+
+export async function sendWaitlistConfirmEmail(email, token) {
+  const link = `${appUrl()}/?wl=${encodeURIComponent(token)}`;
+  const { subject, text, html } = buildWaitlistConfirmEmail(link);
   return sendMail(email, subject, text, html);
 }
 
