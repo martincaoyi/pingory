@@ -2,6 +2,7 @@
 // 密码哈希用 Node 内置 crypto.scrypt（不引入 bcrypt 依赖）
 
 import crypto from 'crypto';
+import net from 'node:net';
 import { getPool } from './db.js';
 
 function hashPassword(password) {
@@ -403,6 +404,25 @@ export async function recordBillingEvent(ev) {
   return id;
 }
 
+// 自定义域名合法性 + 保留域校验（P1-10，2026-11-18）。
+// 旧实现把任意字符串落库 ⇒ ① 用户可把 status_custom_domain 设成 pingory.com 自身，
+// Host 路由（server.js:172 / cf-worker api.js:843）命中后，**本站首页会被替换成该用户的状态页**（首页劫持）；
+// ② 也可设成 IP/带端口/带 scheme 的串，污染 Host 匹配。
+export function validateCustomDomain(raw) {
+  const host = String(raw == null ? '' : raw).trim().toLowerCase();
+  if (!host) return null; // 空串 = 清除自定义域名，合法
+  if (host.includes('/') || host.includes(':') || host.includes('%')) return 'Custom domain must be a bare hostname (no scheme, port or path)';
+  if (net.isIP(host)) return 'Custom domain cannot be an IP address';
+  if (!/^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(host)) return 'Custom domain format is invalid';
+  // 保留域：本站 apex 及其全部子域（APP_URL 为部署环境真源），否则可劫持首页/对比页
+  let apex = 'pingory.com';
+  try { apex = new URL(process.env.APP_URL || 'https://pingory.com').hostname.toLowerCase(); } catch { /* 用默认 */ }
+  if (host === apex || host.endsWith(`.${apex}`) || host === 'localhost') {
+    return 'This domain is reserved and cannot be claimed';
+  }
+  return null;
+}
+
 // 更新公开状态页设置（G7 扩展：自定义域名 / 白标 / 私有密码 / 页面标题）
 export async function updateStatusPage(userId, { enabled, slug, customDomain, whiteLabel, password, title } = {}) {
   const pool = await getPool();
@@ -413,6 +433,10 @@ export async function updateStatusPage(userId, { enabled, slug, customDomain, wh
   if (slug) { sets.push(`public_slug = $${i++}`); params.push(slug); }
   if (customDomain !== undefined) {
     const cd = String(customDomain || '').trim().toLowerCase() || null;
+    if (cd) {
+      const invalid = validateCustomDomain(cd);
+      if (invalid) throw new Error(invalid);
+    }
     sets.push(`status_custom_domain = $${i++}`); params.push(cd);
   }
   if (whiteLabel !== undefined) { sets.push(`status_white_label = $${i++}`); params.push(!!whiteLabel); }
@@ -552,6 +576,10 @@ export async function createTeam(ownerId, name) {
 //   · 只写 team_invites(pending)，不改任何归属
 //   · 被邀请人 accept 后才真正迁移（见 acceptTeamInvite）
 // 返回值：'pending'（新邀请/已有待处理）| 'already'（已在本团队）
+// 防枚举（2026-11-18）：不区分「邮箱未注册 / 已在别的团队」——两者与正常邀请返回同样的
+// 'pending'。理由：错误文案不同 = 团队 owner 可用本接口探测任意邮箱是否注册。
+// 未注册者拿到的邀请邮件会引导注册，注册同邮箱后 acceptTeamInvite 的 CTE 会自然放行；
+// 已在别队的人在 accept 时被 SQL 的「未在别队」条件拒绝，无需提前拒绝。
 export async function inviteTeamMember(teamId, ownerId, email) {
   const pool = await getPool();
   const normEmail = String(email == null ? '' : email).trim().toLowerCase();
@@ -560,10 +588,7 @@ export async function inviteTeamMember(teamId, ownerId, email) {
   const { rows: t } = await pool.query('SELECT id FROM teams WHERE id = $1 AND owner_id = $2', [teamId, ownerId]);
   if (t.length === 0) throw new Error('No permission to operate this team');
   const { rows: u } = await pool.query('SELECT id, team_id FROM users WHERE email = $1', [normEmail]);
-  if (u.length === 0) throw new Error('This email is not registered yet; ask them to sign up first');
-  if (u[0].team_id === teamId) return 'already';
-  // 不允许跨团队抢人：对方已在别的团队时必须先自行退出
-  if (u[0].team_id) throw new Error('This user already belongs to another team');
+  if (u.length && u[0].team_id === teamId) return 'already';
   // 幂等：同一团队对同一邮箱重复邀请不堆行
   const { rows: existing } = await pool.query(
     `SELECT id FROM team_invites

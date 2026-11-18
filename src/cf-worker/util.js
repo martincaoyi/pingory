@@ -43,6 +43,7 @@ export const E = {
   USER_NOT_FOUND:           'user_not_found',
   INVALID_MONITOR_LIMIT:    'invalid_monitor_limit',
   INVALID_PLAN:             'invalid_plan',
+  VALIDATION_FAILED:        'validation_failed',   // 通用入参校验失败（msg 带具体原因，2026-11-18）
   API_TYPE_NOT_SUPPORTED:   'api_type_not_supported',
   CHANNEL_NOT_SUPPORTED:    'channel_not_supported',
   CHANNEL_NOT_CONFIGURED:   'channel_not_configured',

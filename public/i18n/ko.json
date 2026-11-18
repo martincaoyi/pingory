@@ -653,6 +653,7 @@
   "monerr.heartbeat_late": "예상 간격 내에 하트비트가 없습니다",
   "monerr.ssl_expiring": "SSL 인증서가 {detail}일 후에 만료됩니다",
   "monerr.domain_expiring": "도메인이 {detail}일 후에 만료됩니다",
+  "monerr.port_invalid": "잘못된 포트",
   "nav.compare": "UptimeRobot과 비교 →",
   "nav.llmsChecker": "llms.txt 검사기",
   "footer.compare": "비교",

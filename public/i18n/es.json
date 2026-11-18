@@ -653,6 +653,7 @@
   "monerr.heartbeat_late": "No se recibió latido dentro del intervalo esperado",
   "monerr.ssl_expiring": "El certificado SSL caduca en {detail} días",
   "monerr.domain_expiring": "El dominio caduca en {detail} días",
+  "monerr.port_invalid": "Puerto no válido",
   "nav.compare": "Comparar con UptimeRobot →",
   "nav.llmsChecker": "Comprobador de llms.txt",
   "footer.compare": "Comparar",

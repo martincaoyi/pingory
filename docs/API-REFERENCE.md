@@ -26,7 +26,7 @@
 ▸ 字典缺键时回退显示原始错误码（便于定位）
 ▸ 内容自由文本（如监控历史时间线的 `error` 字段记录 HTTP 错误原文）不走错误码，保持原样
 
-### 错误码清单（43）
+### 错误码清单（44）
 
 | 错误码 | HTTP | 含义 / 占位符 |
 |---|---|---|
@@ -74,6 +74,7 @@
 | `invalid_domain` | 400 | 公开检查端点的域名非法 / 不是裸域名（2026-10-24 D43 新增） |
 | `capacity` | 503 | 公开检查端点全局日预算耗尽或配额表不可用（2026-10-24 D43 新增） |
 | `check_failed` | 502 | 公开检查端点上游抓取异常 / 超时（不透出异常原文，2026-10-24 D43 新增） |
+| `validation_failed` | 400 | 通用入参校验失败（`ep.msg` 带具体原因；2026-11-18 新增，首个使用场景=状态页自定义域名校验） |
 
 ### 未匹配路由的统一兜底（2026-09-16 P1-11 新增）
 
@@ -538,12 +539,13 @@ OAuth 回调终点。用 code 换取 token 并获取邮箱，按邮箱找/建用
 ▸ 服务端对人不带语言偏好的出口（告警邮件 / Slack / Webhook / Telegram / Discord）：`src/monerr.js` 的 `monErrText()`
 ▸ 语言中立原文（`HTTP 500`、`ECONNREFUSED`、`err.message`）不属错误码，原样存储与展示
 
-错误码清单（17，均须在 8 语字典有 `monerr.*` 键）
+错误码清单（18，均须在 8 语字典有 `monerr.*` 键）
 
 ▸ `timeout`｜`kw_missing`｜`kw_not_found|{keyword}`｜`ping_no_response`｜`ping_failed`
 ▸ `connect_timeout`｜`ssl_no_cert`｜`ssl_expired`｜`ssl_handshake|{errCode}`｜`ssl_timeout`
 ▸ `whois_no_expiry`｜`domain_expired`｜`assert_failed|{path}|{actual}|{expected}`
 ▸ `heartbeat_never`｜`heartbeat_late`｜`ssl_expiring|{days}`｜`domain_expiring|{days}`
+▸ `port_invalid`（2026-11-18 P1-④ 新增：tcp/ssl 端口非整数或越界，检查前置校验，结果正常落库判 down）
 （最后两个为 `warning` 事件的 `error` 字段，取值为剩余天数）
 
 单一事实源：`src/monerr.js`（`MON_ERR` / `MON_ERR_CODES` / `monErrText`）。新增检查类型时必须同步 8 语 `monerr.*` 键与两个页面的 `MONERR_CODES`。
@@ -581,12 +583,13 @@ Heartbeat 监控的回填端点（G1，**无需登录**，凭监控 id + 上报�
 **响应 200**
 ```json
 { "title": "Acme Inc", "whiteLabel": false,
-  "monitors": [ { "id": "...", "name": "My Site", "status": "up", "uptime": 0.998, "avgRt": 124,
+  "monitors": [ { "name": "My Site", "status": "up", "uptime": 0.998, "avgRt": 124,
                   "spark": [ { "day": "2026-08-01", "avgRt": 120, "down": false }, ... ] } ],
-  "incidents": [ { "monitor_id": "...", "event_type": "status", "to_status": "down", "error": "HTTP 503", "created_at": 1693000000000 } ] }
+  "incidents": [ { "monitor": "My Site", "event_type": "status", "to_status": "down", "error": "HTTP 503", "created_at": 1693000000000 } ] }
 ```
 - `monitors[].spark`：近 30 日每日降采样（avgRt + 当日是否 down），供状态页 sparkline。
 - `incidents`：近 30 日该状态页下监控的 down/up 事件（倒序），供事故时间线。
+- 🔴 **不返回监控 id**（2026-11-18 P1-⑭）：公开 payload 带监控 UUID 是纯暴露；事故名称由服务端解析成 `incidents[].monitor` 直接下发，前端不再做 id↔名称映射。（心跳伪造已由 token+类型限制根治，见 `POST /api/heartbeat/:id`。）
 **响应 404** slug 不存在或用户未开启状态页
 
 ### GET /status/:slug
@@ -603,6 +606,7 @@ Heartbeat 监控的回填端点（G1，**无需登录**，凭监控 id + 上报�
 - `title`：可选（**Pro**），公开状态页标题，≤80 字符；留空=清除。未设置时状态页标题回退到 `users.name`，再回退到前端通用文案
 
 **响应 200** `{ user }`（含 `statusPageEnabled` / `publicSlug` / `statusPageTitle`）；**403** 套餐不支持；**401** 未登录
+- `customDomain`（**Pro**）：**2026-11-18 起服务端校验**——必须是裸主机名（无 scheme/端口/路径）、不能是 IP、不能是本站保留域（`APP_URL` apex 及其全部子域 / localhost）；违规返回 **400 `validation_failed`**（`ep.msg` 带具体原因）。配套：`users.status_custom_domain` 已建唯一索引（撞绑返回 23505）
 
 ### GET /api/plan-features
 返回当前用户套餐的可用能力（前端渲染表单用，需登录）。
@@ -856,7 +860,7 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 - **GET /api/maintenance-windows**、**POST /api/maintenance-windows**（`{title,monitorIds:'all'|[],startAt,endAt}`）、**DELETE /api/maintenance-windows/:id**。窗口覆盖的监控 down 时不派发告警（仍记录事件）。
 
 ### 9.3 团队 + Account API（G9，Pro）
-- **POST /api/team**（`{name}`）创建团队；**POST /api/team/invite**（`{email}`）发送邀请（**2026-11-18 起为待确认制**：仅写 `team_invites(pending)` 并发邀请邮件，不改动对方任何归属，返回 `result: "pending" | "already"`）；**GET /api/team** 查看成员与共享监控；**POST /api/team/leave** 退出（owner 退出时自动转让给最早加入的成员；团队只剩自己则解散）。
+- **POST /api/team**（`{name}`）创建团队；**POST /api/team/invite**（`{email}`）发送邀请（**2026-11-18 起为待确认制**：仅写 `team_invites(pending)` 并发邀请邮件，不改动对方任何归属，返回 `result: "pending" | "already"`）。**防枚举（2026-11-18）**：对「邮箱未注册 / 已在别的团队」与正常邀请同样返回 `pending` 并发信——错误文案区分会暴露任意邮箱的注册状态；未注册者注册同邮箱后即可接受，已在别队者在 accept 时被 SQL 拒绝；**GET /api/team** 查看成员与共享监控；**POST /api/team/leave** 退出（owner 退出时自动转让给最早加入的成员；团队只剩自己则解散）。
 - **团队邀请（待确认流程）**：`GET /api/team/invites` 列出当前登录邮箱收到的待处理邀请；`POST /api/team/invites/:id/accept` 接受（**此时**才迁移 `users.team_id` 与其本人监控的 `team_id`）；`POST /api/team/invites/:id/decline` 拒绝。邀请 7 天过期，且只能由被邀请邮箱本人操作（SQL 层强校验，改请求参数无法绕过）。
 - **POST /api/account/apikey**（`{regenerate?}`）生成/重置 API Key；**GET /api/account/apikey** 查看。
 - **Account API（Bearer 鉴权）**：`GET /api/v1/monitors`（含团队共享）、`POST /api/v1/monitors`（`{url,name,type,interval,config,channels,statusPublic}`；`interval` 与 Web 端同受生效下限约束——低于下限返回 `plan_min_interval` / `plan_min_interval_hosted`，不会静默接受；**2026-11-18 起与 Web 端同等校验**：套餐监控数上限、未验证邮箱 cap=3、`normalizeTarget` + SSRF 守卫、渠道按套餐过滤）、`GET|DELETE /api/v1/monitors/:id`（归属按「本人 / 同团队」显式判定，`null === null` 不再放行）。

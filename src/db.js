@@ -171,6 +171,11 @@ const SCHEMA_DDL = `
     ALTER TABLE users ADD COLUMN IF NOT EXISTS status_page_enabled BOOLEAN NOT NULL DEFAULT false;
 
     CREATE INDEX IF NOT EXISTS idx_users_public_slug ON users(public_slug);
+    -- 唯一性约束（P1-①，2026-11-18）：public_slug / status_custom_domain 重名时
+    -- loadStatusPageUser 的归属不确定（任意行命中）⇒ slug 可被抢注、自定义域名可撞绑。
+    -- 线上库已查重（2026-11-18 实测 0 重复）后才加的唯一索引；partial index 放行 NULL。
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_users_public_slug ON users(public_slug) WHERE public_slug IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_users_status_custom_domain ON users(status_custom_domain) WHERE status_custom_domain IS NOT NULL;
 
     -- ===== 用户扩展：账号安全 + 超级管理员（G-SEC / G-ADMIN）=====
     -- email_verified：注册后需验证邮箱才视为可信账号

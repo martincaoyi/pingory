@@ -1838,7 +1838,7 @@ docker compose up -d</code></pre>
     // 检查失败原因：服务端存 `code|detail` 稳定错误码，这里按当前语言翻译。
     // 未知值（HTTP 500 / ECONNREFUSED / err.message 等语言中立的原文）原样显示。
     // ⚠️ 新增错误码须同步 src/monerr.js 与 8 语 monerr.* 键。
-    const MONERR_CODES = ['timeout','kw_missing','kw_not_found','ping_no_response','ping_failed','connect_timeout','ssl_no_cert','ssl_expired','ssl_handshake','ssl_timeout','whois_no_expiry','domain_expired','assert_failed','heartbeat_never','heartbeat_late','ssl_expiring','domain_expiring'];
+    const MONERR_CODES = ['timeout','kw_missing','kw_not_found','ping_no_response','ping_failed','connect_timeout','ssl_no_cert','ssl_expired','ssl_handshake','ssl_timeout','whois_no_expiry','domain_expired','assert_failed','heartbeat_never','heartbeat_late','ssl_expiring','domain_expiring','port_invalid'];
     function fmtMonitorError(raw) {
       if (!raw) return '';
       const p = String(raw).split('|');

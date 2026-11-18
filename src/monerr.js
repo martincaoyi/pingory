@@ -37,6 +37,7 @@ export const MON_ERR = {
   HEARTBEAT_LATE: 'heartbeat_late',
   SSL_EXPIRING: 'ssl_expiring',
   DOMAIN_EXPIRING: 'domain_expiring',
+  PORT_INVALID: 'port_invalid',              // tcp/ssl 端口非法（非整数或越界，P1-④）
 };
 
 // 所有已知错误码（前端用；与 public/index.html / status.html 的 MONERR_CODES 保持一致）

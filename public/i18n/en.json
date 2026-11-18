@@ -653,6 +653,7 @@
   "monerr.heartbeat_late": "No heartbeat within the expected interval",
   "monerr.ssl_expiring": "SSL certificate expires in {detail} days",
   "monerr.domain_expiring": "Domain expires in {detail} days",
+  "monerr.port_invalid": "Invalid port",
   "nav.compare": "Compare with UptimeRobot →",
   "nav.llmsChecker": "llms.txt Checker",
   "footer.compare": "Compare",

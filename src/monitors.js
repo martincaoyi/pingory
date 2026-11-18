@@ -83,11 +83,16 @@ const slowState = new Map(); // monitorId -> lastSlowAt
 
 export function createMonitor({ url, name, interval = 60, userId = null, type = 'http', config = {}, channels = null, teamId = null }) {
   const id = crypto.randomUUID();
+  // 内部状态位（_ai 等）不接受客户端写入（P1-⑧，2026-11-18）：伪造 config._ai.prev
+  // 可让 AI 检查误判「没有变化」⇒ 压掉告警。Worker 的 Web 创建口此前已剥（api.js:630），
+  // 但 createMonitor 是所有创建路径（Web/v1/导入 × Express/Worker）的单一汇合点，
+  // 在这里剥一次 = 全部入口同时收口；后端会在检查时按需初始化 _ai（monitors.js:753）。
   // Heartbeat 上报令牌（P1，2026-11-18）：上报端点旧实现只凭 id 就能把任意监控改成 up，
   // 而公开状态页会把 id 返回给访客。新建的 heartbeat 监控一律生成令牌，上报时必须带 ?token=。
-  let finalConfig = config;
+  const base = (config && typeof config === 'object') ? { ...config } : {};
+  delete base._ai;
+  let finalConfig = base;
   if (type === 'heartbeat') {
-    const base = (config && typeof config === 'object') ? { ...config } : {};
     if (!base.heartbeatToken) base.heartbeatToken = crypto.randomBytes(16).toString('hex');
     finalConfig = base;
   }
@@ -297,6 +302,21 @@ export async function getStatusPage(slug) {
   return buildStatusPage(u);
 }
 
+// 公开响应整形（P1-⑭，2026-11-18）：剥掉内部 id；事故事件的 monitor_id 解析成名称。
+// 四个出口（/api/status/:slug 与 /api/status-page × Express/Worker）共用此结构。
+export function toPublicPage(page, incidentsRaw) {
+  const nameById = new Map(page.monitors.map((m) => [m.id, m.name]));
+  const incidents = (incidentsRaw || []).map(({ monitor_id, ...rest }) => ({
+    ...rest, monitor: nameById.get(monitor_id) || monitor_id,
+  }));
+  return {
+    title: page.title,
+    whiteLabel: page.whiteLabel,
+    monitors: page.monitors.map(({ id, ...m }) => m),
+    incidents,
+  };
+}
+
 // G7 自定义域名：按 Host 解析
 export async function getStatusPageByHost(host) {
   const u = await loadStatusPageUser(host, true);
@@ -316,6 +336,10 @@ async function buildStatusPage(u) {
     title: u.status_page_title || u.name || null,
     whiteLabel: !!u.status_white_label,
     private: !!u.status_password_hash,
+    // id 仅供服务端内部用（getStats/getStatusIncidents 聚合）；**公开响应里必须在
+    // handler 层剥掉**（P1-⑭，2026-11-18）——公开 payload 带监控 UUID 是纯暴露，
+    // 心跳已加 token+类型限制后 id 无任何访客侧用途。事故事件名称由服务端解析
+    // 成 monitor 字段下发，前端不再需要 id↔名称映射表。
     monitors: ms.map((m) => ({
       id: m.id, name: m.name, url: m.url, type: m.type,
       status: m.status, lastChecked: Number(m.last_checked), lastResponseTime: m.last_response_time,
@@ -390,7 +414,9 @@ export async function getStats(id, days = 30) {
   const uptime = checks ? (ups / checks) * 100 : null;
   const rts = rows.filter((r) => r.response_time != null).map((r) => r.response_time);
   const avgRt = rts.length ? Math.round(rts.reduce((a, b) => a + b, 0) / rts.length) : null;
-  const p95Rt = rts.length ? rts.sort((a, b) => a - b)[Math.floor(rts.length * 0.95)] : null;
+  // P95 用最近秩（nearest-rank）：ceil(0.95·N) 第 N 个。旧写法 floor(0.95·N) 在 N=100
+  // 时取到第 96 个值，系统性偏高半位（付费统计口径，P1-⑤）。
+  const p95Rt = rts.length ? rts.sort((a, b) => a - b)[Math.max(0, Math.ceil(rts.length * 0.95) - 1)] : null;
   return {
     days,
     checks,
@@ -627,8 +653,18 @@ export async function runLocalCheck(monitor) {
   switch (t) {
     case 'keyword': return checkKeyword(target, c);
     case 'ping': return checkPing(target);
-    case 'tcp': return checkTcp(target, c.port || 80);
-    case 'ssl': return checkSsl(target, c.port || 443, c.sslWarnDays || 30);
+    // 端口合法性前置校验（P1-④）：Number('abc')/端口越界会让 net.Socket.connect 在
+    // promise executor 里同步抛 TypeError ⇒ 检查结果永不落库（监控永远停在旧状态）。
+    case 'tcp': {
+      const p = Number(c.port || 80);
+      if (!Number.isInteger(p) || p < 1 || p > 65535) return { status: 'down', error: MON_ERR.PORT_INVALID };
+      return checkTcp(target, p);
+    }
+    case 'ssl': {
+      const sp = Number(c.port || 443);
+      if (!Number.isInteger(sp) || sp < 1 || sp > 65535) return { status: 'down', error: MON_ERR.PORT_INVALID };
+      return checkSsl(target, sp, c.sslWarnDays || 30);
+    }
     case 'domain': return checkDomain(target, c.domainWarnDays || 30);
     case 'api': return checkApi(target, c);
     case 'dns': return checkDns(target, c.recordType || 'A', c.expectedValues || []);

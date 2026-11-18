@@ -6,7 +6,7 @@ import { Paddle } from '@paddle/paddle-node-sdk';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { createMonitor, listMonitors, getMonitor, deleteMonitor, saveMonitor, insertMonitorWithinLimit, recordHeartbeat, getHistory, getStats, getStatusIncidents, getStatusPage, getStatusPageByHost, getStatusPageAuth, getStatusPageOwnerId, listTeamMonitors, startPolling, isPollLeader } from './src/monitors.js';
+import { createMonitor, listMonitors, getMonitor, deleteMonitor, saveMonitor, insertMonitorWithinLimit, recordHeartbeat, getHistory, getStats, getStatusIncidents, getStatusPage, getStatusPageByHost, getStatusPageAuth, getStatusPageOwnerId, listTeamMonitors, startPolling, isPollLeader, toPublicPage } from './src/monitors.js';
 import { isBlockedTarget } from './src/ssrf-guard.js';
 import { initAlerts, generateMonthlyReport, sendTestAlert } from './src/alerts.js';
 import { initDb, startKeepAlive, getPool, pool } from './src/db.js';
@@ -61,6 +61,7 @@ const E = {
   USER_NOT_FOUND:           'user_not_found',
   INVALID_MONITOR_LIMIT:    'invalid_monitor_limit',
   INVALID_PLAN:             'invalid_plan',
+  VALIDATION_FAILED:        'validation_failed',   // 通用入参校验失败（msg 带具体原因，2026-11-18）
   API_TYPE_NOT_SUPPORTED:   'api_type_not_supported',
   CHANNEL_NOT_SUPPORTED:    'channel_not_supported',
   CHANNEL_NOT_CONFIGURED:   'channel_not_configured',
@@ -1271,7 +1272,9 @@ app.get('/api/status/:slug', async (req, res) => {
       return { ...m, uptime: s.uptime, avgRt: s.avgRt, spark: dailySpark(s.series) };
     }));
     const incidents = await getStatusIncidents(page.monitors.map((m) => m.id), 30, 20);
-    res.json({ title: page.title, whiteLabel: page.whiteLabel, monitors: enriched, incidents });
+    // P1-⑭：公开响应剥掉监控 id，事故事件名称由服务端解析（防 UUID 暴露给访客）
+    const pub = toPublicPage({ ...page, monitors: enriched }, incidents);
+    res.json(pub);
   } catch (err) {
     res.status(500).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
   }
@@ -1292,7 +1295,9 @@ app.get('/api/status-page', async (req, res) => {
       return { ...m, uptime: s.uptime, avgRt: s.avgRt, spark: dailySpark(s.series) };
     }));
     const incidents = await getStatusIncidents(page.monitors.map((m) => m.id), 30, 20);
-    res.json({ title: page.title, whiteLabel: page.whiteLabel, monitors: enriched, incidents });
+    // P1-⑭：同 /api/status/:slug，公开响应剥 id + 事故名称服务端解析
+    const pub = toPublicPage({ ...page, monitors: enriched }, incidents);
+    res.json(pub);
   } catch (err) {
     res.status(500).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
   }
@@ -1393,7 +1398,12 @@ app.patch('/api/me/status-page', async (req, res) => {
   if ((customDomain !== undefined || whiteLabel !== undefined || password !== undefined || title !== undefined) && user.plan !== 'pro') {
     return res.status(403).json(apiErr(E.SP_PRO_ONLY));
   }
-  await updateStatusPage(userId, { enabled, slug, customDomain, whiteLabel, password, title });
+  try {
+    await updateStatusPage(userId, { enabled, slug, customDomain, whiteLabel, password, title });
+  } catch (err) {
+    // validateCustomDomain 抛错（格式非法/保留域）→ 400 带原因，不落 500
+    return res.status(400).json(apiErr(E.VALIDATION_FAILED, { msg: err.message }));
+  }
   recordUserEvent({ userId, eventType: 'status_page_update', metadata: { enabled, slug, customDomain, whiteLabel, title }, req });
   const updated = await getUserById(userId);
   res.json({ user: updated });
@@ -1454,7 +1464,9 @@ app.get('/api/monitors/:id/history', async (req, res) => {
   try {
     const m = await getMonitor(req.params.id);
     if (!m || m.userId !== userId) return res.status(404).json(apiErr(E.MONITOR_NOT_FOUND));
-    const events = await getHistory(req.params.id, 50);
+    // P1-⑬：文档契约本就声明 ?limit=（默认 50 最大 200），旧实现硬编码 50 无视参数
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
+    const events = await getHistory(req.params.id, limit);
     res.json(events);
   } catch (err) {
     res.status(500).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
@@ -2411,6 +2423,9 @@ function startMonthlyReportTimer() {
   if (monthlyReportTimer) return;
   let lastReportMonth = 0;
   monthlyReportTimer = setInterval(async () => {
+    // P1-⑦：复用轮询的 DB leader 租约——自托管双实例时只有 leader 发月报，
+    // 否则每个实例都会在同一小时各发一封（Worker 侧由 cron 单点天然规避）。
+    if (typeof isPollLeader === 'function' && !isPollLeader()) return;
     const now = new Date();
     const ym = now.getUTCFullYear() * 100 + now.getUTCMonth();
     if (now.getUTCDate() === 1 && ym !== lastReportMonth) {

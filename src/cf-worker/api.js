@@ -5,7 +5,7 @@
 import crypto from 'crypto';
 import { setCookie } from 'hono/cookie';
 import { getPool } from '../db.js';
-import { createMonitor, listMonitors, getMonitor, deleteMonitor, saveMonitor, insertMonitorWithinLimit, recordHeartbeat, getHistory, getStats, getStatusIncidents, getStatusPage, getStatusPageByHost, getStatusPageAuth, getStatusPageOwnerId, listTeamMonitors } from '../monitors.js';
+import { createMonitor, listMonitors, getMonitor, deleteMonitor, saveMonitor, insertMonitorWithinLimit, recordHeartbeat, getHistory, getStats, getStatusIncidents, getStatusPage, getStatusPageByHost, getStatusPageAuth, getStatusPageOwnerId, listTeamMonitors, toPublicPage } from '../monitors.js';
 import { generateMonthlyReport, sendTestAlert } from '../alerts.js';
 import { recordUserEvent, listUserEvents, getUserEventSummary, getUserActivityRanking, getDormantUsers } from '../events.js';
 import { registerUser, loginUser, getUserById, getUserByEmail, updatePlan, updateStatusPage, createEmailVerification, verifyEmailToken, setRole, addSubscriber, listSubscribers, removeSubscriber, createMaintenanceWindow, listMaintenanceWindows, deleteMaintenanceWindow, ensureApiKey, regenerateApiKey, getUserByApiKey, createTeam, inviteTeamMember, listPendingInvites, acceptTeamInvite, declineTeamInvite, getTeamName, listTeam, leaveTeam, verifyPagePassword, recordReferralConversion, createOAuthUser, recordBillingEvent, changePassword, setPassword, updateProfileName, requestEmailChange, confirmEmailChange, requestPasswordReset, resetPassword, getAlertChannels, saveAlertChannels } from '../auth.js';
@@ -809,7 +809,9 @@ export function registerApiRoutes(app) {
     try {
       const m = await getMonitor(c.req.param('id'));
       if (!m || m.userId !== userId) return c.json(apiErr(E.MONITOR_NOT_FOUND), 404);
-      const events = await getHistory(c.req.param('id'), 50);
+      // P1-⑬：落地文档契约 ?limit=（默认 50 最大 200）
+      const limit = Math.min(200, Math.max(1, Number(c.req.query('limit')) || 50));
+      const events = await getHistory(c.req.param('id'), limit);
       return c.json(events);
     } catch (err) {
       return c.json(apiErr(E.SERVER_ERROR, { msg: err.message }), 500);
@@ -830,7 +832,9 @@ export function registerApiRoutes(app) {
         return { ...m, uptime: s.uptime, avgRt: s.avgRt, spark: dailySpark(s.series) };
       }));
       const incidents = await getStatusIncidents(page.monitors.map((m) => m.id), 30, 20);
-      return c.json({ title: page.title, whiteLabel: page.whiteLabel, monitors: enriched, incidents });
+      // P1-⑭：公开响应剥掉监控 id，事故事件名称由服务端解析（防 UUID 暴露给访客）
+      const pub = toPublicPage({ ...page, monitors: enriched }, incidents);
+      return c.json(pub);
     } catch (err) {
       return c.json(apiErr(E.SERVER_ERROR, { msg: err.message }), 500);
     }
@@ -850,7 +854,8 @@ export function registerApiRoutes(app) {
         return { ...m, uptime: s.uptime, avgRt: s.avgRt, spark: dailySpark(s.series) };
       }));
       const incidents = await getStatusIncidents(page.monitors.map((m) => m.id), 30, 20);
-      return c.json({ title: page.title, whiteLabel: page.whiteLabel, monitors: enriched, incidents });
+      const pub = toPublicPage({ ...page, monitors: enriched }, incidents);
+      return c.json(pub);
     } catch (err) {
       return c.json(apiErr(E.SERVER_ERROR, { msg: err.message }), 500);
     }
@@ -947,7 +952,12 @@ export function registerApiRoutes(app) {
     if ((customDomain !== undefined || whiteLabel !== undefined || password !== undefined || title !== undefined) && user.plan !== 'pro') {
       return c.json(apiErr(E.SP_PRO_ONLY), 403);
     }
-    await updateStatusPage(userId, { enabled, slug, customDomain, whiteLabel, password, title });
+    try {
+      await updateStatusPage(userId, { enabled, slug, customDomain, whiteLabel, password, title });
+    } catch (err) {
+      // validateCustomDomain 抛错（格式非法/保留域）→ 400 带原因，不落 500
+      return c.json(apiErr(E.VALIDATION_FAILED, { msg: err.message }), 400);
+    }
     recordUserEvent({ userId, eventType: 'status_page_update', metadata: { enabled, slug, customDomain, whiteLabel, title }, req: reqShim(c) });
     const updated = await getUserById(userId);
     return c.json({ user: updated });

@@ -653,6 +653,7 @@
   "monerr.heartbeat_late": "Aucun signal de cœur dans l'intervalle prévu",
   "monerr.ssl_expiring": "Le certificat SSL expire dans {detail} jours",
   "monerr.domain_expiring": "Le domaine expire dans {detail} jours",
+  "monerr.port_invalid": "Port invalide",
   "nav.compare": "Comparer avec UptimeRobot →",
   "nav.llmsChecker": "Vérificateur llms.txt",
   "footer.compare": "Comparer",
