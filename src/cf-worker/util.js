@@ -270,7 +270,8 @@ export async function requireApiKey(c) {
   if (!m) return c.json(apiErr(E.MISSING_AUTH_HEADER), 401);
   const { getUserByApiKey } = await import('../auth.js');
   const u = await getUserByApiKey(m[1].trim()); // 抛错交 onError
-  if (!u) return c.json(apiErr(E.INVALID_API_KEY), 403);
+  // 封禁账号的 key 必须一并失效（否则封禁可被 Account API 绕过）
+  if (!u || u.banned) return c.json(apiErr(E.INVALID_API_KEY), 403);
   c.set('apiUser', u);
   return null;
 }

@@ -231,7 +231,7 @@
   "cfg.expected": "期待値（カンマ区切り）",
   "cfg.headers": "カスタムヘッダー (JSON)",
   "cfg.hint.ai": "ドメインのみ（例: example.com）— トップページとルートの3ファイルを取得します",
-  "cfg.hint.heartbeat": "監視対象は定期的に POST /api/heartbeat/<id> を呼び出す必要があります",
+  "cfg.hint.heartbeat": "監視対象は定期的に POST /api/heartbeat/<id>?token=<token> を呼び出す必要があります",
   "cfg.keyword": "キーワード",
   "cfg.kwph": "ページに含まれるべき文字列",
   "cfg.method": "HTTP メソッド",

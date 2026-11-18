@@ -5,12 +5,12 @@
 import crypto from 'crypto';
 import { setCookie } from 'hono/cookie';
 import { getPool } from '../db.js';
-import { createMonitor, listMonitors, getMonitor, deleteMonitor, saveMonitor, getHistory, getStats, getStatusIncidents, getStatusPage, getStatusPageByHost, getStatusPageAuth, getStatusPageOwnerId, listTeamMonitors } from '../monitors.js';
+import { createMonitor, listMonitors, getMonitor, deleteMonitor, saveMonitor, insertMonitorWithinLimit, recordHeartbeat, getHistory, getStats, getStatusIncidents, getStatusPage, getStatusPageByHost, getStatusPageAuth, getStatusPageOwnerId, listTeamMonitors } from '../monitors.js';
 import { generateMonthlyReport, sendTestAlert } from '../alerts.js';
 import { recordUserEvent, listUserEvents, getUserEventSummary, getUserActivityRanking, getDormantUsers } from '../events.js';
-import { registerUser, loginUser, getUserById, getUserByEmail, updatePlan, updateStatusPage, createEmailVerification, verifyEmailToken, setRole, addSubscriber, listSubscribers, removeSubscriber, createMaintenanceWindow, listMaintenanceWindows, deleteMaintenanceWindow, ensureApiKey, regenerateApiKey, getUserByApiKey, createTeam, inviteTeamMember, listTeam, leaveTeam, verifyPagePassword, recordReferralConversion, createOAuthUser, recordBillingEvent, changePassword, setPassword, updateProfileName, requestEmailChange, confirmEmailChange, requestPasswordReset, resetPassword, getAlertChannels, saveAlertChannels } from '../auth.js';
-import { sendVerificationEmail, sendFeedbackNotification, sendPasswordResetEmail, sendChangeEmailVerification, sendWaitlistConfirmEmail, sendWaitlistAnnounce } from '../email.js';
-import { PLAN_LIMITS, planHasType, planHasChannel, planHasStatusPage, planHasStats, planFeatures, planMinInterval, TYPE_LABELS, CHANNEL_LABELS, EMAIL_VERIFY_MONITOR_CAP } from '../plans.js';
+import { registerUser, loginUser, getUserById, getUserByEmail, updatePlan, updateStatusPage, createEmailVerification, verifyEmailToken, setRole, addSubscriber, listSubscribers, removeSubscriber, createMaintenanceWindow, listMaintenanceWindows, deleteMaintenanceWindow, ensureApiKey, regenerateApiKey, getUserByApiKey, createTeam, inviteTeamMember, listPendingInvites, acceptTeamInvite, declineTeamInvite, getTeamName, listTeam, leaveTeam, verifyPagePassword, recordReferralConversion, createOAuthUser, recordBillingEvent, changePassword, setPassword, updateProfileName, requestEmailChange, confirmEmailChange, requestPasswordReset, resetPassword, getAlertChannels, saveAlertChannels } from '../auth.js';
+import { sendVerificationEmail, sendFeedbackNotification, sendPasswordResetEmail, sendChangeEmailVerification, sendWaitlistConfirmEmail, sendWaitlistAnnounce, sendTeamInviteEmail } from '../email.js';
+import { PLAN_LIMITS, planHasType, planHasChannel, planHasStatusPage, planHasStats, planFeatures, planMinInterval, TYPE_LABELS, CHANNEL_LABELS, EMAIL_VERIFY_MONITOR_CAP, HOSTED_UNAVAILABLE_TYPES } from '../plans.js';
 import { E, apiErr, reqShim, makeRateLimiter, normalizeTarget, normalizeChannelCfg, parseImportMonitors, statusPageToken, statusPageUnlocked, dailySpark, requireAdmin, requireApiKey } from './util.js';
 
 // ===== 限流器（内存版；多 isolate 下配额减弱，见 util.js 注释）=====
@@ -607,7 +607,7 @@ export function registerApiRoutes(app) {
     const { url, name, interval, type: rawType, config = {}, channels = null, statusPublic = false } = c.get('body') || {};
     const type = (rawType == null || String(rawType).trim() === '') ? 'http' : String(rawType).trim();
     if (!url) return c.json(apiErr(E.URL_REQUIRED), 400);
-    if (!planHasType(plan, type)) {
+    if (!planHasType(plan, type, { hosted: true })) {
       return c.json(apiErr(E.PLAN_TYPE_NOT_SUPPORTED, { plan, type: TYPE_LABELS[type] || type }), 403);
     }
     const minInterval = effMinInterval(c, plan);
@@ -642,7 +642,9 @@ export function registerApiRoutes(app) {
         statusPublic: finalPublic,
         userId,
       });
-      await saveMonitor(monitor);
+      const effectiveLimit = (!user?.emailVerified && EMAIL_VERIFY_MONITOR_CAP < limit) ? EMAIL_VERIFY_MONITOR_CAP : limit;
+      const created = await insertMonitorWithinLimit(monitor, effectiveLimit);
+      if (!created) return c.json(apiErr(E.PLAN_MONITOR_LIMIT, { plan, limit: effectiveLimit }), 403);
       recordUserEvent({ userId, eventType: 'monitor_create', metadata: { url: monitor.url, type: monitor.type, interval: monitor.interval }, req: reqShim(c) });
       return c.json(monitor, 201);
     } catch (err) {
@@ -664,12 +666,15 @@ export function registerApiRoutes(app) {
     catch (e) { return c.json(apiErr(E.IMPORT_PARSE_FAILED, { msg: e.message }), 400); }
     if (!rows.length) return c.json(apiErr(E.IMPORT_NO_MONITORS), 400);
     const limit = user?.monitorLimit != null ? user.monitorLimit : (PLAN_LIMITS[plan] ?? PLAN_LIMITS.free);
+    // 未验证邮箱的账号同样受 cap=3 限制（旧实现只查套餐上限 ⇒ 导入是绕过 cap 的入口）
+    const effectiveLimit = (!user?.emailVerified && EMAIL_VERIFY_MONITOR_CAP < limit)
+      ? EMAIL_VERIFY_MONITOR_CAP : limit;
     const minInterval = effMinInterval(c, plan);
     let created = 0, skipped = 0; const reasons = new Set();
     for (const r of rows) {
-      if ((await listMonitors(userId)).length >= limit) { reasons.add('plan monitor limit reached'); break; }
+      if ((await listMonitors(userId)).length >= effectiveLimit) { reasons.add('plan monitor limit reached'); break; }
       let type = (r.type || 'http').toString().toLowerCase();
-      if (!planHasType(plan, type)) type = 'http';
+      if (!planHasType(plan, type, { hosted: true })) type = 'http';
       const url = (r.url || '').toString().trim();
       if (!url) { skipped++; reasons.add('missing url'); continue; }
       const parsedInterval = r.interval ? Number(r.interval) : minInterval;
@@ -681,7 +686,9 @@ export function registerApiRoutes(app) {
           url: nres.url, name: r.name ? String(r.name).trim() : null,
           interval: finalInterval, type, config: r.config || {}, channels: null, statusPublic: false, userId,
         });
-        await saveMonitor(monitor);
+        // 逐条原子判配额：并发导入也不会突破上限
+        const ok = await insertMonitorWithinLimit(monitor, effectiveLimit);
+        if (!ok) { reasons.add('plan monitor limit reached'); break; }
         created++;
       } catch (e) { skipped++; reasons.add(e.message); }
     }
@@ -702,9 +709,12 @@ export function registerApiRoutes(app) {
         // 保留后端自己维护的内部状态（_ai：指纹/快照），否则前端每次保存都会把它清掉，
         // 导致「指纹永远为空 ⇒ 每次都算变化 ⇒ 每次检查都告警」
         const prevInternal = (m.config && typeof m.config === 'object') ? m.config._ai : undefined;
+        const prevHeartbeatToken = (m.config && typeof m.config === 'object') ? m.config.heartbeatToken : undefined;
         m.config = (config && typeof config === 'object') ? { ...config } : {};
         delete m.config._ai;
         if (prevInternal !== undefined) m.config._ai = prevInternal;
+        // heartbeatToken 同理：前端保存配置时不会回传它，若不保留会被清空 ⇒ 上报鉴权失效
+        if (prevHeartbeatToken && m.config.heartbeatToken === undefined) m.config.heartbeatToken = prevHeartbeatToken;
       }
       if (interval !== undefined) {
         const minI = effMinInterval(c, plan);
@@ -749,10 +759,16 @@ export function registerApiRoutes(app) {
   app.post('/api/heartbeat/:id', async (c) => {
     try {
       const m = await getMonitor(c.req.param('id'));
-      if (!m) return c.json(apiErr(E.MONITOR_NOT_FOUND), 404);
-      m.lastSuccessAt = Date.now();
-      if (m.status === 'down') m.status = 'up';
-      await saveMonitor(m);
+      // 只接受 heartbeat 类型 + 校验上报令牌（旧实现凭 id 即可把任意监控改成 up）
+      if (!m || m.type !== 'heartbeat') return c.json(apiErr(E.MONITOR_NOT_FOUND), 404);
+      const want = m.config && m.config.heartbeatToken;
+      const got = c.req.query('token') || c.req.header('x-heartbeat-token') || '';
+      if (want && String(got) !== String(want)) {
+        return c.json(apiErr(E.AUTH_REQUIRED, { reason: 'heartbeat_token' }), 401);
+      }
+      // 专用写入：saveMonitor 对 heartbeat 会保留旧 last_success_at，上报必须走 recordHeartbeat
+      const ok = await recordHeartbeat(m.id, Date.now());
+      if (!ok) return c.json(apiErr(E.MONITOR_NOT_FOUND), 404);
       return c.json({ ok: true });
     } catch (err) {
       return c.json(apiErr(E.SERVER_ERROR, { msg: err.message }), 500);
@@ -937,6 +953,13 @@ export function registerApiRoutes(app) {
     return c.json({ user: updated });
   });
 
+  // 公开能力声明（无鉴权）：首页营销网格据此隐藏托管版兑现不了的类型。
+  // 只暴露「本环境缺哪几类能力」，不含任何用户或套餐数据。
+  app.get('/api/capabilities', (c) => {
+    c.header('Cache-Control', 'public, max-age=300');
+    return c.json({ unavailableTypes: [...HOSTED_UNAVAILABLE_TYPES] });
+  });
+
   // 套餐能力
   app.get('/api/plan-features', async (c) => {
     const sess = c.get('session');
@@ -949,7 +972,7 @@ export function registerApiRoutes(app) {
     // 不能静默钳制：用户选 30 秒必须被告知托管最快只有 60 秒。
     const minInterval = effMinInterval(c, plan);
     const intervalClamped = minInterval > planMinInterval(plan);
-    return c.json({ plan, features: planFeatures(plan), typeLabels: TYPE_LABELS, channelLabels: CHANNEL_LABELS, minInterval, intervalClamped });
+    return c.json({ plan, features: planFeatures(plan, { hosted: true }), typeLabels: TYPE_LABELS, channelLabels: CHANNEL_LABELS, minInterval, intervalClamped });
   });
 
   // ===== 客户反馈 =====
@@ -1463,13 +1486,52 @@ export function registerApiRoutes(app) {
     const user = await getUserById(userId);
     if (!user?.teamId) return c.json(apiErr(E.NO_TEAM), 403);
     try {
-      const email = (c.get('body') || {}).email;
+      const email = String((c.get('body') || {}).email || '').trim();
       const r = await inviteTeamMember(user.teamId, userId, email);
+      if (r === 'pending') {
+        const teamName = (await getTeamName(user.teamId)) || 'Pingory team';
+        try { await sendTeamInviteEmail({ to: email, teamName, inviterEmail: user.email }); }
+        catch (e) { console.warn('[team] 邀请邮件发送失败:', e && e.message); }
+      }
       recordUserEvent({ userId, eventType: 'team_invite', metadata: { teamId: user.teamId, email, result: r }, req: reqShim(c) });
       return c.json({ ok: true, result: r });
     } catch (err) {
       return c.json(apiErr(E.SERVER_ERROR, { msg: err.message }), 400);
     }
+  });
+
+  // 被邀请人视角：待接受邀请列表（P0-W4 新增，配合确认流程）
+  app.get('/api/team/invites', async (c) => {
+    const sess = c.get('session');
+    const userId = sess && sess.userId;
+    if (!userId) return c.json(apiErr(E.AUTH_REQUIRED), 401);
+    try {
+      return c.json({ invites: await listPendingInvites(userId) });
+    } catch (err) {
+      return c.json(apiErr(E.SERVER_ERROR, { msg: err.message }), 400);
+    }
+  });
+
+  app.post('/api/team/invites/:id/accept', async (c) => {
+    const sess = c.get('session');
+    const userId = sess && sess.userId;
+    if (!userId) return c.json(apiErr(E.AUTH_REQUIRED), 401);
+    try {
+      const teamId = await acceptTeamInvite(userId, c.req.param('id'));
+      recordUserEvent({ userId, eventType: 'team_invite_accept', metadata: { teamId }, req: reqShim(c) });
+      return c.json({ ok: true, teamId });
+    } catch (err) {
+      return c.json(apiErr(E.SERVER_ERROR, { msg: err.message }), 400);
+    }
+  });
+
+  app.post('/api/team/invites/:id/decline', async (c) => {
+    const sess = c.get('session');
+    const userId = sess && sess.userId;
+    if (!userId) return c.json(apiErr(E.AUTH_REQUIRED), 401);
+    const ok = await declineTeamInvite(userId, c.req.param('id'));
+    if (ok) recordUserEvent({ userId, eventType: 'team_invite_decline', metadata: { id: c.req.param('id') }, req: reqShim(c) });
+    return c.json({ ok });
   });
 
   app.get('/api/team', async (c) => {
@@ -1647,18 +1709,45 @@ export function registerApiRoutes(app) {
     const g = await requireApiKey(c); if (g) return g;
     try {
       const apiUser = c.get('apiUser');
-      const plan = apiUser.plan;
-      const { url, name, interval, type = 'http', config = {}, channels = null, statusPublic = false } = c.get('body') || {};
+      const plan = apiUser.plan || 'free';
+      // P0-W1（2026-11-18）：补齐 Web 端已有的四道校验。此前 v1 只有类型+间隔，
+      // 免费号拿 key 可无限建监控 → 打爆探针与 DB。
+      const limit = apiUser.monitorLimit != null ? apiUser.monitorLimit : (PLAN_LIMITS[plan] ?? PLAN_LIMITS.free);
+      const own = await listMonitors(apiUser.id);
+      if (own.length >= limit) return c.json(apiErr(E.PLAN_MONITOR_LIMIT, { plan, limit }), 403);
+      if (!apiUser.emailVerified && own.length >= EMAIL_VERIFY_MONITOR_CAP) {
+        return c.json(apiErr(E.EMAIL_VERIFY_REQUIRED, { cap: EMAIL_VERIFY_MONITOR_CAP }), 403);
+      }
+
+      const { url, name, interval, type: rawType, config = {}, channels = null, statusPublic = false } = c.get('body') || {};
       if (!url) return c.json(apiErr(E.URL_REQUIRED), 400);
-      if (!planHasType(plan, type)) return c.json(apiErr(E.API_TYPE_NOT_SUPPORTED, { type }), 403);
-      // D49：API Key 建监控同样受套餐下限约束，否则托管 Pro 用 API 就能绕过 60 秒钳制（审阅 P0）
+      const type = (rawType == null || String(rawType).trim() === '') ? 'http' : String(rawType).trim();
+      if (!planHasType(plan, type, { hosted: true })) return c.json(apiErr(E.API_TYPE_NOT_SUPPORTED, { type }), 403);
+
+      // D49：API Key 建监控同样受套餐下限约束（托管 Pro 已被钳到 60 秒）
       const minI = effMinInterval(c, plan);
       const iv = interval ? Number(interval) : minI;
       if (!Number.isFinite(iv) || iv < minI) return c.json(minIntervalErr(c, plan, minI), 400);
-      const mon = createMonitor({ url, name, interval: iv, userId: apiUser.id, type, config, channels });
+
+      // SSRF/规范化：与 Web 端同一实现（Worker 侧从 util.js 引入）
+      const nres = normalizeTarget(type, url);
+      if (nres.err) return c.json(nres.err, 400);
+
+      // 渠道按套餐过滤（旧实现把请求里的 channels 原样落库）
+      let safeChannels = null;
+      if (channels && typeof channels === 'object') {
+        safeChannels = {};
+        for (const [ch, cfg] of Object.entries(channels)) {
+          if (cfg && cfg.enabled && planHasChannel(plan, ch)) safeChannels[ch] = cfg;
+        }
+      }
+
+      const mon = createMonitor({ url: nres.url, name: name ? String(name).trim() : null, interval: iv, userId: apiUser.id, type, config, channels: safeChannels });
       mon.statusPublic = !!statusPublic && planHasStatusPage(plan);
       mon.teamId = apiUser.teamId || null;
-      await saveMonitor(mon);
+      const effectiveLimit = (!apiUser.emailVerified && EMAIL_VERIFY_MONITOR_CAP < limit) ? EMAIL_VERIFY_MONITOR_CAP : limit;
+      const created = await insertMonitorWithinLimit(mon, effectiveLimit);
+      if (!created) return c.json(apiErr(E.PLAN_MONITOR_LIMIT, { plan, limit: effectiveLimit }), 403);
       recordUserEvent({ userId: apiUser.id, eventType: 'monitor_create', metadata: { url: mon.url, type: mon.type, source: 'api' }, req: reqShim(c) });
       return c.json(mon, 201);
     } catch (err) {
@@ -1666,11 +1755,15 @@ export function registerApiRoutes(app) {
     }
   });
 
+  // P0-W2：显式归属判断。`m.teamId !== apiUser.teamId` 在双方均为 null 时误判为「同团队」。
+  const canAccessMonitor = (m, apiUser) =>
+    !!m && (m.userId === apiUser.id || (!!apiUser.teamId && m.teamId === apiUser.teamId));
+
   app.get('/api/v1/monitors/:id', async (c) => {
     const g = await requireApiKey(c); if (g) return g;
     const apiUser = c.get('apiUser');
     const m = await getMonitor(c.req.param('id'));
-    if (!m || (m.userId !== apiUser.id && m.teamId !== apiUser.teamId)) return c.json(apiErr(E.MONITOR_NOT_FOUND), 404);
+    if (!canAccessMonitor(m, apiUser)) return c.json(apiErr(E.MONITOR_NOT_FOUND), 404);
     return c.json(m);
   });
 
@@ -1678,8 +1771,10 @@ export function registerApiRoutes(app) {
     const g = await requireApiKey(c); if (g) return g;
     const apiUser = c.get('apiUser');
     const m = await getMonitor(c.req.param('id'));
-    if (!m || (m.userId !== apiUser.id && m.teamId !== apiUser.teamId)) return c.json(apiErr(E.MONITOR_NOT_FOUND), 404);
-    await deleteMonitor(c.req.param('id'), apiUser.id);
+    if (!canAccessMonitor(m, apiUser)) return c.json(apiErr(E.MONITOR_NOT_FOUND), 404);
+    // 团队成员删除共享监控时，deleteMonitor 按 user_id 限定会删 0 行却回 ok（旧缺陷）。
+    // 这里按实际归属分派：本人监控走原路径；团队监控用 teamId 限定删除。
+    await deleteMonitor(c.req.param('id'), m.userId === apiUser.id ? apiUser.id : null, m.teamId || null);
     recordUserEvent({ userId: apiUser.id, eventType: 'monitor_delete', metadata: { id: c.req.param('id'), url: m.url, type: m.type, source: 'api' }, req: reqShim(c) });
     return c.json({ ok: true });
   });

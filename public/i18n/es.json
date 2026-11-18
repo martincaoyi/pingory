@@ -231,7 +231,7 @@
   "cfg.expected": "Valores esperados (separados por comas)",
   "cfg.headers": "Cabeceras personalizadas (JSON)",
   "cfg.hint.ai": "Solo el dominio, p. ej. example.com — consultamos la página principal y 3 archivos raíz",
-  "cfg.hint.heartbeat": "El sitio debe llamar a POST /api/heartbeat/<id> periódicamente",
+  "cfg.hint.heartbeat": "El sitio debe llamar a POST /api/heartbeat/<id>?token=<token> periódicamente",
   "cfg.keyword": "Palabra clave",
   "cfg.kwph": "Cadena que debe contener la página",
   "cfg.method": "Método HTTP",

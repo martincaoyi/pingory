@@ -6,14 +6,14 @@ import { Paddle } from '@paddle/paddle-node-sdk';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { createMonitor, listMonitors, getMonitor, deleteMonitor, saveMonitor, getHistory, getStats, getStatusIncidents, getStatusPage, getStatusPageByHost, getStatusPageAuth, getStatusPageOwnerId, listTeamMonitors, startPolling, isPollLeader } from './src/monitors.js';
+import { createMonitor, listMonitors, getMonitor, deleteMonitor, saveMonitor, insertMonitorWithinLimit, recordHeartbeat, getHistory, getStats, getStatusIncidents, getStatusPage, getStatusPageByHost, getStatusPageAuth, getStatusPageOwnerId, listTeamMonitors, startPolling, isPollLeader } from './src/monitors.js';
 import { isBlockedTarget } from './src/ssrf-guard.js';
 import { initAlerts, generateMonthlyReport, sendTestAlert } from './src/alerts.js';
 import { initDb, startKeepAlive, getPool, pool } from './src/db.js';
 import { startRetention } from './src/retention.js';
 import { recordUserEvent, listUserEvents, getUserEventSummary, getUserActivityRanking, getDormantUsers, parseJSON } from './src/events.js';
-import { registerUser, loginUser, getUserById, getUserByEmail, updatePlan, updateStatusPage, createEmailVerification, verifyEmailToken, seedAdmin, setRole, addSubscriber, listSubscribers, removeSubscriber, createMaintenanceWindow, listMaintenanceWindows, deleteMaintenanceWindow, ensureApiKey, regenerateApiKey, getUserByApiKey, createTeam, inviteTeamMember, listTeam, leaveTeam, verifyPagePassword, recordReferralConversion, createOAuthUser, recordBillingEvent, changePassword, setPassword, updateProfileName, requestEmailChange, confirmEmailChange, requestPasswordReset, resetPassword, getAlertChannels, saveAlertChannels } from './src/auth.js';
-import { sendVerificationEmail, sendFeedbackNotification, sendPasswordResetEmail, sendChangeEmailVerification, sendWaitlistConfirmEmail, sendWaitlistAnnounce } from './src/email.js';
+import { registerUser, loginUser, getUserById, getUserByEmail, updatePlan, updateStatusPage, createEmailVerification, verifyEmailToken, seedAdmin, setRole, addSubscriber, listSubscribers, removeSubscriber, createMaintenanceWindow, listMaintenanceWindows, deleteMaintenanceWindow, ensureApiKey, regenerateApiKey, getUserByApiKey, createTeam, inviteTeamMember, listPendingInvites, acceptTeamInvite, declineTeamInvite, getTeamName, listTeam, leaveTeam, verifyPagePassword, recordReferralConversion, createOAuthUser, recordBillingEvent, changePassword, setPassword, updateProfileName, requestEmailChange, confirmEmailChange, requestPasswordReset, resetPassword, getAlertChannels, saveAlertChannels } from './src/auth.js';
+import { sendVerificationEmail, sendFeedbackNotification, sendPasswordResetEmail, sendChangeEmailVerification, sendWaitlistConfirmEmail, sendWaitlistAnnounce, sendTeamInviteEmail } from './src/email.js';
 import { PLAN_LIMITS, planHasType, planHasChannel, planHasStatusPage, planHasStats, planFeatures, planMinInterval, TYPE_LABELS, CHANNEL_LABELS, EMAIL_VERIFY_MONITOR_CAP } from './src/plans.js';
 import { checkAiVisibility } from './src/ai-visibility.js';
 // 自托管复用 Worker 的公开 payload 构造（纯函数，无 Hono 依赖），保证两条路径返回一致
@@ -466,6 +466,13 @@ app.post(
         case 'subscription.activated':
         case 'subscription.updated': {
           const plan = planFromPrice(priceId);
+          // P1：Paddle 的 updated 事件也会带着 canceled/past_due/paused 状态重投。
+          // 旧实现只要价格映射成功就升级 ⇒ 取消订阅或欠费后会被这个事件重新升回付费档。
+          const subStatus = event.data?.status;
+          if (subStatus && !['active', 'trialing'].includes(subStatus)) {
+            console.log(`[webhook] subscription.updated status=${subStatus}，不改动套餐（交由取消/暂停事件处理）`);
+            break;
+          }
           if (customerEmail && plan) {
             const u = await getUserByEmail(customerEmail);
             if (u) {
@@ -656,8 +663,8 @@ app.post('/api/creem/webhook', express.raw({ type: '*/*' }), async (req, res) =>
 
     const grant = async (doCommission) => {
       if (!u || !plan) return;
-      try { await updatePlan(u.id, plan, { customerId: custId, subscriptionId: subId }); }
-      catch (e) { console.error('[creem webhook] updatePlan 失败:', e.message); }
+      // 不能再吞错：updatePlan 失败若仍返回 200，上游不会重投 ⇒「钱收了、plan 没升」永久卡死。
+      await updatePlan(u.id, plan, { customerId: custId, subscriptionId: subId });
       recordUserEvent({ userId: u.id, eventType: 'plan_upgrade', metadata: { provider: 'creem', plan, cycle }, req: null });
       console.log('[creem webhook] 用户', u.email, '升级到', plan);
       try {
@@ -673,8 +680,7 @@ app.post('/api/creem/webhook', express.raw({ type: '*/*' }), async (req, res) =>
     };
     const revoke = async () => {
       if (!u) return;
-      try { await updatePlan(u.id, 'free', { customerId: custId, subscriptionId: null }); }
-      catch (e) { console.error('[creem webhook] updatePlan 失败:', e.message); }
+      await updatePlan(u.id, 'free', { customerId: custId, subscriptionId: null });
       recordUserEvent({ userId: u.id, eventType: 'plan_downgrade', metadata: { provider: 'creem', plan: 'free' }, req: null });
       console.log('[creem webhook] 用户', u.email, '降回 free');
       try {
@@ -698,7 +704,9 @@ app.post('/api/creem/webhook', express.raw({ type: '*/*' }), async (req, res) =>
       default: break;
     }
   } catch (err) {
-    console.error('[creem webhook] 处理异常（已返回 200，不触发上游重试）:', err && err.message, err && err.stack);
+    // 返回 500 让 Creem 重投（此前一律 200，失败事件永久丢失）
+    console.error('[creem webhook] 处理失败，返回 500 触发上游重试:', err && err.message);
+    return res.status(500).send('error');
   }
   return res.status(200).send('ok');
 });
@@ -811,38 +819,53 @@ app.post('/api/auth/logout', (req, res) => {
 // ===== Google / GitHub OAuth 登录（#287）=====
 // 手动 OAuth2（不引入 passport）。client id/secret 走环境变量；回调 base 用 APP_URL。
 function oauthBase() { return (process.env.APP_URL || 'https://pingory.com').replace(/\/$/, ''); }
-function oauthStartUrl(provider, ref) {
+function oauthStartUrl(provider, state) {
   const base = oauthBase();
-  const state = ref ? 'ref:' + ref : 'x';
+  // state 必须 URL 编码：旧实现直接拼 'ref:'+ref，ref 可注入额外查询参数（登录 CSRF 的入口）
+  const st = encodeURIComponent(state);
   if (provider === 'google') {
     const cid = process.env.GOOGLE_CLIENT_ID;
     if (!cid) return null;
     const redir = encodeURIComponent(base + '/api/auth/oauth/google/callback');
-    return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${cid}&redirect_uri=${redir}&response_type=code&scope=${encodeURIComponent('openid email profile')}&state=${state}`;
+    return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${cid}&redirect_uri=${redir}&response_type=code&scope=${encodeURIComponent('openid email profile')}&state=${st}`;
   }
   if (provider === 'github') {
     const cid = process.env.GITHUB_CLIENT_ID;
     if (!cid) return null;
     const redir = encodeURIComponent(base + '/api/auth/oauth/github/callback');
-    return `https://github.com/login/oauth/authorize?client_id=${cid}&redirect_uri=${redir}&scope=${encodeURIComponent('read:user user:email')}&state=${state}`;
+    return `https://github.com/login/oauth/authorize?client_id=${cid}&redirect_uri=${redir}&scope=${encodeURIComponent('read:user user:email')}&state=${st}`;
   }
   return null;
 }
 app.get('/api/auth/oauth/:provider/start', (req, res) => {
   const provider = req.params.provider;
   const ref = (typeof req.query.ref === 'string' && req.query.ref.trim()) ? req.query.ref.trim() : '';
-  const url = oauthStartUrl(provider, ref);
+  // 随机 state 落 session，回调必须一致 ⇒ 阻断「攻击者构造回调链接把受害者登进攻击者账号」
+  const state = crypto.randomBytes(24).toString('hex');
+  req.session.oauthState = state;
+  req.session.oauthRef = ref;
+  const url = oauthStartUrl(provider, state);
   if (!url) return res.status(400).send('OAuth not configured for ' + provider);
-  res.redirect(url);
+  req.session.save(() => res.redirect(url));
 });
-// 统一收尾：按邮箱找/建用户并登录；ref 来自 state
-async function oauthFinish(req, res, email, name, state, provider) {
+// 回调统一校验 state（一次性）。失败直接回登录页，不继续换 token。
+function verifyOAuthState(req) {
+  const got = typeof req.query.state === 'string' ? req.query.state : '';
+  const want = req.session.oauthState || '';
+  req.session.oauthState = null;
+  return !!got && !!want && got === want;
+}
+// 统一收尾：按邮箱找/建用户并登录；ref 只从 session 取（不再信任 state 载荷）
+async function oauthFinish(req, res, email, name, provider) {
   try {
     if (!email) return res.redirect('/signin.html?err=noemail');
-    const ref = (typeof state === 'string' && state.startsWith('ref:')) ? state.slice(4) : '';
+    const ref = req.session.oauthRef || '';
+    req.session.oauthRef = null;
     const existed = !!(await getUserByEmail(email));
     let user = await getUserByEmail(email);
     if (!user) user = await createOAuthUser(email, name, ref);
+    // 封禁必须与密码登录同权：旧实现直接建会话，被封禁账号可用 OAuth 绕过
+    if (user && user.banned) return res.redirect('/signin.html?err=banned');
     req.session.userId = user.id;
     await new Promise((r) => req.session.save(r));
     recordUserEvent({ userId: user.id, eventType: existed ? 'user_login' : 'user_signup', metadata: { provider }, req });
@@ -854,8 +877,9 @@ async function oauthFinish(req, res, email, name, state, provider) {
 }
 app.get('/api/auth/oauth/google/callback', async (req, res) => {
   try {
-    const { code, state } = req.query;
+    const { code } = req.query;
     if (!code) return res.redirect('/signin.html?err=google_code');
+    if (!verifyOAuthState(req)) return res.redirect('/signin.html?err=oauth_state');
     const base = oauthBase();
     const tokRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -868,13 +892,14 @@ app.get('/api/auth/oauth/google/callback', async (req, res) => {
     if (!tok.access_token) { console.error('[oauth google] token 失败:', tok.error, tok.error_description); return res.redirect('/signin.html?err=google_token'); }
     const infoRes = await fetch('https://openidconnect.googleapis.com/v1/userinfo', { headers: { Authorization: 'Bearer ' + tok.access_token } });
     const info = await infoRes.json();
-    await oauthFinish(req, res, (info.email || '').toLowerCase(), info.name || '', state, 'google');
+    await oauthFinish(req, res, (info.email || '').toLowerCase(), info.name || '', 'google');
   } catch (e) { console.error('[oauth google]', e.message); res.redirect('/signin.html?err=google_err'); }
 });
 app.get('/api/auth/oauth/github/callback', async (req, res) => {
   try {
-    const { code, state } = req.query;
+    const { code } = req.query;
     if (!code) return res.redirect('/signin.html?err=gh_code');
+    if (!verifyOAuthState(req)) return res.redirect('/signin.html?err=oauth_state');
     const base = oauthBase();
     const tokRes = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
@@ -894,7 +919,7 @@ app.get('/api/auth/oauth/github/callback', async (req, res) => {
       const primary = ems.find((e) => e.primary && e.verified) || ems.find((e) => e.verified) || ems[0];
       if (primary) email = (primary.email || '').toLowerCase();
     }
-    await oauthFinish(req, res, email, gh.name || gh.login || '', state, 'github');
+    await oauthFinish(req, res, email, gh.name || gh.login || '', 'github');
   } catch (e) { console.error('[oauth github]', e.message); res.redirect('/signin.html?err=gh_err'); }
 });
 
@@ -1001,7 +1026,12 @@ app.post('/api/monitors', monitorLimiter, async (req, res) => {
       statusPublic: finalPublic,
       userId,
     });
-    await saveMonitor(monitor);
+    // 原子化配额（并发下前面的 count 检查可能被同时通过）
+    const effectiveLimit = (!user?.emailVerified && EMAIL_VERIFY_MONITOR_CAP < limit) ? EMAIL_VERIFY_MONITOR_CAP : limit;
+    const created = await insertMonitorWithinLimit(monitor, effectiveLimit);
+    if (!created) {
+      return res.status(403).json(apiErr(E.PLAN_MONITOR_LIMIT, { plan, limit: effectiveLimit }));
+    }
     recordUserEvent({ userId, eventType: 'monitor_create', metadata: { url: monitor.url, type: monitor.type, interval: monitor.interval }, req });
     res.status(201).json(monitor);
   } catch (err) {
@@ -1085,10 +1115,13 @@ app.post('/api/monitors/import', monitorLimiter, async (req, res) => {
   catch (e) { return res.status(400).json(apiErr(E.IMPORT_PARSE_FAILED, { msg: e.message })); }
   if (!rows.length) return res.status(400).json(apiErr(E.IMPORT_NO_MONITORS));
   const limit = user?.monitorLimit != null ? user.monitorLimit : (PLAN_LIMITS[plan] ?? PLAN_LIMITS.free);
+  // 未验证邮箱同样受 cap=3 约束（旧实现只判套餐上限 ⇒ 导入成了绕过 cap 的口子）
+  const effectiveLimit = (!user?.emailVerified && EMAIL_VERIFY_MONITOR_CAP < limit)
+    ? EMAIL_VERIFY_MONITOR_CAP : limit;
   const minInterval = planMinInterval(plan);
   let created = 0, skipped = 0; const reasons = new Set();
   for (const r of rows) {
-    if ((await listMonitors(userId)).length >= limit) { reasons.add('plan monitor limit reached'); break; }
+    if ((await listMonitors(userId)).length >= effectiveLimit) { reasons.add('plan monitor limit reached'); break; }
     let type = (r.type || 'http').toString().toLowerCase();
     if (!planHasType(plan, type)) type = 'http'; // 不支持的类型降级到 http（free 也支持）
     const url = (r.url || '').toString().trim();
@@ -1102,7 +1135,9 @@ app.post('/api/monitors/import', monitorLimiter, async (req, res) => {
         url: nres.url, name: r.name ? String(r.name).trim() : null,
         interval: finalInterval, type, config: r.config || {}, channels: null, statusPublic: false, userId,
       });
-      await saveMonitor(monitor);
+      // 逐条原子判配额：并发导入也不会突破上限
+      const ok = await insertMonitorWithinLimit(monitor, effectiveLimit);
+      if (!ok) { reasons.add('plan monitor limit reached'); break; }
       created++;
     } catch (e) { skipped++; reasons.add(e.message); }
   }
@@ -1119,7 +1154,15 @@ app.patch('/api/monitors/:id', async (req, res) => {
     if (!m || m.userId !== userId) return res.status(404).json(apiErr(E.MONITOR_NOT_FOUND));
     const plan = (await getUserById(userId))?.plan ?? 'free';
     const { config, channels, statusPublic, interval, name } = req.body || {};
-    if (config !== undefined) m.config = config;
+    if (config !== undefined) {
+      // 与 Worker 端对齐：保留后端维护字段，避免前端保存配置时把内部状态清空
+      const prev = (m.config && typeof m.config === 'object') ? m.config : {};
+      m.config = (config && typeof config === 'object') ? { ...config } : {};
+      // _ai：AI 可读性指纹/快照（清掉会导致每次检查都被判为「有变化」）
+      if (prev._ai !== undefined) m.config._ai = prev._ai;
+      // heartbeatToken：上报鉴权令牌（清掉等于把心跳端点重新变成无鉴权）
+      if (prev.heartbeatToken && m.config.heartbeatToken === undefined) m.config.heartbeatToken = prev.heartbeatToken;
+    }
     if (interval !== undefined) {
       const minI = planMinInterval(plan);
       const v = Number(interval);
@@ -1164,10 +1207,16 @@ app.get('/api/monitors/:id/stats', async (req, res) => {
 app.post('/api/heartbeat/:id', async (req, res) => {
   try {
     const m = await getMonitor(req.params.id);
-    if (!m) return res.status(404).json(apiErr(E.MONITOR_NOT_FOUND));
-    m.lastSuccessAt = Date.now();
-    if (m.status === 'down') m.status = 'up';
-    await saveMonitor(m);
+    // 只接受 heartbeat 类型：旧实现凭 id 可把任意监控刷成 up（公开状态页会返回 id）
+    if (!m || m.type !== 'heartbeat') return res.status(404).json(apiErr(E.MONITOR_NOT_FOUND));
+    const want = m.config && m.config.heartbeatToken;
+    const got = (req.query && req.query.token) || req.headers['x-heartbeat-token'] || (req.body || {}).token || '';
+    if (want && String(got) !== String(want)) {
+      return res.status(401).json(apiErr(E.AUTH_REQUIRED, { reason: 'heartbeat_token' }));
+    }
+    // 专用写入：saveMonitor 对 heartbeat 会刻意保留旧 last_success_at，上报必须走 recordHeartbeat
+    const ok = await recordHeartbeat(m.id, Date.now());
+    if (!ok) return res.status(404).json(apiErr(E.MONITOR_NOT_FOUND));
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
@@ -1354,6 +1403,13 @@ app.patch('/api/me/status-page', async (req, res) => {
 app.post('/api/admin/monthly-report', requireAdmin, async (req, res) => {
   const sent = await generateMonthlyReport(req.admin.id);
   res.json({ sent });
+});
+
+// 公开能力声明（无鉴权）：前端据此隐藏本环境无法兑现的检查类型。
+// 自托管具备全部 10 类能力，故返回空数组——绝不能因为托管侧收口而误伤自托管。
+app.get('/api/capabilities', (_req, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json({ unavailableTypes: [] });
 });
 
 // 当前套餐可用能力（前端渲染表单用）
@@ -1569,7 +1625,8 @@ function requireApiKey(req, res, next) {
   const m = auth.match(/^Bearer\s+(.+)$/i);
   if (!m) return res.status(401).json(apiErr(E.MISSING_AUTH_HEADER));
   getUserByApiKey(m[1].trim()).then((u) => {
-    if (!u) return res.status(403).json(apiErr(E.INVALID_API_KEY));
+    // 封禁账号的 key 必须一并失效，否则封禁可被 API 绕过
+    if (!u || u.banned) return res.status(403).json(apiErr(E.INVALID_API_KEY));
     req.apiUser = u;
     next();
   }).catch(() => res.status(500).json(apiErr(E.SERVER_ERROR)));
@@ -1933,13 +1990,51 @@ app.post('/api/team/invite', async (req, res) => {
   const user = await getUserById(userId);
   if (!user?.teamId) return res.status(403).json(apiErr(E.NO_TEAM));
   try {
-    const email = (req.body || {}).email;
+    const email = String((req.body || {}).email || '').trim();
     const r = await inviteTeamMember(user.teamId, userId, email);
+    // 只有新建 pending 邀请才发信；'already'（已在本团队）不发
+    if (r === 'pending') {
+      const teamName = (await getTeamName(user.teamId)) || 'Pingory team';
+      // 发信失败不阻断邀请（邀请已在库中待接受），但必须留日志可追
+      sendTeamInviteEmail({ to: email, teamName, inviterEmail: user.email })
+        .catch((e) => console.warn('[team] 邀请邮件发送失败:', e && e.message));
+    }
     recordUserEvent({ userId, eventType: 'team_invite', metadata: { teamId: user.teamId, email, result: r }, req });
     res.json({ ok: true, result: r });
   } catch (err) {
     res.status(400).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
   }
+});
+
+// 我收到的待接受邀请（被邀请人视角；不暴露其他团队的成员信息）
+app.get('/api/team/invites', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) return res.status(401).json(apiErr(E.AUTH_REQUIRED));
+  try {
+    res.json({ invites: await listPendingInvites(userId) });
+  } catch (err) {
+    res.status(400).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
+  }
+});
+
+app.post('/api/team/invites/:id/accept', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) return res.status(401).json(apiErr(E.AUTH_REQUIRED));
+  try {
+    const teamId = await acceptTeamInvite(userId, req.params.id);
+    recordUserEvent({ userId, eventType: 'team_invite_accept', metadata: { teamId }, req });
+    res.json({ ok: true, teamId });
+  } catch (err) {
+    res.status(400).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
+  }
+});
+
+app.post('/api/team/invites/:id/decline', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) return res.status(401).json(apiErr(E.AUTH_REQUIRED));
+  const ok = await declineTeamInvite(userId, req.params.id);
+  if (ok) recordUserEvent({ userId, eventType: 'team_invite_decline', metadata: { id: req.params.id }, req });
+  res.json({ ok });
 });
 
 app.get('/api/team', async (req, res) => {
@@ -2111,31 +2206,79 @@ app.get('/api/v1/monitors', requireApiKey, async (req, res) => {
 
 app.post('/api/v1/monitors', requireApiKey, async (req, res) => {
   try {
-    const plan = req.apiUser.plan;
-    const { url, name, interval, type = 'http', config = {}, channels = null, statusPublic = false } = req.body || {};
+    const apiUser = req.apiUser;
+    const plan = apiUser.plan || 'free';
+    // P0-W1（2026-11-18）：v1 此前只校验类型与间隔，配额/邮箱 cap/target 规范化全缺 ⇒
+    // 免费号拿 key 即可无限建监控。这里与 Web 端 POST /api/monitors 的四道校验对齐。
+    const me = await getUserById(apiUser.id);
+    const limit = me?.monitorLimit != null ? me.monitorLimit : (PLAN_LIMITS[plan] ?? PLAN_LIMITS.free);
+    const own = await listMonitors(apiUser.id);
+    if (own.length >= limit) return res.status(403).json(apiErr(E.PLAN_MONITOR_LIMIT, { plan, limit }));
+    if (!me?.emailVerified && own.length >= EMAIL_VERIFY_MONITOR_CAP) {
+      return res.status(403).json(apiErr(E.EMAIL_VERIFY_REQUIRED, { cap: EMAIL_VERIFY_MONITOR_CAP }));
+    }
+
+    const { url, name, interval, type: rawType, config = {}, channels = null, statusPublic = false } = req.body || {};
     if (!url) return res.status(400).json(apiErr(E.URL_REQUIRED));
+    const type = (rawType == null || String(rawType).trim() === '') ? 'http' : String(rawType).trim();
     if (!planHasType(plan, type)) return res.status(403).json(apiErr(E.API_TYPE_NOT_SUPPORTED, { type }));
-    const mon = createMonitor({ url, name, interval, userId: req.apiUser.id, type, config, channels });
+
+    const minInterval = planMinInterval(plan);
+    const parsedInterval = interval ? Number(interval) : minInterval;
+    if (!Number.isFinite(parsedInterval) || parsedInterval < minInterval) {
+      return res.status(400).json(apiErr(E.PLAN_MIN_INTERVAL, { plan, minInterval }));
+    }
+
+    const nres = normalizeTarget(type, url);
+    if (nres.err) return res.status(400).json(nres.err);
+
+    let safeChannels = null;
+    if (channels && typeof channels === 'object') {
+      safeChannels = {};
+      for (const [ch, cfg] of Object.entries(channels)) {
+        if (cfg && cfg.enabled && planHasChannel(plan, ch)) safeChannels[ch] = cfg;
+      }
+    }
+
+    const mon = createMonitor({
+      url: nres.url,
+      name: name ? String(name).trim() : null,
+      interval: parsedInterval,
+      userId: apiUser.id,
+      type,
+      config,
+      channels: safeChannels,
+    });
     mon.statusPublic = !!statusPublic && planHasStatusPage(plan);
-    mon.teamId = req.apiUser.teamId || null;
-    await saveMonitor(mon);
-    recordUserEvent({ userId: req.apiUser.id, eventType: 'monitor_create', metadata: { url: mon.url, type: mon.type, source: 'api' }, req });
+    mon.teamId = apiUser.teamId || null;
+    const effectiveLimit = (!me?.emailVerified && EMAIL_VERIFY_MONITOR_CAP < limit) ? EMAIL_VERIFY_MONITOR_CAP : limit;
+    const created = await insertMonitorWithinLimit(mon, effectiveLimit);
+    if (!created) return res.status(403).json(apiErr(E.PLAN_MONITOR_LIMIT, { plan, limit: effectiveLimit }));
+    recordUserEvent({ userId: apiUser.id, eventType: 'monitor_create', metadata: { url: mon.url, type: mon.type, source: 'api' }, req });
     res.status(201).json(mon);
   } catch (err) {
     res.status(400).json(apiErr(E.SERVER_ERROR, { msg: err.message }));
   }
 });
 
+// P0-W2：归属判断必须显式。旧写法 `m.teamId !== apiUser.teamId` 在双方都是 null 时
+// 判定为「相等」⇒ 非团队用户可读写任意他人监控（含 config 里的 Authorization 头）。
+function canAccessMonitor(m, apiUser) {
+  if (!m) return false;
+  if (m.userId === apiUser.id) return true;
+  return !!(apiUser.teamId && m.teamId === apiUser.teamId);
+}
+
 app.get('/api/v1/monitors/:id', requireApiKey, async (req, res) => {
   const m = await getMonitor(req.params.id);
-  if (!m || (m.userId !== req.apiUser.id && m.teamId !== req.apiUser.teamId)) return res.status(404).json(apiErr(E.MONITOR_NOT_FOUND));
+  if (!canAccessMonitor(m, req.apiUser)) return res.status(404).json(apiErr(E.MONITOR_NOT_FOUND));
   res.json(m);
 });
 
 app.delete('/api/v1/monitors/:id', requireApiKey, async (req, res) => {
   const m = await getMonitor(req.params.id);
-  if (!m || (m.userId !== req.apiUser.id && m.teamId !== req.apiUser.teamId)) return res.status(404).json(apiErr(E.MONITOR_NOT_FOUND));
-  await deleteMonitor(req.params.id, req.apiUser.id);
+  if (!canAccessMonitor(m, req.apiUser)) return res.status(404).json(apiErr(E.MONITOR_NOT_FOUND));
+  await deleteMonitor(req.params.id, req.apiUser.id, req.apiUser.teamId || null);
   recordUserEvent({ userId: req.apiUser.id, eventType: 'monitor_delete', metadata: { id: req.params.id, url: m.url, type: m.type, source: 'api' }, req });
   res.json({ ok: true });
 });

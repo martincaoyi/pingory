@@ -545,20 +545,108 @@ export async function createTeam(ownerId, name) {
   await pool.query('UPDATE monitors SET team_id = $2 WHERE user_id = $1', [ownerId, id]);
   return id;
 }
-// 邀请成员：按邮箱；已注册则直接归入团队，未注册则标记待加入（注册后由 acceptTeamInvite 处理）
+// 邀请成员（P0-W4，2026-11-18 重写）。
+// 旧实现「邀请即并入」：直接把被邀请人 team_id 与其全部监控改写到本团队，被邀请人零同意。
+// 当时因 `rows.length`（应为 `t.length`）先抛 ReferenceError 而无法利用；一旦只修笔误，
+// 就等于开放「任意人可把他人连人带监控并入自己团队」。故改为**待确认邀请**：
+//   · 只写 team_invites(pending)，不改任何归属
+//   · 被邀请人 accept 后才真正迁移（见 acceptTeamInvite）
+// 返回值：'pending'（新邀请/已有待处理）| 'already'（已在本团队）
 export async function inviteTeamMember(teamId, ownerId, email) {
   const pool = await getPool();
-  const normEmail = String(email).trim().toLowerCase();
-  // 校验团队归属
-  const { rows: t } = await pool.query('SELECT * FROM teams WHERE id = $1 AND owner_id = $2', [teamId, ownerId]);
-  if (rows.length === 0) throw new Error('No permission to operate this team');  const { rows: u } = await pool.query('SELECT * FROM users WHERE email = $1', [normEmail]);
+  const normEmail = String(email == null ? '' : email).trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normEmail)) throw new Error('Invalid email address');
+  // 校验团队归属（旧代码这里解构出 t 却读 rows ⇒ ReferenceError）
+  const { rows: t } = await pool.query('SELECT id FROM teams WHERE id = $1 AND owner_id = $2', [teamId, ownerId]);
+  if (t.length === 0) throw new Error('No permission to operate this team');
+  const { rows: u } = await pool.query('SELECT id, team_id FROM users WHERE email = $1', [normEmail]);
   if (u.length === 0) throw new Error('This email is not registered yet; ask them to sign up first');
   if (u[0].team_id === teamId) return 'already';
-  // 归入团队
-  await pool.query('UPDATE users SET team_id = $2, team_role = $3 WHERE id = $1', [u[0].id, teamId, 'member']);
-  await pool.query('UPDATE monitors SET team_id = $2 WHERE user_id = $1', [u[0].id, teamId]);
-  return 'joined';
+  // 不允许跨团队抢人：对方已在别的团队时必须先自行退出
+  if (u[0].team_id) throw new Error('This user already belongs to another team');
+  // 幂等：同一团队对同一邮箱重复邀请不堆行
+  const { rows: existing } = await pool.query(
+    `SELECT id FROM team_invites
+      WHERE team_id = $1 AND lower(email) = $2 AND status = 'pending'
+      LIMIT 1`,
+    [teamId, normEmail]
+  );
+  if (existing.length) return 'pending';
+  await pool.query(
+    `INSERT INTO team_invites (id, team_id, email, invited_by, expires_at)
+     VALUES ($1, $2, $3, $4, now() + interval '7 days')`,
+    [crypto.randomUUID(), teamId, normEmail, ownerId]
+  );
+  return 'pending';
 }
+
+// 我收到的待处理邀请（按登录用户邮箱匹配；过期的自动视为无效）
+export async function listPendingInvites(userId) {
+  const pool = await getPool();
+  const { rows } = await pool.query(
+    `SELECT ti.id, ti.team_id, t.name AS team_name, ti.created_at, ti.expires_at,
+            (SELECT email FROM users WHERE id = ti.invited_by) AS invited_by_email
+       FROM team_invites ti
+       JOIN teams t ON t.id = ti.team_id
+       JOIN users me ON me.id = $1
+      WHERE lower(ti.email) = lower(me.email)
+        AND ti.status = 'pending'
+        AND ti.expires_at > now()
+      ORDER BY ti.created_at DESC`,
+    [userId]
+  );
+  return rows;
+}
+
+// 接受邀请：单条 CTE 原子完成「标记 accepted + 用户入队」，避免跨请求事务；
+// 归属条件全部写进 SQL（邮箱必须匹配本人、不得已在别的团队），无法靠改请求参数绕过。
+export async function acceptTeamInvite(userId, inviteId) {
+  const pool = await getPool();
+  const { rows } = await pool.query(
+    `WITH inv AS (
+       UPDATE team_invites ti
+          SET status = 'accepted'
+        WHERE ti.id = $1
+          AND ti.status = 'pending'
+          AND ti.expires_at > now()
+          AND lower(ti.email) = (SELECT lower(email) FROM users WHERE id = $2)
+          AND NOT EXISTS (
+                SELECT 1 FROM users u
+                 WHERE u.id = $2 AND u.team_id IS NOT NULL AND u.team_id <> ti.team_id
+              )
+        RETURNING ti.team_id
+     )
+     UPDATE users SET team_id = (SELECT team_id FROM inv), team_role = 'member'
+      WHERE id = $2 AND EXISTS (SELECT 1 FROM inv)
+      RETURNING team_id`,
+    [inviteId, userId]
+  );
+  const teamId = rows[0]?.team_id;
+  if (!teamId) throw new Error('Invitation not found, expired, or not for your account');
+  await pool.query('UPDATE monitors SET team_id = $2 WHERE user_id = $1', [userId, teamId]);
+  return teamId;
+}
+
+export async function declineTeamInvite(userId, inviteId) {
+  const pool = await getPool();
+  const { rowCount } = await pool.query(
+    `UPDATE team_invites ti
+        SET status = 'declined'
+      WHERE ti.id = $1
+        AND ti.status = 'pending'
+        AND lower(ti.email) = (SELECT lower(email) FROM users WHERE id = $2)`,
+    [inviteId, userId]
+  );
+  return (rowCount || 0) > 0;
+}
+
+export async function getTeamName(teamId) {
+  if (!teamId) return null;
+  const pool = await getPool();
+  const { rows } = await pool.query('SELECT name FROM teams WHERE id = $1', [teamId]);
+  return rows[0]?.name || null;
+}
+
 export async function listTeam(teamId) {
   const pool = await getPool();
   const { rows: t } = await pool.query('SELECT * FROM teams WHERE id = $1', [teamId]);
@@ -573,10 +661,36 @@ export async function listTeam(teamId) {
   );
   return { id: t[0].id, name: t[0].name, members, monitors: mon };
 }
+// 退出团队（P0-W4）。旧实现 SQL 用 `$3` 却只传 2 个参数 ⇒ 必 500；且团队 owner 直接退出
+// 会让团队变成无主孤儿。现在：普通成员直接解绑；owner 退出时先转让给最早加入的成员，
+// 若团队只剩自己则解散团队（其监控回落为个人监控）。
 export async function leaveTeam(userId) {
   const pool = await getPool();
+  const { rows: me } = await pool.query('SELECT team_id, team_role FROM users WHERE id = $1', [userId]);
+  const teamId = me[0]?.team_id;
+  if (!teamId) return false;
+
+  if (me[0].team_role === 'owner') {
+    const { rows: rest } = await pool.query(
+      'SELECT id FROM users WHERE team_id = $1 AND id <> $2 ORDER BY created_at ASC LIMIT 1',
+      [teamId, userId]
+    );
+    if (rest.length) {
+      // 转让团队所有权，避免留下无 owner 的团队（owner_id 是各类团队操作的权限判据）
+      await pool.query('UPDATE teams SET owner_id = $2 WHERE id = $1', [teamId, rest[0].id]);
+      await pool.query("UPDATE users SET team_role = 'owner' WHERE id = $1", [rest[0].id]);
+    } else {
+      // 只剩自己：团队无存在意义，一并清掉共享标记
+      await pool.query('UPDATE monitors SET team_id = NULL WHERE team_id = $1', [teamId]);
+      await pool.query('DELETE FROM teams WHERE id = $1', [teamId]);
+    }
+  }
+
+  // 只解绑**本人**创建的监控；团队里别人建的监控仍属团队，不能因一人退出而被带走
   await pool.query('UPDATE monitors SET team_id = NULL WHERE user_id = $1', [userId]);
-  await pool.query('UPDATE users SET team_id = NULL, team_role = $3 WHERE id = $1', [userId, 'owner']);
+  // team_role 列是 NOT NULL DEFAULT 'owner'，无团队时回落默认值
+  await pool.query("UPDATE users SET team_id = NULL, team_role = 'owner' WHERE id = $1", [userId]);
+  return true;
 }
 
 // ===== 推荐码：付费转化记提成 =====

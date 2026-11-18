@@ -32,17 +32,43 @@ const FLAGS = {
   pro: { statusPage: true, multiRegion: true, stats: true },
 };
 
-export function planFeatures(plan) {
+// 🔴 托管（Cloudflare Worker）运行时**不具备**的检查能力（P0-W3，2026-11-18）。
+// 这四类依赖 node:child_process / node:tls / node:dns，Workers 下模块缺失，
+// 旧行为是「照卖 + 执行时判 down」⇒ 付费用户买到永久 red 的监控 + 持续误告警。
+// 因此托管侧必须在**售卖与创建两道口**都收口；自托管仍是 10 类全开。
+// 判据不是主观取舍：src/monitors.js:15-40 的懒加载 + PORT-CHECKLIST.md 已自认。
+export const HOSTED_UNAVAILABLE_TYPES = Object.freeze(['ping', 'ssl', 'domain', 'dns']);
+
+function filterHosted(types, opts) {
+  if (!opts || !opts.hosted) return types;
+  return types.filter((t) => !HOSTED_UNAVAILABLE_TYPES.includes(t));
+}
+
+// 各套餐的检查历史保留天数（P0-W5，2026-11-18）。
+// 对外承诺来自 public/index.html 套餐卡：Free 7 天 / Starter 90 天 / Pro 365 天。
+// 此前 src/retention.js 无差别只留 30 天 ⇒ 付费卖点直接虚假（第 31 天就查不到历史）。
+// 这里作为唯一真值源，retention 清理与前端文案必须同时对齐。
+export const PLAN_RETENTION_DAYS = { free: 7, starter: 90, pro: 365 };
+
+export function planRetentionDays(plan) {
+  return PLAN_RETENTION_DAYS[plan] ?? PLAN_RETENTION_DAYS.free;
+}
+
+export function planFeatures(plan, opts = {}) {
   return {
-    types: TYPES[plan] || TYPES.free,
+    types: filterHosted(TYPES[plan] || TYPES.free, opts),
     channels: CHANNELS[plan] || CHANNELS.free,
     statusPage: FLAGS[plan]?.statusPage ?? false,
     multiRegion: FLAGS[plan]?.multiRegion ?? false,
     stats: FLAGS[plan]?.stats ?? false,
+    // 仅托管侧会真的剔除能力；自托管返回空数组，前端据此隐藏首页对应卡片
+    unavailableTypes: opts.hosted ? [...HOSTED_UNAVAILABLE_TYPES] : [],
   };
 }
 
-export function planHasType(plan, type) {
+// opts.hosted=true 时按托管运行时能力收口（Express/Worker 共用同一判据，避免两套漂移）
+export function planHasType(plan, type, opts = {}) {
+  if (opts.hosted && HOSTED_UNAVAILABLE_TYPES.includes(type)) return false;
   return (TYPES[plan] || TYPES.free).includes(type);
 }
 

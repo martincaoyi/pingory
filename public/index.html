@@ -509,12 +509,12 @@ docker compose up -d</code></pre>
         <a class="mt-tryfree" id="aiTypeFreeLink" href="/llms-txt-checker" data-i18n="landing.type.ai.tryFree">Or try the free llms.txt checker →</a>
       </div>
       <div class="mt-card wide"><div class="mt-icon">🌐</div><div class="mt-title" data-i18n="landing.type.http.title">HTTP/HTTPS</div><div class="mt-desc" data-i18n="landing.type.http.desc">Monitor any web page or API endpoint for availability</div></div>
-      <div class="mt-card"><div class="mt-icon">🔒</div><div class="mt-title" data-i18n="landing.type.ssl.title">SSL Certificates</div><div class="mt-desc" data-i18n="landing.type.ssl.desc">Get alerted 30 days before your certificates expire</div></div>
-      <div class="mt-card"><div class="mt-icon">📅</div><div class="mt-title" data-i18n="landing.type.domain.title">Domain Expiry</div><div class="mt-desc" data-i18n="landing.type.domain.desc">WHOIS monitoring so you never lose a domain</div></div>
+      <div class="mt-card" data-mtype="ssl"><div class="mt-icon">🔒</div><div class="mt-title" data-i18n="landing.type.ssl.title">SSL Certificates</div><div class="mt-desc" data-i18n="landing.type.ssl.desc">Get alerted 30 days before your certificates expire</div></div>
+      <div class="mt-card" data-mtype="domain"><div class="mt-icon">📅</div><div class="mt-title" data-i18n="landing.type.domain.title">Domain Expiry</div><div class="mt-desc" data-i18n="landing.type.domain.desc">WHOIS monitoring so you never lose a domain</div></div>
       <div class="mt-card"><div class="mt-icon">🔍</div><div class="mt-title" data-i18n="landing.type.keyword.title">Keyword Checks</div><div class="mt-desc" data-i18n="landing.type.keyword.desc">Detect when expected content appears or disappears</div></div>
-      <div class="mt-card"><div class="mt-icon">📡</div><div class="mt-title" data-i18n="landing.type.ping.title">Ping &amp; Port</div><div class="mt-desc" data-i18n="landing.type.ping.desc">ICMP ping and TCP port monitoring for servers</div></div>
+      <div class="mt-card" data-mtype="ping"><div class="mt-icon">📡</div><div class="mt-title" data-i18n="landing.type.ping.title">Ping &amp; Port</div><div class="mt-desc" data-i18n="landing.type.ping.desc">ICMP ping and TCP port monitoring for servers</div></div>
       <div class="mt-card"><div class="mt-icon">⚡</div><div class="mt-title" data-i18n="landing.type.api.title">API Monitoring</div><div class="mt-desc" data-i18n="landing.type.api.desc">Validate response headers and JSON assertions</div></div>
-      <div class="mt-card"><div class="mt-icon">📋</div><div class="mt-title" data-i18n="landing.type.dns.title">DNS Records</div><div class="mt-desc" data-i18n="landing.type.dns.desc">Detect unauthorized DNS changes early</div></div>
+      <div class="mt-card" data-mtype="dns"><div class="mt-icon">📋</div><div class="mt-title" data-i18n="landing.type.dns.title">DNS Records</div><div class="mt-desc" data-i18n="landing.type.dns.desc">Detect unauthorized DNS changes early</div></div>
       <div class="mt-card wide"><div class="mt-icon">💓</div><div class="mt-title" data-i18n="landing.type.heartbeat.title">Heartbeat / Cron</div><div class="mt-desc" data-i18n="landing.type.heartbeat.desc">Know immediately when scheduled jobs fail</div></div>
     </div>
 
@@ -1482,6 +1482,20 @@ docker compose up -d</code></pre>
 
     // ===== 套餐能力与动态表单 =====
     let FEATURES = null, TYPE_LABELS = {}, CHANNEL_LABELS = {};
+    // 首页能力网格收口（P0-W3）：托管版（Cloudflare Worker）无 ping/ssl/domain/dns 运行能力，
+    // 卖出去只会永久 down。这里按后端声明的 unavailableTypes 隐藏对应卡片，避免虚假宣传。
+    // 自托管返回空数组 ⇒ 10 类全部保留，不受影响。
+    (async function applyEnvironmentCapabilities() {
+      try {
+        const res = await fetch('/api/capabilities');
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = Array.isArray(data.unavailableTypes) ? data.unavailableTypes : [];
+        list.forEach((ty) => {
+          document.querySelectorAll('[data-mtype="' + ty + '"]').forEach((el) => { el.style.display = 'none'; });
+        });
+      } catch { /* 拿不到能力声明时保持原样，不误隐藏 */ }
+    })();
     // 托管环境的生效间隔下限（来自 /api/plan-features 的 minInterval）。
     // ⚠️ 它不在 data.features 里——早先写 FEATURES.minInterval 永远取到 300（D49 审阅发现）
     let PLAN_MIN = 300;

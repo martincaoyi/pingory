@@ -6,6 +6,7 @@ import { getUserById, isMonitorInMaintenance, getSubscriberEmails, getAlertChann
 import { planHasChannel, planHasStats } from './plans.js';
 import { monErrText } from './monerr.js';
 import { getPool } from './db.js';
+import { safeFetch } from './ssrf-guard.js';
 
 // 邮件告警的收件人 = 监控归属账号的注册邮箱（多租户各归各）。
 // ⚠️ 不再使用全局 ALERT_TO_EMAIL 作为告警收件人（该变量仅剩「客户反馈通知」用途，见 src/email.js）。
@@ -137,6 +138,9 @@ async function sendAlertEmail(to, subject, text, { priority = 'critical', accoun
 // 状态页订阅者通知（G7）：逐人发送，配额耗尽即停
 async function notifySubscribers(monitor, title, text, priority = 'critical') {
   if (!monitor.userId) return;
+  // P1：订阅者只能看到**公开**状态页上的监控。旧实现对全部监控通知订阅者，
+  // 会把私有监控的名称与 URL 直接发给无关订阅者（隐私泄露）。
+  if (!monitor.statusPublic) return;
   try {
     const emails = await getSubscriberEmails(monitor.userId);
     let sent = 0;
@@ -151,50 +155,117 @@ async function notifySubscribers(monitor, title, text, priority = 'critical') {
   }
 }
 
+// ===== 渠道发送 =====
+// 统一约定（P1，2026-11-18 修复）：
+//   ① 用户可填 URL 的渠道（slack / webhook / discord / teams / pagerduty）必须走 safeFetch，
+//      否则可被用来探测内网与云元数据；
+//   ② 必须检查 res.ok —— 旧实现全部不判，Telegram token 失效 / Webhook 404 一律当成功；
+//   ③ 返回 true/false，由 dispatch 汇总失败渠道，避免「以为发了其实没发」。
 async function sendSlack(url, text) {
-  if (!url) return;
+  if (!url) return false;
   try {
-    await fetch(url, {
+    const res = await safeFetch(url, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
-    });
-  } catch (e) { console.error('[alert] Slack 失败:', e.message); }
+    }, { timeoutMs: 10000 });
+    if (!res.ok) { console.error(`[alert] Slack 返回 HTTP ${res.status}`); return false; }
+    return true;
+  } catch (e) { console.error('[alert] Slack 失败:', e.message); return false; }
 }
 
 async function sendWebhook(url, payload) {
-  if (!url) return;
+  if (!url) return false;
   try {
-    await fetch(url, {
+    const res = await safeFetch(url, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    });
-  } catch (e) { console.error('[alert] Webhook 失败:', e.message); }
+    }, { timeoutMs: 10000 });
+    if (!res.ok) { console.error(`[alert] Webhook 返回 HTTP ${res.status}`); return false; }
+    return true;
+  } catch (e) { console.error('[alert] Webhook 失败:', e.message); return false; }
 }
 
 async function sendTelegram(botToken, chatId, text) {
-  if (!botToken || !chatId) return;
+  if (!botToken || !chatId) return false;
   try {
-    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    // 目标域名固定为 api.telegram.org，不存在 SSRF 面；仅需超时兜底
+    const signal = typeof AbortSignal !== 'undefined' && AbortSignal.timeout
+      ? AbortSignal.timeout(10000) : undefined;
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+      signal,
     });
-  } catch (e) { console.error('[alert] Telegram 失败:', e.message); }
+    if (!res.ok) { console.error(`[alert] Telegram 返回 HTTP ${res.status}`); return false; }
+    return true;
+  } catch (e) { console.error('[alert] Telegram 失败:', e.message); return false; }
 }
 
 async function sendDiscord(url, text) {
-  if (!url) return;
+  if (!url) return false;
   try {
     const APP_URL = (process.env.APP_URL || 'https://pingory.com').replace(/\/$/, '');
-    await fetch(url, {
+    const res = await safeFetch(url, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: 'Pingory', avatar_url: `${APP_URL}/icon-192.png`, content: text }),
-    });
-  } catch (e) { console.error('[alert] Discord 失败:', e.message); }
+    }, { timeoutMs: 10000 });
+    if (!res.ok) { console.error(`[alert] Discord 返回 HTTP ${res.status}`); return false; }
+    return true;
+  } catch (e) { console.error('[alert] Discord 失败:', e.message); return false; }
 }
 
-// Teams / PagerDuty 走 webhook 语义
-const sendTeams = sendWebhook;
-const sendPagerduty = sendWebhook;
+// MS Teams：旧实现直接复用 sendWebhook，但调用处按 (url,title,text,extra) 传 4 参
+// ⇒ 实际 body 是 JSON.stringify(title)（裸字符串），Teams 侧必然拒收。这里显式实现。
+async function sendTeams(url, title, text) {
+  if (!url) return false;
+  try {
+    const res = await safeFetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        '@type': 'MessageCard',
+        '@context': 'https://schema.org/extensions',
+        summary: title,
+        themeColor: 'D93025',
+        title,
+        text,
+      }),
+    }, { timeoutMs: 10000 });
+    if (!res.ok) { console.error(`[alert] Teams 返回 HTTP ${res.status}`); return false; }
+    return true;
+  } catch (e) { console.error('[alert] Teams 失败:', e.message); return false; }
+}
+
+// PagerDuty Events API v2：routing_key 必填，且必须放在 body 里。
+// 兼容两种既有填法：URL 带 ?routing_key= / 或直接把 integration key 当 url 填。
+async function sendPagerduty(url, { summary, source, severity }) {
+  if (!url) return false;
+  let endpoint = url;
+  let routingKey = null;
+  const raw = String(url).trim();
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const u = new URL(raw);
+      routingKey = u.searchParams.get('routing_key') || u.searchParams.get('integration_key') || null;
+      if (u.hostname === 'events.pagerduty.com') endpoint = raw;
+    } catch { /* 落到下面 */ }
+  } else if (/^[A-Za-z0-9]{20,}$/.test(raw)) {
+    routingKey = raw;
+    endpoint = 'https://events.pagerduty.com/v2/enqueue';
+  }
+  if (!routingKey) { console.error('[alert] PagerDuty 缺少 routing key，跳过'); return false; }
+  try {
+    const res = await safeFetch(endpoint, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        routing_key: routingKey,
+        event_action: 'trigger',
+        payload: { summary, source, severity: severity || 'critical' },
+      }),
+    }, { timeoutMs: 10000 });
+    if (!res.ok) { console.error(`[alert] PagerDuty 返回 HTTP ${res.status}`); return false; }
+    return true;
+  } catch (e) { console.error('[alert] PagerDuty 失败:', e.message); return false; }
+}
 
 // ===== 渠道凭据完整性：缺凭据的渠道直接跳过，避免无意义的失败与噪声 =====
 function channelCredOk(ch, cfg) {
@@ -229,26 +300,32 @@ function resolveChannels(monitor, plan, accountChannels) {
 // ===== 统一分发 =====
 async function dispatch(monitor, plan, title, text, channelExtra = {}, accountChannels = {}, emailTo = null, priority = 'critical') {
   const channels = resolveChannels(monitor, plan, accountChannels);
+  const failed = [];
   for (const [ch, cfg] of Object.entries(channels)) {
     try {
+      let ok = true;
       switch (ch) {
         case 'email':
           // 发给该监控归属账号的注册邮箱；无归属邮箱时跳过并留日志，绝不回退到固定个人邮箱。
-          if (emailTo) await sendAlertEmail(emailTo, title, text, { priority, accountId: monitor.userId });
-          else console.warn(`[alert] email 渠道跳过：监控无归属账号邮箱（${monitor.name}）`);
+          if (emailTo) ok = await sendAlertEmail(emailTo, title, text, { priority, accountId: monitor.userId });
+          else { console.warn(`[alert] email 渠道跳过：监控无归属账号邮箱（${monitor.name}）`); ok = false; }
           break;
-        case 'slack': await sendSlack(cfg.url, text); break;
-        case 'webhook': await sendWebhook(cfg.url, { title, text, monitor: monitor.name, ...channelExtra }); break;
-        case 'telegram': await sendTelegram(cfg.botToken, cfg.chatId, text); break;
-        case 'discord': await sendDiscord(cfg.url, text); break;
-        case 'teams': await sendTeams(cfg.url, title, text, channelExtra); break;
-        case 'pagerduty': await sendPagerduty(cfg.url, { summary: title, source: monitor.name, severity: channelExtra.severity || 'critical' }); break;
+        case 'slack': ok = await sendSlack(cfg.url, text); break;
+        case 'webhook': ok = await sendWebhook(cfg.url, { title, text, monitor: monitor.name, ...channelExtra }); break;
+        case 'telegram': ok = await sendTelegram(cfg.botToken, cfg.chatId, text); break;
+        case 'discord': ok = await sendDiscord(cfg.url, text); break;
+        case 'teams': ok = await sendTeams(cfg.url, title, text); break;
+        case 'pagerduty': ok = await sendPagerduty(cfg.url, { summary: title, source: monitor.name, severity: channelExtra.severity || 'critical' }); break;
         default: break;
       }
+      if (ok === false) failed.push(ch);
     } catch (e) {
+      failed.push(ch);
       console.error(`[alert] 渠道 ${ch} 异常:`, e.message);
     }
   }
+  // 失败必须可见：旧实现静默吞掉，运维与用户都无法得知「告警其实没送达」
+  if (failed.length) console.warn(`[alert] 渠道未送达 [${failed.join(', ')}] ${monitor.name}`);
   // 控制台始终打印（方便本地调试）
   console.log(`[alert][${title}] ${monitor.name} (${monitor.url}): ${text}`);
 }
@@ -261,14 +338,15 @@ export async function sendTestAlert(channel, cfg) {
       const body = channel === 'discord'
         ? { username: 'Pingory', content: text }
         : { text };
-      const r = await fetch(cfg.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      // 用户可填 URL ⇒ 必须过 SSRF 守卫（否则「发送测试」可探测内网并回显状态码）
+      const r = await safeFetch(cfg.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, { timeoutMs: 10000 });
       return { ok: r.ok, status: r.status };
     }
     if (channel === 'webhook' || channel === 'teams' || channel === 'pagerduty') {
       const body = channel === 'webhook'
         ? { title: 'Pingory test alert', text }
         : { title: 'Pingory test alert', text, summary: 'Pingory test alert', source: 'Pingory', severity: 'info' };
-      const r = await fetch(cfg.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const r = await safeFetch(cfg.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, { timeoutMs: 10000 });
       return { ok: r.ok, status: r.status };
     }
     if (channel === 'telegram') {
@@ -311,14 +389,17 @@ export function initAlerts() {
       if (ctx.downConfirmed && (monitor.alertCount || 0) === 0) {
         const text = `🔴 DOWN ${monitor.name} (${monitor.url})\nError: ${monErrText(result.error) || 'Unknown'}\nTime: ${fmt()}`;
         await saveEvent(monitor.id, { eventType: 'down', fromStatus: ctx.prevStatus, toStatus: 'down', responseTime: result.responseTime, error: result.error, detail: text });
+        if (inMaintenance) {
+          // 维护窗口内**不占用告警状态位**：旧实现仍置 alertCount=1，维护结束后恢复时会
+          // 发出一条从未有过对应 DOWN 的 RECOVERED（幽灵恢复）。这里只记事件，不派发。
+          console.log(`[alert] 维护窗口内跳过告警: ${monitor.name}`);
+          return;
+        }
         monitor.lastAlertAt = Date.now();
         monitor.alertCount = 1;
         await saveMonitor(monitor);
-        if (inMaintenance) { console.log(`[alert] 维护窗口内跳过告警: ${monitor.name}`); }
-        else {
-          await dispatch(monitor, plan, `Pingory DOWN: ${monitor.name}`, text, { severity: 'critical' }, accountChannels, userEmail, 'critical');
-          await notifySubscribers(monitor, `Status page alert: ${monitor.name} is DOWN`, text, 'critical');
-        }
+        await dispatch(monitor, plan, `Pingory DOWN: ${monitor.name}`, text, { severity: 'critical' }, accountChannels, userEmail, 'critical');
+        await notifySubscribers(monitor, `Status page alert: ${monitor.name} is DOWN`, text, 'critical');
       } else if ((monitor.alertCount || 0) > 0) {
         // 持续 down：升级告警（G2）
         const escMin = (monitor.config?.escalationIntervalMin) || 30;
@@ -361,8 +442,10 @@ export function initAlerts() {
         warnText = `⚠️ WARNING ${monitor.name} (${monitor.url})\n${monErrText(result.warn)}\nTime: ${fmt()}`;
       }
       if (warnText) {
-        await dispatch(monitor, plan, `Pingory WARNING: ${monitor.name}`, warnText, { severity: 'warning' }, accountChannels, userEmail, 'warning');
         await saveEvent(monitor.id, { eventType: 'warning', fromStatus: 'up', toStatus: 'up', responseTime: result.responseTime, error: result.warn || null, detail: warnText });
+        // 维护窗口同样覆盖 warning（旧实现只挡 DOWN/RECOVERED，维护期仍会收到慢响应/到期预警）
+        if (inMaintenance) console.log(`[alert] 维护窗口内跳过 warning: ${monitor.name}`);
+        else await dispatch(monitor, plan, `Pingory WARNING: ${monitor.name}`, warnText, { severity: 'warning' }, accountChannels, userEmail, 'warning');
       }
       return;
     }

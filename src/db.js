@@ -264,6 +264,24 @@ const SCHEMA_DDL = `
     CREATE INDEX IF NOT EXISTS idx_users_api_key ON users(api_key);
     CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);
 
+    -- ===== 团队邀请（P0-W4，2026-11-18）=====
+    -- 背景：旧实现「邀请即把人连人带监控并入团队」，被邀请人零同意 ⇒ 一旦修掉
+    -- ReferenceError 就等于开放「任意人可把他人并入自己团队」的越权。故引入待确认态：
+    -- 邀请只写 pending 记录，被邀请人 accept 后才真正改 team_id / monitors.team_id。
+    CREATE TABLE IF NOT EXISTS team_invites (
+      id          TEXT PRIMARY KEY,
+      team_id     TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      email       TEXT NOT NULL,
+      invited_by  TEXT NOT NULL,
+      status      TEXT NOT NULL DEFAULT 'pending',   -- pending | accepted | declined | revoked
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+      expires_at  TIMESTAMPTZ NOT NULL
+    );
+    -- 同一团队对同一邮箱只保留一条待处理邀请（重复邀请走幂等返回，不堆行）
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_team_invites_pending
+      ON team_invites (team_id, lower(email)) WHERE status = 'pending';
+    CREATE INDEX IF NOT EXISTS idx_team_invites_email ON team_invites (lower(email), status);
+
     -- 监控归属团队（团队共享可见）
     ALTER TABLE monitors ADD COLUMN IF NOT EXISTS team_id TEXT;
     CREATE INDEX IF NOT EXISTS idx_monitors_team_id ON monitors(team_id);

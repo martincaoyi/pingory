@@ -231,7 +231,7 @@
   "cfg.expected": "기대값 (쉼표로 구분)",
   "cfg.headers": "커스텀 헤더 (JSON)",
   "cfg.hint.ai": "도메인만 입력하세요. 예: example.com — 홈페이지와 루트 파일 3개를 가져옵니다",
-  "cfg.hint.heartbeat": "모니터링 대상이 주기적으로 POST /api/heartbeat/<id>를 호출해야 합니다",
+  "cfg.hint.heartbeat": "모니터링 대상이 주기적으로 POST /api/heartbeat/<id>?token=<token>를 호출해야 합니다",
   "cfg.keyword": "키워드",
   "cfg.kwph": "페이지에 포함되어야 할 문자열",
   "cfg.method": "HTTP 메서드",

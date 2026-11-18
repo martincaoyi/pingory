@@ -95,6 +95,33 @@ export async function sendVerificationEmail(email, token) {
   return sendMail(email, subject, text, html);
 }
 
+// 团队邀请（P0-W4）：只在对方接受后才并入，故文案必须写明「需要你确认」，
+// 且不放任何营销内容，避免与「确认对象」混淆（同 waitlist 双重确认的既有约束）。
+export async function sendTeamInviteEmail({ to, teamName, inviterEmail }) {
+  const link = `${appUrl()}/`;
+  const subject = `You've been invited to join "${teamName}" on Pingory`;
+  const text = `Hello,
+
+${inviterEmail} invited you to join the team "${teamName}" on Pingory.
+
+Nothing has changed on your account yet — you need to accept the invitation first.
+Sign in to Pingory and open your team invitations to accept or decline:
+${link}
+
+This invitation expires in 7 days. If you were not expecting it, you can safely ignore this email.
+
+— Pingory`;
+  const html = `<div style="padding:14px 0 12px;border-bottom:1px solid #e5e7eb;margin-bottom:16px;">
+  <img src="${appUrl()}/logo-email.png" width="40" height="40" alt="" style="vertical-align:middle;border-radius:9px;border:1px solid #e5e7eb;"/>
+  <span style="font-size:20px;font-weight:700;color:#1faa6b;vertical-align:middle;margin-left:8px;">Pingory</span>
+</div>
+<p><b>${inviterEmail}</b> invited you to join the team <b>${teamName}</b> on Pingory.</p>
+<p>Nothing has changed on your account yet — you need to accept the invitation first.</p>
+<p>Sign in and open your team invitations to accept or decline:<br/><a href="${link}">${link}</a></p>
+<p style="color:#6b7280;font-size:13px;">This invitation expires in 7 days. If you were not expecting it, you can safely ignore this email.</p>`;
+  return sendMail(to, subject, text, html);
+}
+
 // 客户反馈到达，通知管理员
 export async function sendFeedbackNotification({ email, message, page }) {
   const to = process.env.ALERT_TO_EMAIL;

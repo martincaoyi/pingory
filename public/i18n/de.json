@@ -231,7 +231,7 @@
   "cfg.expected": "Erwartete Werte (durch Komma getrennt)",
   "cfg.headers": "Benutzerdefinierte Header (JSON)",
   "cfg.hint.ai": "Nur die Domain, z. B. example.com — wir rufen die Startseite und 3 Root-Dateien ab",
-  "cfg.hint.heartbeat": "Die Site muss regelmäßig POST /api/heartbeat/<id> aufrufen",
+  "cfg.hint.heartbeat": "Die Site muss regelmäßig POST /api/heartbeat/<id>?token=<token> aufrufen",
   "cfg.keyword": "Schlüsselwort",
   "cfg.kwph": "Zeichenkette, die die Seite enthalten muss",
   "cfg.method": "HTTP-Methode",

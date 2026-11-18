@@ -231,7 +231,7 @@
   "cfg.expected": "Expected values (comma separated)",
   "cfg.headers": "Custom headers (JSON)",
   "cfg.hint.ai": "Domain only, e.g. example.com — we fetch the homepage and 3 root files",
-  "cfg.hint.heartbeat": "Your site must call POST /api/heartbeat/<id> periodically",
+  "cfg.hint.heartbeat": "Your site must call POST /api/heartbeat/<id>?token=<token> periodically",
   "cfg.keyword": "Keyword",
   "cfg.kwph": "String the page must contain",
   "cfg.method": "HTTP method",

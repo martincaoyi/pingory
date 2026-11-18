@@ -15,8 +15,16 @@
 // monitor_events）按同一模式往 TABLES 里加即可，但需先各自确认「查历史」的产品语义允许多久的保留期。
 
 import { getPool } from './db.js';
+import { PLAN_RETENTION_DAYS } from './plans.js';
 
-const RETENTION_DAYS = Math.max(1, Number(process.env.RETENTION_CHECKS_DAYS || 30));
+// 显式 env 覆盖（自托管运维场景）：设置后所有监控统一用该天数，忽略套餐差异。
+// 不设时走套餐真值（Free 7 / Starter 90 / Pro 365），与前端套餐卡承诺一致。
+const OVERRIDE_DAYS = process.env.RETENTION_CHECKS_DAYS
+  ? Math.max(1, Number(process.env.RETENTION_CHECKS_DAYS))
+  : null;
+// 无归属用户的存量匿名监控（历史数据）没有套餐承诺，沿用旧默认 30 天，避免误删到不可解释。
+const ANON_RETENTION_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const BATCH_SIZE = Math.max(100, Number(process.env.RETENTION_BATCH_SIZE || 5000));
 const MAX_BATCHES_PER_RUN = Math.max(1, Number(process.env.RETENTION_MAX_BATCHES || 20));
 const RUN_INTERVAL_MS = Math.max(60 * 1000, Number(process.env.RETENTION_INTERVAL_MS || 60 * 60 * 1000));
@@ -47,10 +55,67 @@ export async function pruneByTs(table, tsColumn, cutoffMs, { batchSize = BATCH_S
 }
 
 export async function pruneMonitorChecks(nowMs = Date.now()) {
-  const cutoff = nowMs - RETENTION_DAYS * 24 * 60 * 60 * 1000;
-  const deleted = await pruneByTs('monitor_checks', 'ts', cutoff);
+  const pool = await getPool();
+  let deleted = 0;
+
+  for (let i = 0; i < MAX_BATCHES_PER_RUN; i += 1) {
+    let rowCount = 0;
+    if (OVERRIDE_DAYS) {
+      // 运维显式覆盖：全站统一保留期（单表条件，走 idx_monitor_checks_ts）
+      const cutoff = nowMs - OVERRIDE_DAYS * DAY_MS;
+      ({ rowCount } = await pool.query(
+        `DELETE FROM monitor_checks
+          WHERE id IN (
+            SELECT id FROM monitor_checks
+             WHERE ts < $1
+             ORDER BY ts ASC
+             LIMIT $2
+          )`,
+        [cutoff, BATCH_SIZE]
+      ));
+    } else {
+      // 按套餐分档清理：每条监控的保留期取决于其归属用户当前套餐。
+      // 用一条 JOIN 子查询完成，避免「每档一次全表扫描」；排序仍走 idx_monitor_checks_ts。
+      ({ rowCount } = await pool.query(
+        `DELETE FROM monitor_checks
+          WHERE id IN (
+            SELECT mc.id
+              FROM monitor_checks mc
+              JOIN monitors m ON m.id = mc.monitor_id
+              LEFT JOIN users u ON u.id = m.user_id
+             WHERE mc.ts < $1::bigint - (
+                     CASE
+                       WHEN u.id IS NULL THEN $2::bigint
+                       WHEN u.plan = 'pro' THEN $3::bigint
+                       WHEN u.plan = 'starter' THEN $4::bigint
+                       ELSE $5::bigint
+                     END
+                   ) * 86400000
+               -- 粗筛：比最短保留期（free 7 天）还新的行任何套餐都不删，
+               -- 先用它吃 idx_monitor_checks_ts 的范围扫描，避免 JOIN 后全表排序
+               AND mc.ts < $1::bigint - $5::bigint * 86400000
+             ORDER BY mc.ts ASC
+             LIMIT $6
+          )`,
+        [
+          nowMs,
+          ANON_RETENTION_DAYS,
+          PLAN_RETENTION_DAYS.pro,
+          PLAN_RETENTION_DAYS.starter,
+          PLAN_RETENTION_DAYS.free,
+          BATCH_SIZE,
+        ]
+      ));
+    }
+    deleted += rowCount || 0;
+    if (!rowCount || rowCount < BATCH_SIZE) break;
+  }
+
   if (deleted) {
-    console.log(`[retention] monitor_checks 清理 ${deleted} 行（保留 ${RETENTION_DAYS} 天，早于 ${new Date(cutoff).toISOString()}）`);
+    const scope = OVERRIDE_DAYS
+      ? `统一 ${OVERRIDE_DAYS} 天（env 覆盖）`
+      : `free ${PLAN_RETENTION_DAYS.free} / starter ${PLAN_RETENTION_DAYS.starter} / pro ${PLAN_RETENTION_DAYS.pro} 天`;
+    console.log(`[retention] monitor_checks 清理 ${deleted} 行（套餐保留期 ${scope}）`);
   }
   return deleted;
 }
@@ -70,6 +135,10 @@ export function startRetention(isLeaderFn = () => true) {
   const timer = setInterval(tick, RUN_INTERVAL_MS);
   if (first.unref) first.unref();
   if (timer.unref) timer.unref();
-  console.log(`[retention] 已启动：monitor_checks 保留 ${RETENTION_DAYS} 天，每 ${RUN_INTERVAL_MS / 60000} 分钟清理一次`);
+  console.log(
+    `[retention] 已启动：monitor_checks 保留 `
+    + (OVERRIDE_DAYS ? `${OVERRIDE_DAYS} 天（env 覆盖）` : `free ${PLAN_RETENTION_DAYS.free} / starter ${PLAN_RETENTION_DAYS.starter} / pro ${PLAN_RETENTION_DAYS.pro} 天`)
+    + `，每 ${RUN_INTERVAL_MS / 60000} 分钟清理一次`
+  );
   return timer;
 }

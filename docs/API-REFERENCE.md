@@ -553,13 +553,27 @@ OAuth 回调终点。用 code 换取 token 并获取邮箱，按邮箱找/建用
 ## 3.5 状态页 / 心跳 / 套餐能力 / 月报（Phase 1 新增）
 
 ### POST /api/heartbeat/:id
-Heartbeat 监控的回填端点（G1，**无需登录**，凭监控 id）。
+Heartbeat 监控的回填端点（G1，**无需登录**，凭监控 id + 上报令牌）。
+
+**Query / Header**：`?token=<heartbeatToken>` 或 `X-Heartbeat-Token: <token>`
+令牌在创建 heartbeat 监控时自动生成，存于该监控 `config.heartbeatToken`，在监控配置中可见。
 
 **Request Body**：空（由服务端写入 `lastSuccessAt = now()`，若当前为 down 则置 up）
 
-**响应 200** `{ ok: true }`；**404** 监控不存在
+**响应 200** `{ ok: true }`；
+**404** 监控不存在或类型不是 `heartbeat`（2026-11-18 起不再接受任意类型）；
+**401** 令牌缺失或不匹配（存量无令牌监控暂时放行，新建监控一律校验）
 
-> 用法：被监控的后台任务/cron 在成功执行后 `curl -X POST https://your-domain/api/heartbeat/<id>`；超过约定间隔未上报即判定 down。
+> 用法：被监控的后台任务/cron 在成功执行后
+> `curl -X POST "https://your-domain/api/heartbeat/<id>?token=<heartbeatToken>"`；
+> 超过约定间隔未上报即判定 down。
+
+### GET /api/capabilities
+运行环境能力声明（**无需登录**，`Cache-Control: public, max-age=300`）。
+
+托管版（Cloudflare Worker）不具备 `ping` / `ssl` / `domain` / `dns` 四类检查的运行能力，
+故返回 `{ "unavailableTypes": ["ping","ssl","domain","dns"] }`；自托管返回空数组。
+前端据此隐藏首页对应能力卡片，并与套餐类型下拉保持同源。
 
 ### GET /api/status/:slug
 公开状态页数据（G5，**无需登录**）。
@@ -842,9 +856,10 @@ Creem 订阅事件通知（双轨收款启用时）。`creem-signature` 头 = HM
 - **GET /api/maintenance-windows**、**POST /api/maintenance-windows**（`{title,monitorIds:'all'|[],startAt,endAt}`）、**DELETE /api/maintenance-windows/:id**。窗口覆盖的监控 down 时不派发告警（仍记录事件）。
 
 ### 9.3 团队 + Account API（G9，Pro）
-- **POST /api/team**（`{name}`）创建团队；**POST /api/team/invite**（`{email}`）邀请（按邮箱归入团队，共享监控）；**GET /api/team** 查看成员与共享监控；**POST /api/team/leave** 退出。
+- **POST /api/team**（`{name}`）创建团队；**POST /api/team/invite**（`{email}`）发送邀请（**2026-11-18 起为待确认制**：仅写 `team_invites(pending)` 并发邀请邮件，不改动对方任何归属，返回 `result: "pending" | "already"`）；**GET /api/team** 查看成员与共享监控；**POST /api/team/leave** 退出（owner 退出时自动转让给最早加入的成员；团队只剩自己则解散）。
+- **团队邀请（待确认流程）**：`GET /api/team/invites` 列出当前登录邮箱收到的待处理邀请；`POST /api/team/invites/:id/accept` 接受（**此时**才迁移 `users.team_id` 与其本人监控的 `team_id`）；`POST /api/team/invites/:id/decline` 拒绝。邀请 7 天过期，且只能由被邀请邮箱本人操作（SQL 层强校验，改请求参数无法绕过）。
 - **POST /api/account/apikey**（`{regenerate?}`）生成/重置 API Key；**GET /api/account/apikey** 查看。
-- **Account API（Bearer 鉴权）**：`GET /api/v1/monitors`（含团队共享）、`POST /api/v1/monitors`（`{url,name,type,interval,config,channels,statusPublic}`；`interval` 与 Web 端同受生效下限约束——低于下限返回 `plan_min_interval` / `plan_min_interval_hosted`，不会静默接受）、`GET|DELETE /api/v1/monitors/:id`。
+- **Account API（Bearer 鉴权）**：`GET /api/v1/monitors`（含团队共享）、`POST /api/v1/monitors`（`{url,name,type,interval,config,channels,statusPublic}`；`interval` 与 Web 端同受生效下限约束——低于下限返回 `plan_min_interval` / `plan_min_interval_hosted`，不会静默接受；**2026-11-18 起与 Web 端同等校验**：套餐监控数上限、未验证邮箱 cap=3、`normalizeTarget` + SSRF 守卫、渠道按套餐过滤）、`GET|DELETE /api/v1/monitors/:id`（归属按「本人 / 同团队」显式判定，`null === null` 不再放行）。
 
 ### 9.4 i18n（G10）
 - 语言包：`GET /i18n/:lang.json`（en/es/pt/de/fr/ja/ko）；前端 `index.html` 含语言切换器，核心文案经 `data-i18n` 应用。

@@ -231,7 +231,7 @@
   "cfg.expected": "期望值（逗号分隔）",
   "cfg.headers": "自定义 Header (JSON)",
   "cfg.hint.ai": "只填域名，例如 example.com —— 我们会抓取首页和 3 个根文件",
-  "cfg.hint.heartbeat": "被监控方需定时调用 POST /api/heartbeat/<id>",
+  "cfg.hint.heartbeat": "被监控方需定时调用 POST /api/heartbeat/<id>?token=<token>",
   "cfg.keyword": "关键字",
   "cfg.kwph": "页面需包含的字符串",
   "cfg.method": "请求方法",
