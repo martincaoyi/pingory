@@ -228,6 +228,10 @@
     .chart { width:100%; margin-top:12px; }
     .statusbar { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:18px; }
     .statusbar a { color:var(--accent); }
+    .sp-grace { background:var(--bg-2); border:1px solid var(--accent-line); border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:.85rem; }
+    .sp-grace b { display:block; margin-bottom:2px; }
+    .sp-grace .muted { color:var(--muted); }
+    .sp-grace a { color:var(--accent); font-weight:600; white-space:nowrap; }
     /* 新手引导（3 步清单，方案A：free 第③步为升级点） */
     .onb { background:var(--card); border:1px solid var(--accent-line); border-radius:12px; padding:18px 20px; margin-bottom:18px; }
     .onb-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
@@ -1761,11 +1765,15 @@ docker compose up -d</code></pre>
       const bar = document.getElementById('statusBar');
       if (!user.statusPageEnabled && !(FEATURES && FEATURES.statusPage)) { bar.classList.add('hidden'); return; }
       bar.classList.remove('hidden');
+      // ① 降级宽限横幅（Martin 2026-11-18）：免费档但状态页仍开启 ⇒ 提示宽限 30 天 + 续费入口
+      const grace = (user.statusPageEnabled && user.plan === 'free')
+        ? `<div class="sp-grace"><b data-i18n="sp.grace.title">${t('sp.grace.title', 'Status page grace period')}</b><span class="muted" data-i18n="sp.grace.desc">${t('sp.grace.desc', 'Your current plan no longer includes status pages. This page stays online for another 30 days, then it will be unpublished. Resubscribe any time to keep it live.')}</span> <a href="/#pricing" data-i18n="sp.grace.cta">${t('sp.grace.cta', 'See plans')}</a></div>`
+        : '';
       if (user.statusPageEnabled && user.publicSlug) {
-        bar.innerHTML = `<span data-i18n="status.on">${t('status.on', 'Public status page is on:')}</span> <a href="/status/${user.publicSlug}" target="_blank">/status/${user.publicSlug}</a>
+        bar.innerHTML = grace + `<span data-i18n="status.on">${t('status.on', 'Public status page is on:')}</span> <a href="/status/${user.publicSlug}" target="_blank">/status/${user.publicSlug}</a>
           <button class="pub" id="spDisable" data-i18n="status.disable">${t('status.disable', 'Disable')}</button>`;
       } else {
-        bar.innerHTML = `<span data-i18n="status.off">${t('status.off', 'Generate a public status page for your customers (Starter and above):')}</span>
+        bar.innerHTML = grace + `<span data-i18n="status.off">${t('status.off', 'Generate a public status page for your customers (Starter and above):')}</span>
           <button class="pub" id="spEnable" data-i18n="status.enable">${t('status.enable', 'Enable status page')}</button>`;
       }
       const en = document.getElementById('spEnable');

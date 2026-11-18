@@ -7,7 +7,7 @@ import os from 'node:os';
 import { promisify } from 'node:util';
 import { getPool } from './db.js';
 import { getUserById } from './auth.js';
-import { planFeatures } from './plans.js';
+import { planFeatures, planHasStatusPage } from './plans.js';
 import { MON_ERR } from './monerr.js';
 import { assertSafeTarget, safeFetch } from './ssrf-guard.js';
 import { checkAiVisibility } from './ai-visibility.js';
@@ -284,16 +284,28 @@ export async function getMonitor(id) {
 
 // 公开状态页：按 slug 或自定义域名取用户 + 其公开监控
 // byHost=true 时用 status_custom_domain 解析（G7 自定义域名）
+// ① 降级宽限（Martin 2026-11-18 定案）：套餐失去状态页资格后，公开页再保留
+// STATUS_PAGE_GRACE_DAYS（默认 30 天，环境变量可调），到期公开端点全部 404；
+// 仪表盘同时展示宽限横幅与续费入口（见 index.html loadStatusPage）。
+const STATUS_PAGE_GRACE_MS =
+  Math.max(0, Number(process.env.STATUS_PAGE_GRACE_DAYS ?? 30)) * 86400000;
+
 async function loadStatusPageUser(slugOrHost, byHost) {
   const pool = await getPool();
   const col = byHost ? 'status_custom_domain' : 'public_slug';
   const { rows } = await pool.query(
-    `SELECT id, email, name, public_slug, status_page_enabled, status_white_label, status_password_hash, status_page_title
+    `SELECT id, email, name, public_slug, status_page_enabled, status_white_label, status_password_hash, status_page_title, plan, plan_downgraded_at
      FROM users WHERE ${col} = $1`,
     [slugOrHost]
   );
   if (!rows.length || !rows[0].status_page_enabled) return null;
-  return rows[0];
+  const u = rows[0];
+  if (!planHasStatusPage(u.plan)) {
+    // 失去资格：在宽限期内仍可访问，过期（或无降级时间戳的异常行）一律 404。
+    const dg = Number(u.plan_downgraded_at || 0);
+    if (!dg || Date.now() - dg > STATUS_PAGE_GRACE_MS) return null;
+  }
+  return u;
 }
 
 export async function getStatusPage(slug) {
@@ -549,11 +561,37 @@ async function checkSsl(host, port = 443, warnDays = 30) {
   });
 }
 
-// 极简 WHOIS 客户端（仅取到期日，覆盖常见 TLD）
+// 极简 WHOIS 客户端（仅取到期日）。②（Martin 2026-11-18）：TLD 表扩充到 30+ 个
+// 有可靠 port-43 WHOIS 服务的后缀；未命中表的后缀退化到 IANA 引荐 → 解析不出再走
+// RDAP 兜底（rdap.org 覆盖全部新 gTLD 与多数 ccTLD）。🔴 文档/页面不承诺支持所有后缀。
 const WHOIS_SERVERS = {
-  com: 'whois.verisign-grs.com', net: 'whois.verisign-grs.com', org: 'whois.pir.org',
-  io: 'whois.nic.io', ai: 'whois.nic.ai', co: 'whois.nic.co', info: 'whois.afilias.net',
-  me: 'whois.nic.me', dev: 'whois.nic.dev', app: 'whois.nic.app', xyz: 'whois.nic.xyz',
+  // Verisign
+  com: 'whois.verisign-grs.com', net: 'whois.verisign-grs.com',
+  // Afilias / PIR
+  org: 'whois.pir.org', info: 'whois.afilias.net', me: 'whois.nic.me',
+  // Google Registry（含 nic.tld 别名）
+  dev: 'whois.nic.dev', app: 'whois.nic.app', page: 'whois.nic.page',
+  // Identity Digital / Donuts 系（whois.nic.<tld> 模式可靠）
+  xyz: 'whois.nic.xyz', online: 'whois.nic.online', site: 'whois.nic.site',
+  store: 'whois.nic.store', tech: 'whois.nic.tech', space: 'whois.nic.space',
+  website: 'whois.nic.website', club: 'whois.nic.club', vip: 'whois.nic.vip',
+  wang: 'whois.nic.wang', pro: 'whois.nic.pro', fun: 'whois.nic.fun',
+  icu: 'whois.nic.icu', live: 'whois.nic.live', asia: 'whois.nic.asia',
+  // GoDaddy Registry
+  cc: 'whois.nic.cc', tv: 'whois.nic.tv', mobi: 'whois.nic.mobi',
+  // 其它 gTLD / 短后缀
+  io: 'whois.nic.io', ai: 'whois.nic.ai', co: 'whois.nic.co',
+  sh: 'whois.nic.sh', ac: 'whois.nic.ac', fm: 'whois.nic.fm', am: 'whois.nic.am',
+  so: 'whois.nic.so', im: 'whois.nic.im', name: 'whois.nic.name',
+  biz: 'whois.nic.biz', top: 'whois.nic.top', cloud: 'whois.nic.cloud',
+  gov: 'whois.dotgov.gov', edu: 'whois.educause.edu',
+  // ccTLD（port-43 确认可用）
+  us: 'whois.nic.us', uk: 'whois.nic.uk', fr: 'whois.nic.fr',
+  nl: 'whois.domain-registry.nl', jp: 'whois.jprs.jp', cn: 'whois.cnnic.cn',
+  ru: 'whois.tcinet.ru', br: 'whois.registro.br', au: 'whois.auda.org.au',
+  it: 'whois.nic.it', pl: 'whois.dns.pl', nz: 'whois.domainz.net.nz',
+  mx: 'whois.mx', kr: 'whois.kr', in: 'whois.registry.in',
+  hk: 'whois.hkirc.hk', sg: 'whois.sgnic.sg',
 };
 function whoisQuery(domain) {
   return new Promise((resolve) => {
@@ -570,15 +608,41 @@ function whoisQuery(domain) {
 }
 function parseExpiry(whoisText) {
   if (!whoisText) return null;
-  const re = /(expiry date|expiration date|registry expiry date|paid-till|renewal date)\s*:\s*(.+)/i;
+  // 各注册局字段名差异：Expiry/Expiration/Registry Expiry/paid-till(renewal，ru)/
+  // Expiration Time(cn)/Expire Date(it)/Expires on(jprs)/expires(br,se)
+  const re = /(expiry date|expiration date|registry expiry date|expiration time|expire date|paid-till|renewal date|expires on|expires)\s*:?\s*(.+)/i;
   const m = whoisText.match(re);
   if (!m) return null;
-  const d = new Date(m[2].trim());
+  const raw = m[2].trim();
+  // registro.br 用 YYYYMMDD（如 20270215），Date 构造器不认，手动拆
+  if (/^\d{8}$/.test(raw)) {
+    const d = new Date(`${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}T00:00:00Z`);
+    return isNaN(d.getTime()) ? null : d.getTime();
+  }
+  const d = new Date(raw);
   return isNaN(d.getTime()) ? null : d.getTime();
+}
+// RDAP 兜底（②，2026-11-18）：rdap.org 按 IANA 引荐 302 到对应注册局，覆盖
+// 全部新 gTLD 与多数 ccTLD；WHOIS 解析不出到期日时调用。任何失败静默返回 null。
+// （导出仅为可测性；业务入口走 checkDomain）
+export async function rdapExpiry(domain) {
+  try {
+    const res = await safeFetch(`https://rdap.org/domain/${encodeURIComponent(domain)}`,
+      { headers: { Accept: 'application/rdap+json, application/json' } }, { maxRedirects: 5 });
+    if (!res.ok) return null;
+    const j = await res.json();
+    const ev = Array.isArray(j.events) ? j.events.find((e) => e && e.eventAction === 'expiration') : null;
+    if (!ev || !ev.eventDate) return null;
+    const d = new Date(ev.eventDate);
+    return isNaN(d.getTime()) ? null : d.getTime();
+  } catch {
+    return null;
+  }
 }
 async function checkDomain(domain, warnDays = 30) {
   const text = await whoisQuery(domain);
-  const exp = parseExpiry(text);
+  let exp = parseExpiry(text);
+  if (!exp) exp = await rdapExpiry(domain); // WHOIS 无果 → RDAP 兜底
   if (!exp) return { status: 'down', error: MON_ERR.WHOIS_NO_EXPIRY };
   const now = Date.now();
   if (exp < now) return { status: 'down', error: MON_ERR.DOMAIN_EXPIRED };
@@ -701,14 +765,18 @@ function isTransientError(error) {
 }
 
 // 本地单点检查 + 瞬时失败单次重试：消除东京探针偶发抖动造成的假 down，避免 demo/状态页红标误报
+// ③ 口径（Martin 2026-11-18）：responseTime 只记最后一次尝试自身的耗时——
+// 失败尝试与 1.5s 重试等待不再计入，避免偶发抖动抬高均值、误触 slow 警告。
+// 图表一致性靠日聚合平均自然平滑，不做人工平滑（不造数据）。
 export async function runLocalCheckRetry(monitor) {
-  const start = Date.now();
+  let t0 = Date.now();
   let res = await runLocalCheck(monitor);
   if (res.status === 'down' && isTransientError(res.error)) {
     await new Promise((r) => setTimeout(r, 1500));
+    t0 = Date.now();
     res = await runLocalCheck(monitor);
   }
-  res.responseTime = res.responseTime ?? (Date.now() - start);
+  res.responseTime = res.responseTime ?? (Date.now() - t0);
   return res;
 }
 

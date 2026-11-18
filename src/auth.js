@@ -377,10 +377,17 @@ export async function seedAdmin() {
 
 export async function updatePlan(userId, plan, extra = {}) {
   const pool = await getPool();
+  // plan_downgraded_at（P1-①，2026-11-18）：降回 free 记时刻（状态页宽限起点）；升档清空。
   await pool.query(
-    `UPDATE users SET plan = $2, paddle_customer_id = COALESCE($3, paddle_customer_id),
-       paddle_subscription_id = COALESCE($4, paddle_subscription_id) WHERE id = $1`,
-    [userId, plan, extra.customerId || null, extra.subscriptionId || null]
+    `UPDATE users SET plan = $2,
+       paddle_customer_id = COALESCE($3, paddle_customer_id),
+       paddle_subscription_id = COALESCE($4, paddle_subscription_id),
+       plan_downgraded_at = CASE
+         WHEN $2 = 'free' AND users.plan <> 'free' THEN $5::bigint
+         WHEN $2 <> 'free' THEN NULL
+         ELSE users.plan_downgraded_at END
+     WHERE id = $1`,
+    [userId, plan, extra.customerId || null, extra.subscriptionId || null, Date.now()]
   );
 }
 

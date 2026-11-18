@@ -130,7 +130,17 @@ app.use((req, res, next) => {
 //   3) req.ip（trust proxy=1）。
 // ⚠️ 不要用 X-Forwarded-For 最左条目：CF 对已有 XFF 是追加而非覆盖，
 //    客户端可自带假 XFF 让最左变成假 IP，从而轮换假 IP 绕过限流。
+// ⑤（Martin 2026-11-18）：自托管在自有反代（Nginx/Caddy 等）后时，设
+//    TRUSTED_CLIENT_IP_HEADER 声明真实客户端 IP 所在的头（如 x-real-ip）。
+//    设置后只信该头（取逗号分隔首段），其余代理头一律忽略——防直连暴露时
+//    伪造 XFF 轮换 IP 绕过限流。未设置保持既有优先级。仅 Express 侧；
+//    Worker 线上由 Cloudflare 强制写入 CF-Connecting-IP，无需配置。
+const TRUSTED_IP_HEADER = (process.env.TRUSTED_CLIENT_IP_HEADER || '').trim().toLowerCase();
 function clientIp(req) {
+  if (TRUSTED_IP_HEADER) {
+    const v = req.headers[TRUSTED_IP_HEADER];
+    if (v) return String(v).split(',')[0].trim() || 'unknown';
+  }
   const cf = req.headers['cf-connecting-ip'];
   if (cf) return String(cf).trim();
   const fly = req.headers['fly-client-ip'];

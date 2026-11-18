@@ -9,6 +9,7 @@
 > **关联代码**：`server.js`（路由，共 84 个端点）、`src/cf-worker/public-ai.js`（公开 AI Readability 检查端点，D43 新增，计入后 85 个端点）、`src/monitors.js`（检查引擎）、`src/alerts.js`（告警）、`src/plans.js`（套餐门禁 / 数量上限单一源）、`src/auth.js`（认证）、`src/email.js`（邮件）；多区域探针另有 `src/worker.js`（`GET /health`、`POST /probe`，独立服务不计入上表）；**Cloudflare 迁移新增 `src/cf-worker/index.js`（Worker 入口，ADR-0001）——迁移期 `/health` 与 `/api/*` 将由 Fly 版与 Worker 版并行提供，端点契约与本文档一致，全部端点迁移完成前 Worker 版仅做预览验证，不接生产流量**
 >
 > **2026-09-19 探针可靠性**：本地检查与多区域 `/probe` 均经 `runLocalCheckRetry` 执行——单次检查遇超时 / 网络抖动类错误会重试一次（间隔 1.5s）后再判定 down，消除东京探针偶发抖动造成的假故障；单点 HTTP/Keyword 超时从硬编码 10s 提至 15s（可经 `CHECK_TIMEOUT_MS` 环境变量调参，无需重新部署）。
+> **2026-11-18 口径修订**：`responseTime` 只记最后一次尝试自身的耗时——失败尝试与 1.5s 重试等待不再计入，偶发抖动不再抬高均值/误触 slow 警告；图表一致性由日聚合平均自然平滑。
 
 ---
 
@@ -130,7 +131,16 @@
 
 新增/可调环境变量（都有默认值，无需配置即可运行）：
 `POLL_MAX_CONCURRENT`、`POLL_BATCH_LIMIT`、`RETENTION_CHECKS_DAYS`、`RETENTION_BATCH_SIZE`、
-`RETENTION_MAX_BATCHES`、`RETENTION_INTERVAL_MS`、`RETENTION_FIRST_DELAY_MS`。
+`RETENTION_MAX_BATCHES`、`RETENTION_INTERVAL_MS`、`RETENTION_FIRST_DELAY_MS`、
+`STATUS_PAGE_GRACE_DAYS`（状态页降级宽限天数，默认 30）、
+`TRUSTED_CLIENT_IP_HEADER`（自托管限流真实客户端 IP 头，见下）。
+
+**TRUSTED_CLIENT_IP_HEADER（仅 Express 自托管，2026-11-18）**：自托管在自有反代
+（Nginx/Caddy 等）后时，设为本应用真实客户端 IP 所在的头（如 `x-real-ip`）。
+设置后限流只信该头（取逗号分隔首段），其余代理头（`CF-Connecting-IP` /
+`Fly-Client-IP` / `X-Forwarded-For`）一律忽略——防直连暴露时伪造代理头轮换 IP
+绕过限流。未设置时保持既有优先级（CF → Fly → `req.ip`）。Worker 线上由
+Cloudflare 强制写入 `CF-Connecting-IP`，无需配置。
 
 ### 变更原因（2026-09-13）
 
@@ -370,7 +380,7 @@ OAuth 回调终点。用 code 换取 token 并获取邮箱，按邮箱找/建用
 | `ping` | 主机名/IP（非 URL） | starter+ | ICMP 存活 |
 | `tcp` | `host:port` | starter+ | TCP 端口连通 |
 | `ssl` | 主机名/IP | starter+ | 证书有效 + 到期预警 |
-| `domain` | 域名 | starter+ | WHOIS 到期预警 |
+| `domain` | 域名 | starter+ | WHOIS/RDAP 到期预警（内置 30+ 常用 TLD 的 WHOIS 表；表外后缀自动走 rdap.org RDAP 兜底。🔴 **不承诺支持所有后缀**——个别注册局不提供到期日公开数据时返回 `whois_no_expiry`） |
 | `api` | 合法 URL | starter+ | 自定义 header + JSON 断言 |
 | `dns` | 域名 | starter+ | 记录值比对 |
 | `heartbeat` | 合法 URL（回填端点） | starter+ | 后台任务按时上报 |
@@ -579,6 +589,11 @@ Heartbeat 监控的回填端点（G1，**无需登录**，凭监控 id + 上报�
 
 ### GET /api/status/:slug
 公开状态页数据（G5，**无需登录**）。
+
+> **降级宽限（2026-11-18）**：套餐降回 Free 后，公开状态页不立即下墙——
+> 再保留 `STATUS_PAGE_GRACE_DAYS`（默认 30）天，之后本端点及密码解锁、订阅者
+> 等全部公开端点统一返回 404。仪表盘在宽限期内展示横幅与续费入口。
+> 用户可随时重新订阅恢复（升档即清除宽限计时）。
 
 **响应 200**
 ```json

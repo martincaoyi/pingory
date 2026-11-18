@@ -106,7 +106,7 @@ const INIT_RETRY_DELAYS_MS = [2000, 4000, 8000, 16000, 30000]; // 5 次重试，
 //     （且 monitors.user_id 已补 ON DELETE CASCADE 外键，此后新产生的孤儿会随用户删除自动清理）
 // 简化模型：DDL 全部幂等（IF NOT EXISTS / ADD COLUMN IF NOT EXISTS），
 // 因此「迁移」= 重跑一遍幂等基线 + 记录版本号；中途失败后重跑是安全的（不会重复生效）。
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4; // v4（2026-11-18）：users.plan_downgraded_at（状态页降级宽限）
 const MIGRATION_LOCK_KEY = 8675309;   // 本应用专用常量，仅用于串行化迁移
 const MIGRATION_LOCK_WAIT_MS = 30000; // 抢不到锁时的最长等待（每 1s 重试一次）
 
@@ -222,6 +222,13 @@ const SCHEMA_DDL = `
     -- 🔴 状态页标题**不得回退到 email** —— 那会把用户邮箱直接印在公开页面上（P1-5 修复）
     -- 回退链：status_page_title → name → 前端通用文案（Service Status）
     ALTER TABLE users ADD COLUMN IF NOT EXISTS status_page_title TEXT;
+    -- plan_downgraded_at（P1-①，Martin 2026-11-18 定案）：付费降回 free 的时刻（毫秒）。
+    -- 状态页降级不立即下墙，保留 STATUS_PAGE_GRACE_DAYS（默认 30 天）宽限期；见 monitors.js loadStatusPageUser。
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_downgraded_at BIGINT;
+    -- 历史行一次性补记：本版上线时「免费档但状态页仍开启」的存量用户，宽限从首次启动起算。
+    -- 此后降级一律由 updatePlan 落时间戳，本语句对已补记行无操作。
+    UPDATE users SET plan_downgraded_at = CAST(EXTRACT(EPOCH FROM NOW()) * 1000 AS BIGINT)
+      WHERE plan = 'free' AND status_page_enabled = true AND plan_downgraded_at IS NULL;
 
     CREATE TABLE IF NOT EXISTS status_subscribers (
       id          TEXT PRIMARY KEY,
